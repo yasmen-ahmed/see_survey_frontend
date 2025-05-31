@@ -8,16 +8,18 @@ import {
   RadioTower,
   CircleHelp,
 } from "lucide-react";
+import { useParams } from "react-router-dom";
 
-const SidebarTabs = () => {
+const SidebarTabs = () => {  
+  const { sessionId, siteId } = useParams(); 
   const navItems = [
-    { label: "Site Info", icon: <House size={20} />, path: "/sites/1/site-info/site-location" },
-    { label: "AC Power", icon: <Power size={20} />, path: "/sites/1/ac-power/ac-info" },
-    { label: "Room", icon: <Calendar size={20} />, path: "/sites/1/room/room-info" },
-    { label: "Outdoor", icon: <TentTree size={20} />, path: "/sites/1/outdoor/general-lyout" },
-    { label: "Existing Radio", icon: <RadioTower size={20} />, path: "/sites/1/existing-radio/antennas-strut" },
-    { label: "New Radio", icon: <RadioTower size={20} />, path: "/sites/1/new-radio/new-antennas/" },
-    { label: "H&S", icon: <CircleHelp size={20} />, path: "/sites/1/H&S/h&s" }
+    { label: "Site Info", icon: <House size={20} />, path: `/sites/${sessionId}/${siteId}/site-info/site-location` },
+    { label: "AC Power", icon: <Power size={20} />, path: `/sites/${sessionId}/${siteId}/ac-power/ac-info` },
+    { label: "Room", icon: <Calendar size={20} />, path: `/sites/${sessionId}/${siteId}/room/room-info` },
+    { label: "Outdoor", icon: <TentTree size={20} />, path: `/sites/${sessionId}/${siteId}/outdoor/general-lyout` },
+    { label: "Existing Radio", icon: <RadioTower size={20} />, path: `/sites/${sessionId}/${siteId}/existing-radio/antennas-strut` },
+    { label: "New Radio", icon: <RadioTower size={20} />, path: `/sites/${sessionId}/${siteId}/new-radio/new-antennas/` },
+    { label: "H&S", icon: <CircleHelp size={20} />, path: `/sites/${sessionId}/${siteId}/H&S/h&s` }
   ];
 
   return (

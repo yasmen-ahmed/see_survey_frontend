@@ -18,6 +18,29 @@ const SurveyCardList = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleStatusChange = async (surveyId, newStatus) => {
+    try {
+      await updateSurveyStatus(surveyId, newStatus);
+      console.log("Status updated successfully");
+    } catch (error) {
+      console.error("Error updating status:", error);
+    }
+  };
+
+  const updateSurveyStatus = async (surveyId, newStatus) => {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/surveys/${surveyId}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status: newStatus }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update status');
+    }
+  };
+
   if (loading) {
     return <div className="p-6">Loading surveys...</div>;
   }
@@ -36,6 +59,7 @@ const SurveyCardList = () => {
             <th className="px-6 py-3">Created By</th>
             <th className="px-6 py-3">Assigned To</th>
             <th className="px-6 py-3">Project</th>
+            <th className="px-6 py-3">TSSR Status</th>
             <th className="px-6 py-3">Action</th>
           </tr>
         </thead>
@@ -47,6 +71,18 @@ const SurveyCardList = () => {
               <td className="px-6 py-4">{survey.createdBy?.username}</td>
               <td className="px-6 py-4">{survey.user?.username}</td>
               <td className="px-6 py-4">{survey.project}</td>
+              <td className="px-6 py-4">
+                <select
+                  value={survey.TSSR_Status}
+                  onChange={(e) => handleStatusChange(survey.session_id, e.target.value)}
+                  className="border rounded p-1"
+                >
+                  <option value="created">Created</option>
+                  <option value="submitted">Submitted</option>
+                  <option value="review">Review</option>
+                  <option value="done">Done</option>
+                </select>
+              </td>
               <td className="px-6 py-4">
                 <button
                   onClick={() => navigate(

@@ -49,9 +49,9 @@ function SiteInformationForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-10">
+    <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 p-2">
     <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-md space-y-8">
-
+{/*  <div className="bg-white p-3 rounded-xl shadow-md w-full "> */}
   
       {/* Site Details */}
       <section>

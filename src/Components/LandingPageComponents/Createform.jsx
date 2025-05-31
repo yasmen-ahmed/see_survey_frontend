@@ -206,7 +206,7 @@ function Createform() {
 
         {/* User */}
         <div className="mb-4">
-          <label htmlFor="user" className="block text-gray-700 mb-2">User:</label>
+          <label htmlFor="user" className="block text-gray-700 mb-2">Assign To:</label>
           <select
             id="user"
             value={selectedUser}

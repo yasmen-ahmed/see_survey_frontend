@@ -23,7 +23,7 @@ const LoginForm = () => {
       const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, formData);
       if (response.data.token) {
         localStorage.setItem("token", response.data.token);
-        localStorage.setItem("username", response.data.user.username);
+        localStorage.setItem("name", response.data.user.firstName + " " + response.data.user.lastName);
         localStorage.setItem("role", response.data.user.role);
         setError("");
         setSuccess("Login successful! Redirecting...");

@@ -1,70 +1,168 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from "react";
+import { useParams, useLocation } from "react-router-dom";
+import axios from "axios";
 
 function SiteAccessForm() {
+  const { sessionId, siteId } = useParams(); 
   const [formData, setFormData] = useState({
     site_access_permission_required: "",
-    Contanct_person_Name_For_Site_Access: "",
-    Contact_Tel_number_for_site_access: "",
-    Access_to_site_by_roads: "",
-    Type_of_gated_fence: "",
+    preferred_time_slot_crane_access: [],
+    contact_person_name: "",
+    contact_tel_number: "",
+    available_access_time: [],
+    access_to_site_by_road: "",
+    type_of_gated_fence: "",
     keys_required: "",
-    stair_lift_dimensions_Depth: "",
-    stair_lift_dimensions_Height: "",
-    stair_lift_dimensions_Width: "",
-    prefered_time_slot_for_crane_access: "",
-    Availabe_Access_Time: "",
-    Keys_Type: "",
-    Material_Accessabality_to_site: "",
-    shared_site: false,
-    ac_power_sharing: false,
-    dc_power_sharing: false,
-    telecom_operators: [""],
-    site_topology: "",
-    site_type: "",
-    planned_scope: [""],
-    existing_rack_location: [""],
-    planned_rack_location: [""],
-    existing_technology: [""],
+    keys_type: [],  
+    material_accessibility_to_site: [],
+    stair_lift_height: "",
+    stair_lift_width: "",
+    stair_lift_depth: "",    
   });
+
+  
+  useEffect(() => {
+    axios.get(`${import.meta.env.VITE_API_URL}/api/site-access/${sessionId}`)
+      .then(res => {
+        const data = res.data;
+        console.log(data)
+        setFormData({   
+          site_access_permission_required: data.site_access_permission_required || "",
+          preferred_time_slot_crane_access: data.preferred_time_slot_crane_access || [],
+          contact_person_name: data.contact_person_name ,
+          contact_tel_number: data.contact_tel_number || 0,
+          available_access_time: data.available_access_time || [],
+          access_to_site_by_road: data.access_to_site_by_road || "",  
+        type_of_gated_fence: data.type_of_gated_fence|| "",  
+          keys_required: data.keys_required || "",
+          keys_type: data.keys_type || [],
+          material_accessibility_to_site: data.material_accessibility_to_site || [],
+          stair_lift_height: data.stair_lift_height || 0,
+          stair_lift_width: data.stair_lift_width || 0,
+          stair_lift_depth: data.stair_lift_depth || 0,
+       }); 
+        console.log(formData)
+      })
+      .catch(err => console.error("Error loading survey details:", err));
+  }, [sessionId, siteId]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    if (type === "checkbox") {
+      if (["preferred_time_slot_crane_access", "available_access_time", "keys_type", "material_accessibility_to_site"].includes(name)) {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: checked ? [...prev[name], value] : prev[name].filter(item => item !== value)
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: checked
+        }));
+      }
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
-  const handleSubmit = (e) => {
+  // Handle form submission
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Form Data Submitted:", formData);
-    alert("Site Access Form submitted!");
+
+ 
+
+    const payload = {
+      site_access_permission_required: formData.site_access_permission_required,
+      preferred_time_slot_crane_access: formData.preferred_time_slot_crane_access,
+      contact_person_name: formData.contact_person_name,
+      contact_tel_number: formData.contact_tel_number,
+      available_access_time: formData.available_access_time,
+      access_to_site_by_road: formData.access_to_site_by_road,
+    type_of_gated_fence: formData.type_of_gated_fence,  
+      keys_required: formData.keys_required,
+      keys_type: formData.keys_type,
+      material_accessibility_to_site: formData.material_accessibility_to_site,
+      stair_lift_height: formData.stair_lift_height,
+      stair_lift_width: formData.stair_lift_width,
+      stair_lift_depth: formData.stair_lift_depth,    
+     
+    };
+
+    
+
+    try {
+      const response=await axios.put(`${import.meta.env.VITE_API_URL}/api/site-access/${sessionId}`,payload);
+      alert("Data submitted successfully!");
+      console.log(response.data)
+    } catch (err) {
+      console.error("Error:", err);
+      alert("Error submitting data. Please try again.");
+    }
   };
+
 
   return (
-    <div className="min-h-screen bg-gray-100 py-10">
-      <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-md space-y-8">
+    <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 p-2">
+      <div className="bg-white p-3 rounded-xl shadow-md w-full ">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block font-medium mb-1">Site Access Permission Required</label>
-            <select
-              name="site_access_permission_required"
-              value={formData.site_access_permission_required}
-              onChange={handleChange}
-              className="w-full p-3 border rounded-md"
-            >
-              <option value="" disabled hidden>Find items...</option>
-              <option value="Yes">Yes</option>
-              <option value="No">No</option>
-            </select>
+            <div className="flex gap-4">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="site_access_permission_required"
+                  value="Yes"
+                  checked={formData.site_access_permission_required === "Yes"}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                Yes
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="site_access_permission_required"
+                  value="No"
+                  checked={formData.site_access_permission_required === "No"}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                No
+              </label>
+            </div>
           </div>
+
+          <div>
+            <label className="block font-medium mb-1">Preferred Time Slot for Crane Access</label>
+            <div className="flex  gap-2">
+              {["Morning", "Afternoon", "Evening", "Night"].map((slot) => (
+                <label key={slot} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="preferred_time_slot_crane_access"
+                    value={slot}
+                    checked={formData.preferred_time_slot_crane_access.includes(slot)}
+                    onChange={handleChange}
+                    className="mr-2"
+                  />
+                  {slot}
+                </label>
+              ))}
+            </div>
+          </div>
+
+
 
           <div>
             <label className="block font-medium mb-1">Contact Person Name For Site Access</label>
             <input
               type="text"
-              name="Contanct_person_Name_For_Site_Access"
-              value={formData.Contanct_person_Name_For_Site_Access}
+              name="contact_person_name"
+              value={formData.contact_person_name}
               onChange={handleChange}
               className="w-full p-3 border rounded-md"
             />
@@ -73,74 +171,213 @@ function SiteAccessForm() {
           <div>
             <label className="block font-medium mb-1">Contact Tel. Number For Site Access</label>
             <input
-              type="text"
-              name="Contact_Tel_number_for_site_access"
-              value={formData.Contact_Tel_number_for_site_access}
+              type="number"
+              name="contact_tel_number"
+              value={formData.contact_tel_number}
               onChange={handleChange}
               className="w-full p-3 border rounded-md"
             />
           </div>
+
+          <div>
+            <label className="block font-medium mb-1">Available Access Time</label>
+            <div className="flex  gap-2">
+              {["Morning", "Afternoon", "Evening", "Night"].map((slot) => (
+                <label key={slot} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="available_access_time"
+                    value={slot}
+                    checked={formData.available_access_time.includes(slot)}
+                    onChange={handleChange}
+                    className="mr-2"
+                  />
+                  {slot}
+                </label>
+              ))}
+            </div>
+          </div>
+
 
           <div>
             <label className="block font-medium mb-1">Access to Site by Road</label>
-            <select
-              name="Access_to_site_by_roads"
-              value={formData.Access_to_site_by_roads}
-              onChange={handleChange}
-              className="w-full p-3 border rounded-md"
-            >
-              <option value="" disabled hidden>Find items...</option>
-              <option value="Yes">Yes</option>
-              <option value="No">No</option>
-              <option value="Other">Other</option>
-            </select>
+            <div className="flex gap-4">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="access_to_site_by_road"
+                  value="Yes"
+                  checked={formData.access_to_site_by_road === "Yes"}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                Yes
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="access_to_site_by_road"
+                  value="No"
+                  checked={formData.access_to_site_by_road === "No"}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                No
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="access_to_site_by_road"
+                  value="Other"
+                  checked={formData.access_to_site_by_road === "Other"}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                Other
+              </label>
+            </div>
           </div>
+
+
+
 
           <div>
             <label className="block font-medium mb-1">Type of Gated Fence</label>
-            <select
-              name="Type_of_gated_fence"
-              value={formData.Type_of_gated_fence}
-              onChange={handleChange}
-              className="w-full p-3 border rounded-md"
-            >
-              <option value="" disabled hidden>Find items...</option>
-              <option value="Brick Wall">Brick Wall</option>
-              <option value="Chain Fence">Chain Fence</option>
-              <option value="Not Exist">Not Exist</option>
-              <option value="Other">Other</option>
-            </select>
+            <div className="flex gap-4 flex-wrap">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="fence_type"
+                  value="Brick Wall"
+                  checked={formData.type_of_gated_fence=== "Bric kWall"}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                Brick Wall
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="fence_type"
+                  value="Chain Fence"
+                  checked={formData.type_of_gated_fence=== "Chain Fence"}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                Chain Fence
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="fence_type"
+                  value="Not Exist"
+                  checked={formData.type_of_gated_fence=== "Not Exist"}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                Not Exist
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="fence_type"
+                  value="Other"
+                  checked={formData.type_of_gated_fence=== "Other"}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                Other
+              </label>
+            </div>
           </div>
+
 
           <div>
             <label className="block font-medium mb-1">Keys Required</label>
-            <input
-              type="text"
-              name="keys_required"
-              value={formData.keys_required}
-              onChange={handleChange}
-              className="w-full p-3 border rounded-md"
-              placeholder="Find items..."
-            />
+            <div className="flex gap-4">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="keys_required"
+                  value="Yes"
+                  checked={formData.keys_required === "Yes"}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                Yes
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="keys_required"
+                  value="No"
+                  checked={formData.keys_required === "No"}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                No
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="keys_required"
+                  value="Other"
+                  checked={formData.keys_required === "Other"}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                Other
+              </label>
+            </div>
           </div>
 
           <div>
-            <label className="block font-medium mb-1">Stair/Lift Depth (meter)</label>
-            <input
-              type="text"
-              name="stair_lift_dimensions_Depth"
-              value={formData.stair_lift_dimensions_Depth}
-              onChange={handleChange}
-              className="w-full p-3 border rounded-md"
-            />
+            <fieldset className="mb-4">
+              <legend className="block font-medium mb-2">Keys Type</legend>
+              <div className="flex flex-wrap gap-4">
+                {["Site or Building gate", "Shelter door", "Rooftop door", "Cabinet", "Other"].map((slot) => (
+                  <label key={slot} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      name="keys_type"
+                      value={slot}
+                      checked={formData.keys_type.includes(slot)}
+                      onChange={handleChange}
+                      className="accent-blue-600"
+                    />
+                    <span>{slot}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
           </div>
+
+          <div>
+            <label className="block font-medium mb-1">Material Accessibility to Site</label>
+            <div className="flex flex-wrap gap-4">
+              {["By Stairs", "By Lift", "By Crane", "Other"].map((slot) => (
+                <label key={slot} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    name="material_accessibility_to_site"
+                    value={slot}
+                    checked={formData.material_accessibility_to_site.includes(slot)}
+                    onChange={handleChange}
+                    className="accent-blue-600"
+                  />
+                  <span>{slot}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
 
           <div>
             <label className="block font-medium mb-1">Stair/Lift Height (meter)</label>
             <input
-              type="text"
-              name="stair_lift_dimensions_Height"
-              value={formData.stair_lift_dimensions_Height}
+              type="number"
+              name="stair_lift_height"
+              value={formData.stair_lift_height}
               onChange={handleChange}
               className="w-full p-3 border rounded-md"
             />
@@ -149,61 +386,30 @@ function SiteAccessForm() {
           <div>
             <label className="block font-medium mb-1">Stair/Lift Width (meter)</label>
             <input
-              type="text"
-              name="stair_lift_dimensions_Width"
-              value={formData.stair_lift_dimensions_Width}
+              type="number"
+              name="stair_lift_width"
+              value={formData.stair_lift_width}
               onChange={handleChange}
               className="w-full p-3 border rounded-md"
             />
           </div>
 
+
           <div>
-            <label className="block font-medium mb-1">Preferred Time Slot for Crane Access</label>
+            <label className="block font-medium mb-1">Stair/Lift Depth (meter)</label>
             <input
-              type="text"
-              name="prefered_time_slot_for_crane_access"
-              value={formData.prefered_time_slot_for_crane_access}
+              type="number"
+              name="stair_lift_depth"
+              value={formData.stair_lift_depth}
               onChange={handleChange}
               className="w-full p-3 border rounded-md"
-              placeholder="Find items..."
             />
           </div>
 
-          <div>
-            <label className="block font-medium mb-1">Available Access Time</label>
-            <input
-              type="text"
-              name="Availabe_Access_Time"
-              value={formData.Availabe_Access_Time}
-              onChange={handleChange}
-              className="w-full p-3 border rounded-md"
-              placeholder="Find items..."
-            />
-          </div>
 
-          <div>
-            <label className="block font-medium mb-1">Keys Type</label>
-            <input
-              type="text"
-              name="Keys_Type"
-              value={formData.Keys_Type}
-              onChange={handleChange}
-              className="w-full p-3 border rounded-md"
-              placeholder="Find items..."
-            />
-          </div>
 
-          <div>
-            <label className="block font-medium mb-1">Material Accessibility to Site</label>
-            <input
-              type="text"
-              name="Material_Accessabality_to_site"
-              value={formData.Material_Accessabality_to_site}
-              onChange={handleChange}
-              className="w-full p-3 border rounded-md"
-              placeholder="Find items..."
-            />
-          </div>
+
+
         </div>
 
         <div className="pt-6 text-center">
