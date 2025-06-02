@@ -49,7 +49,7 @@ function Createform() {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    axios.get(`http://localhost:3000/api/users`)
+    axios.get(`${import.meta.env.VITE_API_URL}/api/users`)
       .then((res) => setUsers(res.data))
       .catch((err) => {
         console.error('Error fetching users:', err);
@@ -108,9 +108,20 @@ function Createform() {
     try {
       // Read JWT token from localStorage
       const token = localStorage.getItem('token');
+      
+      // Debug: Check if token exists
+      console.log('Token exists:', !!token);
+      console.log('Token value:', token);
+      
+      if (!token) {
+        setError('No authentication token found. Please login again.');
+        setLoading(false);
+        return;
+      }
+
       // Include token in Authorization header
       const response = await axios.post(
-        'http://localhost:3000/api/surveys',
+        `${import.meta.env.VITE_API_URL}/api/surveys`,
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -122,7 +133,14 @@ function Createform() {
       }
     } catch (err) {
       console.error('Error posting form data:', err);
-      setError('Failed to create survey.');
+      
+      if (err.response?.status === 403) {
+        setError('Access denied. You may not have permission to create surveys or your session has expired. Please login again.');
+      } else if (err.response?.status === 401) {
+        setError('Authentication failed. Please login again.');
+      } else {
+        setError(`Failed to create survey: ${err.response?.data?.message || err.message}`);
+      }
     } finally {
       setLoading(false);
     }

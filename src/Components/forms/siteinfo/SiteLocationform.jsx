@@ -51,7 +51,7 @@ const SiteLocationForm = () => {
     const { frontImage, sideImage, topImage, ...dataWithoutImages } = formData;
 
     const payload = {
-      site_name: dataWithoutImages.sitename,
+      sitename: dataWithoutImages.sitename,
       region: dataWithoutImages.region,
       city: dataWithoutImages.city,
       longitude: dataWithoutImages.longitude,
@@ -114,13 +114,14 @@ const SiteLocationForm = () => {
             onChange={handleInputChange}
             className="border p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
+            disabled
           />
           </div>
           <div className="grid grid-cols-1 gap-2">
           <label className="font-semibold mb-1">Site Name</label>
           <input
             type="text"
-            name="siteName"
+            name="sitename"
             placeholder="Site Name"
             value={formData.sitename}
             onChange={handleInputChange}

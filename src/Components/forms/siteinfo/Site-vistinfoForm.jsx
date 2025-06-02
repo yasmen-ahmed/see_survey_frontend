@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import axios from "axios";
 
 function SitevistinfoForm() {
@@ -113,6 +113,7 @@ function SitevistinfoForm() {
               onChange={handleInputChange}
               className="border p-3 rounded-md"
               required
+              disabled
             />
           </div>
 
@@ -127,6 +128,7 @@ function SitevistinfoForm() {
               onChange={handleInputChange}
               className="border p-3 rounded-md"
               required
+              disabled
             />
           </div>
 
@@ -141,6 +143,7 @@ function SitevistinfoForm() {
               onChange={handleInputChange}
               className="border p-3 rounded-md"
               required
+              disabled
             />
           </div>
 

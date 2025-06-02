@@ -9,6 +9,8 @@ function SiteAccessForm() {
     preferred_time_slot_crane_access: [],
     contact_person_name: "",
     contact_tel_number: "",
+    contact_person_name_for_site_key: "",
+    contact_tel_number_for_site_key: "",
     available_access_time: [],
     access_to_site_by_road: "",
     type_of_gated_fence: "",
@@ -33,6 +35,8 @@ function SiteAccessForm() {
           contact_tel_number: data.contact_tel_number || 0,
           available_access_time: data.available_access_time || [],
           access_to_site_by_road: data.access_to_site_by_road || "",  
+          contact_person_name_for_site_key: data.contact_person_name_for_site_key || "",
+          contact_tel_number_for_site_key: data.contact_tel_number_for_site_key || "",
         type_of_gated_fence: data.type_of_gated_fence|| "",  
           keys_required: data.keys_required || "",
           keys_type: data.keys_type || [],
@@ -83,6 +87,8 @@ function SiteAccessForm() {
       access_to_site_by_road: formData.access_to_site_by_road,
     type_of_gated_fence: formData.type_of_gated_fence,  
       keys_required: formData.keys_required,
+      contact_person_name_for_site_key: formData.contact_person_name_for_site_key,
+      contact_tel_number_for_site_key: formData.contact_tel_number_for_site_key,
       keys_type: formData.keys_type,
       material_accessibility_to_site: formData.material_accessibility_to_site,
       stair_lift_height: formData.stair_lift_height,
@@ -164,7 +170,7 @@ function SiteAccessForm() {
               name="contact_person_name"
               value={formData.contact_person_name}
               onChange={handleChange}
-              className="w-full p-3 border rounded-md"
+              className="w-1/2 p-3 border rounded-md"
             />
           </div>
 
@@ -174,6 +180,30 @@ function SiteAccessForm() {
               type="number"
               name="contact_tel_number"
               value={formData.contact_tel_number}
+              onChange={handleChange}
+              className="w-full p-3 border rounded-md"
+            />
+          </div>
+
+          
+
+          <div>
+            <label className="block font-medium mb-1">Contact Person Name For Site Key</label>
+            <input
+              type="text"
+              name="contact_person_name_for_site_key"
+              value={formData.contact_person_name_for_site_key}
+              onChange={handleChange}
+              className="w-full p-3 border rounded-md"
+            />
+          </div>
+
+          <div>
+            <label className="block font-medium mb-1">Contact Tel. Number For Site Key</label>
+            <input
+              type="number"
+              name="contact_tel_number_for_site_key"
+              value={formData.contact_tel_number_for_site_key}
               onChange={handleChange}
               className="w-full p-3 border rounded-md"
             />
@@ -247,9 +277,9 @@ function SiteAccessForm() {
               <label className="flex items-center">
                 <input
                   type="radio"
-                  name="fence_type"
+                  name="type_of_gated_fence"
                   value="Brick Wall"
-                  checked={formData.type_of_gated_fence=== "Bric kWall"}
+                  checked={formData.type_of_gated_fence === "Brick Wall"}
                   onChange={handleChange}
                   className="mr-2"
                 />
@@ -258,9 +288,9 @@ function SiteAccessForm() {
               <label className="flex items-center">
                 <input
                   type="radio"
-                  name="fence_type"
+                  name="type_of_gated_fence"
                   value="Chain Fence"
-                  checked={formData.type_of_gated_fence=== "Chain Fence"}
+                  checked={formData.type_of_gated_fence === "Chain Fence"}
                   onChange={handleChange}
                   className="mr-2"
                 />
@@ -269,9 +299,9 @@ function SiteAccessForm() {
               <label className="flex items-center">
                 <input
                   type="radio"
-                  name="fence_type"
+                  name="type_of_gated_fence"
                   value="Not Exist"
-                  checked={formData.type_of_gated_fence=== "Not Exist"}
+                  checked={formData.type_of_gated_fence === "Not Exist"}
                   onChange={handleChange}
                   className="mr-2"
                 />
@@ -280,9 +310,9 @@ function SiteAccessForm() {
               <label className="flex items-center">
                 <input
                   type="radio"
-                  name="fence_type"
+                  name="type_of_gated_fence"
                   value="Other"
-                  checked={formData.type_of_gated_fence=== "Other"}
+                  checked={formData.type_of_gated_fence === "Other"}
                   onChange={handleChange}
                   className="mr-2"
                 />

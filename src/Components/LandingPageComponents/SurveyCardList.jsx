@@ -21,24 +21,54 @@ const SurveyCardList = () => {
   const handleStatusChange = async (surveyId, newStatus) => {
     try {
       await updateSurveyStatus(surveyId, newStatus);
+      setSurveys(prevSurveys => 
+        prevSurveys.map(survey => 
+          survey.session_id === surveyId 
+            ? { ...survey, TSSR_Status: newStatus }
+            : survey
+        )
+      );
       console.log("Status updated successfully");
     } catch (error) {
       console.error("Error updating status:", error);
+      alert("Failed to update status. Please try again.");
     }
   };
 
   const updateSurveyStatus = async (surveyId, newStatus) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/surveys/${surveyId}/status`, {
+    const token = localStorage.getItem('token');
+    
+    console.log('Updating survey status:', { surveyId, newStatus });
+    
+    // Try different API endpoint format - might need just session_id
+    const apiUrl = `${import.meta.env.VITE_API_URL}/api/surveys/${surveyId}/status`;
+    console.log('API URL:', apiUrl);
+    console.log('Token exists:', !!token);
+    
+    const requestBody = { TSSR_Status: newStatus };
+    console.log('Request body:', requestBody);
+    
+    const response = await fetch(apiUrl, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
       },
-      body: JSON.stringify({ status: newStatus }),
+      body: JSON.stringify(requestBody),
     });
 
+    console.log('Response status:', response.status);
+    console.log('Response ok:', response.ok);
+    
     if (!response.ok) {
-      throw new Error('Failed to update status');
+      const errorText = await response.text();
+      console.log('Error response:', errorText);
+      throw new Error(`Failed to update status: ${response.status} - ${errorText}`);
     }
+    
+    const responseData = await response.json().catch(() => ({}));
+    console.log('Success response:', responseData);
+    return responseData;
   };
 
   if (loading) {
