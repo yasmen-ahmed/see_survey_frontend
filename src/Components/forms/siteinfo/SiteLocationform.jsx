@@ -115,7 +115,7 @@ const SiteLocationForm = () => {
     "https://maps.google.com/maps?q=33.6844,73.0479&z=15&output=embed"; // Default Islamabad
 
   return (
-    <div className="min-h-screen flex  items-start space-x-10 justify-start bg-gray-100 p-2">
+    <div className="max-h-screen flex  items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
         <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" onSubmit={handleSubmit}>
           {/* Text Fields */}

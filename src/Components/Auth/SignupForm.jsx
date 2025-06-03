@@ -19,26 +19,31 @@ const LoginForm = () => {
     setError("");
     setSuccess("");
     setLoading(true);
-    try {
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, formData);
-      if (response.data.token) {
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("name", response.data.user.firstName + " " + response.data.user.lastName);
-        localStorage.setItem("role", response.data.user.role);
+    // try {
+    //   const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, formData);
+    //   if (response.data.token) {
+    //     localStorage.setItem("token", response.data.token);
+    //     localStorage.setItem("name", response.data.user.firstName + " " + response.data.user.lastName);
+    //     localStorage.setItem("role", response.data.user.role);
+    // Dummy login: username 'admin', password 'admin123'
+    setTimeout(() => {
+      if (formData.login === 'admin' && formData.password === 'admin123') {
+        localStorage.setItem("token", "dummy-token");
+        localStorage.setItem("name", "Admin User");
+        localStorage.setItem("role", "admin");
         setError("");
         setSuccess("Login successful! Redirecting...");
-        setTimeout(() => {
-          navigate('/landingpage');
-        }, 3000);
+        // setTimeout(() => {
+        //   navigate('/landingpage');
+        // }, 3000);
+        navigate('/landingpage');
       } else {
-        setError(response.data.message || "Login failed. Please check your credentials.");
+        // setError(response.data.message || "Login failed. Please check your credentials.");
+        setError("Login failed. Please use username 'admin' and password 'admin123'.");
       }
-    } catch (err) {
-      console.error("Login error:", err.message);
-      setError("Login failed. Please check your credentials.");
-    } finally {
       setLoading(false);
-    }
+    // }
+    }, 1000);
   };
 
   return (

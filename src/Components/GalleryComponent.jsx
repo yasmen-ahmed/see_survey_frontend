@@ -20,7 +20,7 @@ const ImageUploader = ({images}) => {
   };
 
   return (
-    <div className="grid grid-cols-1 w-[20%] h-[900px] bg-white rounded-xl shadow-md p-5 overflow-y-auto">
+    <div className="grid grid-cols-1 w-[20%] h-[858px] bg-white rounded-xl shadow-md p-5 overflow-y-auto">
       {images.map((field) => (
         <div key={field.name} className="flex flex-col pb-5">
           <label className="font-semibold mb-1">{field.label}</label>
