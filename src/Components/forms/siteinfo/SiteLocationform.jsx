@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import axios from "axios"; // Make sure to import axios
+import ImageUploader from "../../GalleryComponent";
 
 const SiteLocationForm = () => {
   const { sessionId, siteId } = useParams(); // sessionId and siteId from URL
  
-
+  const [imagePreview, setImagePreview] = useState(null);
   // Fetch survey details for pre-filling when session ID changes
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/sites/${siteId}`)
@@ -73,14 +74,28 @@ const SiteLocationForm = () => {
     }
   };
 
+  const images = [
+    { label: 'Site entrance', name: 'site_entrance' },
+    { label: 'Building Stairs / Lift', name: 'building_stairs_lift' },
+    { label: 'Roof entrance', name: 'roof_entrance' },
+    { label: 'Base station Shelter / Room', name: 'base_station_shelter_room' },
+    { label: 'Site Name on shelter/room', name: 'site_name_on_shelter_room' },
+    { label: 'Crane Access to the Street', name: 'crane_access_to_the_street' },
+    { label: 'Crane Location', name: 'crane_location' },
+    { label: 'Site Environment View', name: 'site_environment_view' },
+  ];
+  
   // Handle input change for form fields
   const handleInputChange = (e) => {
     const { name, value, type, files } = e.target;
-    if (type === "file") {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: files[0], // Save file in state (not sent to backend yet)
-      }));
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -100,8 +115,8 @@ const SiteLocationForm = () => {
     "https://maps.google.com/maps?q=33.6844,73.0479&z=15&output=embed"; // Default Islamabad
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-full ">
+    <div className="min-h-screen flex  items-start space-x-10 justify-start bg-gray-100 p-2">
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
         <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" onSubmit={handleSubmit}>
           {/* Text Fields */}
           <div className="grid grid-cols-1 gap-2">
@@ -202,37 +217,7 @@ const SiteLocationForm = () => {
           />
           </div>
 
-          {/* Image Uploads */}
-          <div className="flex flex-col">
-            <label className="font-semibold mb-1">Front View Image</label>
-            <input
-              type="file"
-              name="frontImage"
-              accept="image/*"
-              onChange={handleInputChange}
-              className="border p-2 rounded-md"
-            />
-          </div>
-          <div className="flex flex-col">
-            <label className="font-semibold mb-1">Side View Image</label>
-            <input
-              type="file"
-              name="sideImage"
-              accept="image/*"
-              onChange={handleInputChange}
-              className="border p-2 rounded-md"
-            />
-          </div>
-          <div className="flex flex-col">
-            <label className="font-semibold mb-1">Top View Image</label>
-            <input
-              type="file"
-              name="topImage"
-              accept="image/*"
-              onChange={handleInputChange}
-              className="border p-2 rounded-md"
-            />
-          </div>
+    
 
           <div className="md:col-span-2 flex justify-center">
             <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
@@ -254,6 +239,9 @@ const SiteLocationForm = () => {
           ></iframe>
         </div>
       </div>
+    
+    <ImageUploader images={images} />
+   
     </div>
   );
 };

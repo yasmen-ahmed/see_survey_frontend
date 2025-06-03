@@ -25,7 +25,7 @@ const Header=()=> {
   };
 
     return (
-      <div className="bg-white shadow p-0 flex justify-between items-center">
+      <div className="bg-white shadow p-0 fixed top-0 left-0 w-full h-20 z-30 grid grid-cols-3">
         <div  className="px-6">
           <img
             src="/Noki.png"

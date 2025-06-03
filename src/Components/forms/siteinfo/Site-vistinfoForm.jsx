@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
+import ImageUploader from "../../GalleryComponent";
 
 function SitevistinfoForm() {
   const { sessionId, siteId } = useParams(); 
@@ -15,6 +16,17 @@ function SitevistinfoForm() {
     customer_representative_title: "",
     survey_date: "",
   });
+  const images = [
+    { label: 'Site entrance', name: 'site_entrance' },
+    { label: 'Building Stairs / Lift', name: 'building_stairs_lift' },
+    { label: 'Roof entrance', name: 'roof_entrance' },
+    { label: 'Base station Shelter / Room', name: 'base_station_shelter_room' },
+    { label: 'Site Name on shelter/room', name: 'site_name_on_shelter_room' },    
+    { label: 'Crane Access to the Street', name: 'crane_access_to_the_street' },
+    { label: 'Crane Location', name: 'crane_location' },
+    { label: 'Site Environment View', name: 'site_environment_view' },
+  ];
+  
 
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/site-visit-info/${sessionId}`)
@@ -84,8 +96,8 @@ function SitevistinfoForm() {
   };
 
   return (
-  <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-full">
+  <div className="min-h-screen flex  items-start space-x-10 justify-start bg-gray-100 p-2">
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
         <form className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8" onSubmit={handleSubmit}>
 
           {/* Survey Date */}
@@ -210,6 +222,7 @@ function SitevistinfoForm() {
           </div>
         </form>
       </div>
+      <ImageUploader images={images} />
     </div>
   );
 }

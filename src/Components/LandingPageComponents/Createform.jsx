@@ -126,6 +126,10 @@ function Createform() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (response.status === 200 || response.status === 201) {
+        localStorage.setItem('ct', response.data.ct);
+        localStorage.setItem('project', response.data.project);
+        localStorage.setItem('site_id', response.data.site_id);
+      
         setSuccess('Survey created successfully!');
         navigate('/landingpage');
       } else {

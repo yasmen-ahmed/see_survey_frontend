@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
+import ImageUploader from "../../GalleryComponent";
 
 function SiteInformationForm() {
   
@@ -67,6 +68,17 @@ const [formData, setFormData] = useState({
     }
   };
 
+  const images = [
+    { label: 'Site entrance', name: 'site_entrance' },
+    { label: 'Building Stairs / Lift', name: 'building_stairs_lift' },
+    { label: 'Roof entrance', name: 'roof_entrance' },
+    { label: 'Base station Shelter / Room', name: 'base_station_shelter_room' },
+    { label: 'Site Name on shelter/room', name: 'site_name_on_shelter_room' },
+    { label: 'Crane Access to the Street', name: 'crane_access_to_the_street' },
+    { label: 'Crane Location', name: 'crane_location' },
+    { label: 'Site Environment View', name: 'site_environment_view' },
+  ];
+  
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -103,9 +115,9 @@ const [formData, setFormData] = useState({
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-full ">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="min-h-screen flex  items-start space-x-10 justify-start bg-gray-100 p-2">
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
     
           <div>
             <label className="block font-medium mb-1">Site Located at</label>
@@ -154,7 +166,7 @@ const [formData, setFormData] = useState({
                 />
                Highway Road
               </label>
-              <label className="flex items-center">
+              <label className="flex items-center col-span-2">
                 <input
                   type="radio"
                   name="site_located_at"
@@ -476,7 +488,7 @@ const [formData, setFormData] = useState({
           
           <div>
             <label className="block font-medium mb-1">Location of Existing Telecom Racks & Cabinets </label>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+            <div className="flex gap-2">
               {["Outdoor", "Shelter", "Room", "Data Center", "Other"].map((slot) => (
                 <label key={slot} className="flex items-center">
                   <input
@@ -496,7 +508,7 @@ const [formData, setFormData] = useState({
 
           <div>
             <label className="block font-medium mb-1">Location of Planned New Telecom Racks & Cabinets </label>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+            <div className="flex gap-2">
               {["Outdoor", "Shelter", "Room", "Data Center", "Other"].map((slot) => (
                 <label key={slot} className="flex items-center">
                   <input
@@ -543,6 +555,7 @@ const [formData, setFormData] = useState({
         </button>
       </div>
     </div>
+    <ImageUploader images={images} />
   </div>
   
   );

@@ -23,7 +23,7 @@ const SidebarTabs = () => {
   ];
 
   return (
-    <aside className="w-60 bg-white border-r p-4 min-h-screen">
+    <aside className="w-60 bg-white border-r p-4 fixed top-20 left-0 h-[calc(100vh-5rem)] z-30 overflow-y-auto">
       <nav className="space-y-3">
         {navItems.map(({ label, icon, path }) => (
           <NavLink

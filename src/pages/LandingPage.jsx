@@ -21,7 +21,7 @@ const LandingPage = () => {
   return (
     <div>
      <Header/>
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 pt-40">
       <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-lg p-8">
 
         {/* Main Buttons */}
