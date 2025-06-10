@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import ImageUploader from "../../GalleryComponent";
+import { showSuccess, showError } from "../../../utils/notifications";
 
 function SitevistinfoForm() {
   const { sessionId, siteId } = useParams(); 
@@ -87,11 +88,11 @@ function SitevistinfoForm() {
 
     try {
       const response=await axios.put(`${import.meta.env.VITE_API_URL}/api/site-visit-info/${sessionId}`,payload);
-      alert("Data submitted successfully!");
+      showSuccess('Data submitted successfully!');
       console.log(response)
     } catch (err) {
       console.error("Error:", err);
-      alert("Error submitting data. Please try again.");
+      showError('Error submitting data. Please try again.');
     }
   };
 
