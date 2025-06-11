@@ -5,7 +5,7 @@ export const showNotification = (type, message, options = {}) => {
   const defaultOptions = {
     text: message,
     icon: type, // 'success', 'error', 'warning', 'info'
-    timer: 1000,
+    timer: 3000,
     timerProgressBar: true,
     showConfirmButton: false,
     position: 'top-right',

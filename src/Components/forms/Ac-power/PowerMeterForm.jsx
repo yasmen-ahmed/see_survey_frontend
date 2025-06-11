@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import { showSuccess, showError } from "../../../utils/notifications";
 import ImageUploader from "../../GalleryComponent";
+import { FaRegTrashAlt } from "react-icons/fa";
 
 const PowerMeterForm = () => {
   const { sessionId } = useParams();
