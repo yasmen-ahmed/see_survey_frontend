@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { showSuccess, showError } from '../../../utils/notifications';
 import ImageUploader from '../../GalleryComponent';
+import DynamicTable from '../../DynamicTable';
 
 const OutdoorCabinetsForm = () => {
   const { sessionId } = useParams();
@@ -24,17 +25,35 @@ const OutdoorCabinetsForm = () => {
       powerCableCrossSection: '',
       blvd: '',
       blvdFreeCBs: '',
-      blvdCBsRatings: '',
+      blvdCBsRatings: [],
       llvd: '',
       llvdFreeCBs: '',
-      llvdCBsRatings: '',
+      llvdCBsRatings: [],
       pdu: '',
       pduFreeCBs: '',
-      pduCBsRatings: '',
+      pduCBsRatings: [],
       internalLayout: '',
       freeU: '',
     }))
   });
+
+  const [connectedModules, setConnectedModules] = useState([]);
+
+  // Configuration for CB ratings tables
+  const cbRatingsTableRows = [
+    {
+      key: 'rating',
+      label: 'CB Rating (Amp)',
+      type: 'number',
+      placeholder: 'Enter rating...'
+    },
+    {
+      key: 'connected_load',
+      label: 'Connected Load',
+      type: 'textarea',
+      placeholder: 'Describe connected load...'
+    }
+  ];
 
   // Fetch existing data when component loads
   useEffect(() => {
@@ -44,9 +63,55 @@ const OutdoorCabinetsForm = () => {
         console.log("Fetched data:", data);
 
         if (data) {
+          // Create a default cabinet template
+          const defaultCabinet = {
+            type: [],
+            vendor: '',
+            model: '',
+            antiTheft: '',
+            coolingType: '',
+            coolingCapacity: '',
+            compartments: '',
+            hardware: [],
+            acPowerFeed: '',
+            cbNumber: '',
+            powerCableLength: '',
+            powerCableCrossSection: '',
+            blvd: '',
+            blvdFreeCBs: '',
+            blvdCBsRatings: [],
+            llvd: '',
+            llvdFreeCBs: '',
+            llvdCBsRatings: [],
+            pdu: '',
+            pduFreeCBs: '',
+            pduCBsRatings: [],
+            internalLayout: '',
+            freeU: '',
+          };
+
+          // Merge API data with default structure
+          const mergedCabinets = Array(10).fill(null).map((_, index) => {
+            const apiCabinet = data.cabinets?.[index] || {};
+            return {
+              id: index + 1,
+              ...defaultCabinet,
+              ...apiCabinet,
+              // Ensure arrays are properly initialized
+              type: Array.isArray(apiCabinet.type) ? apiCabinet.type : [],
+              hardware: Array.isArray(apiCabinet.hardware) ? apiCabinet.hardware : [],
+              blvdCBsRatings: Array.isArray(apiCabinet.blvdCBsRatings) ? apiCabinet.blvdCBsRatings : [],
+              llvdCBsRatings: Array.isArray(apiCabinet.llvdCBsRatings) ? apiCabinet.llvdCBsRatings : [],
+              pduCBsRatings: Array.isArray(apiCabinet.pduCBsRatings) ? apiCabinet.pduCBsRatings : [],
+            };
+          });
+
+          console.log("API cabinets data:", data.cabinets);
+          console.log("Merged cabinets data:", mergedCabinets);
+
           setFormData({
             numberOfCabinets: data.numberOfCabinets || '',
-            cabinets: data.cabinets || formData.cabinets
+            cabinets: mergedCabinets
           });
         }
       })
@@ -57,7 +122,6 @@ const OutdoorCabinetsForm = () => {
         }
       });
   }, [sessionId]);
-  const [connectedModules, setConnectedModules] = useState([]);
 
   useEffect(() => {
     const fetchModules = async () => {
@@ -101,6 +165,25 @@ const OutdoorCabinetsForm = () => {
     }));
   };
 
+  // Handle CB ratings table data changes
+  const handleCBRatingsChange = (cabinetIndex, equipmentType, newData) => {
+    setFormData(prev => ({
+      ...prev,
+      cabinets: prev.cabinets.map((cabinet, index) =>
+        index === cabinetIndex
+          ? { ...cabinet, [`${equipmentType}CBsRatings`]: newData }
+          : cabinet
+      )
+    }));
+  };
+
+  // Get table data for a specific cabinet and equipment type
+  const getCBRatingsTableData = (cabinetIndex, equipmentType) => {
+    const cabinet = formData.cabinets[cabinetIndex];
+    const ratings = cabinet?.[`${equipmentType}CBsRatings`] || [];
+    return ratings.length > 0 ? ratings : [];
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -136,25 +219,25 @@ const OutdoorCabinetsForm = () => {
 
   // Helper function to check if any cabinet has AC power feed
   const hasAnyACPowerFeed = () => {
-    const activeCabinets = formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0);
+    const activeCabinets = formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1);
     return activeCabinets.some(cabinet => cabinet.acPowerFeed === 'Yes');
   };
 
   // Helper function to check if any cabinet has BLVD
   const hasAnyBLVD = () => {
-    const activeCabinets = formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0);
+    const activeCabinets = formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1);
     return activeCabinets.some(cabinet => cabinet.blvd === 'Yes');
   };
 
   // Helper function to check if any cabinet has LLVD
   const hasAnyLLVD = () => {
-    const activeCabinets = formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0);
+    const activeCabinets = formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1);
     return activeCabinets.some(cabinet => cabinet.llvd === 'Yes');
   };
 
   // Helper function to check if any cabinet has PDU
   const hasAnyPDU = () => {
-    const activeCabinets = formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0);
+    const activeCabinets = formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1);
     return activeCabinets.some(cabinet => cabinet.pdu === 'Yes');
   };
 
@@ -163,18 +246,21 @@ const OutdoorCabinetsForm = () => {
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
         <form onSubmit={handleSubmit} className="space-y-4">
 
-
           {/* Number of Cabinets Selection */}
           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
             <label className="block font-semibold mb-2">How many cabinets existing on site?</label>
             <select
               name="numberOfCabinets"
               value={formData.numberOfCabinets}
-              onChange={(e) => setFormData(prev => ({ ...prev, numberOfCabinets: e.target.value }))}
+              onChange={(e) => {
+                console.log("Changing number of cabinets to:", e.target.value);
+                console.log("Current formData.cabinets length:", formData.cabinets.length);
+                console.log("First cabinet structure:", formData.cabinets[0]);
+                setFormData(prev => ({ ...prev, numberOfCabinets: e.target.value }));
+              }}
               className="border p-3 rounded-md w-48"
               required
             >
-              <option value="">Select (1 to 10)</option>
               {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
                 <option key={num} value={num}>{num}</option>
               ))}
@@ -182,27 +268,34 @@ const OutdoorCabinetsForm = () => {
           </div>
 
           {/* Table Layout */}
-          <div className="overflow-x-auto border rounded-lg">
-            <table className="w-full border-collapse">
-              <thead className="bg-blue-500 text-white sticky top-0 z-10">
+          <div className="overflow-auto max-h-[600px]">
+            <table className="table-auto w-full border-collapse">
+              <thead className="bg-blue-500 text-white">
                 <tr>
-                  <th className="border px-4 py-3 text-left font-semibold sticky left-0 bg-blue-500 z-20  min-w-[400px]">
+                  <th
+                    className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-30"
+                    style={{ width: '300px', minWidth: '300px', maxWidth: '300px' }}
+                  >
                     Field Description
                   </th>
-                  {Array.from({ length: parseInt(formData.numberOfCabinets) || 0 }, (_, i) => (
-                    <th key={i} className="border px-4 py-3 text-center font-semibold min-w-[450px]">
+                  {Array.from({ length: parseInt(formData.numberOfCabinets) || 1 }, (_, i) => (
+                    <th
+                      key={i}
+                      className="border px-4 py-3 text-center font-semibold min-w-[430px] sticky top-0 bg-blue-500 z-20"
+                    >
                       Existing outdoor cabinet #{i + 1}
                     </th>
                   ))}
                 </tr>
               </thead>
+
               <tbody>
                 {/* Cabinet Type */}
-                <tr className="">
-                  <td className="border px-4 py-3 font-semibold sticky left-0  z-10">
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                     Cabinet type
                   </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className="border px-2 py-2">
                       <div className="grid grid-cols-1 md:grid-cols-5 gap-1">
                         {cabinetTypes.map(type => (
@@ -223,10 +316,10 @@ const OutdoorCabinetsForm = () => {
 
                 {/* Cabinet Vendor */}
                 <tr>
-                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-white z-10">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                     Cabinet vendor
                   </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className="border px-2 py-2">
                       <div className="grid grid-cols-6 gap-1">
                         {vendors.map(vendor => (
@@ -249,10 +342,10 @@ const OutdoorCabinetsForm = () => {
 
                 {/* Cabinet Model */}
                 <tr className="bg-gray-50">
-                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-gray-50 z-10">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                     Cabinet model
                   </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className="border px-2 py-2">
                       <select
                         value={cabinet.model}
@@ -270,10 +363,10 @@ const OutdoorCabinetsForm = () => {
 
                 {/* Anti Theft */}
                 <tr>
-                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-white z-10">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                     Cabinet has anti theft?
                   </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className="border px-2 py-2">
                       <div className="flex gap-4">
                         {['Yes', 'No'].map(option => (
@@ -296,10 +389,10 @@ const OutdoorCabinetsForm = () => {
 
                 {/* Cooling Type */}
                 <tr className="bg-gray-50">
-                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-gray-50 z-10">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                     Cooling type
                   </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className="border px-2 py-2">
                       <div className="grid grid-cols-2 gap-1">
                         {['Air-condition', 'Fan-filter'].map(option => (
@@ -322,10 +415,10 @@ const OutdoorCabinetsForm = () => {
 
                 {/* Cooling Capacity */}
                 <tr>
-                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-white z-10">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                     Cooling capacity (watt)
                   </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className="border px-2 py-2">
                       <input
                         type="number"
@@ -340,10 +433,10 @@ const OutdoorCabinetsForm = () => {
 
                 {/* Compartments */}
                 <tr className="bg-gray-50">
-                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-gray-50 z-10">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                     How many compartment?
                   </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className="border px-2 py-2">
                       <div className="flex gap-4">
                         {['1', '2'].map(option => (
@@ -366,10 +459,10 @@ const OutdoorCabinetsForm = () => {
 
                 {/* Existing Hardware */}
                 <tr>
-                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-white z-10">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                     Existing hardware inside the cabinet
                   </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className="border px-2 py-2">
                       <div className="grid grid-cols-3 gap-1">
                         {hardwareOptions.map(option => (
@@ -389,11 +482,11 @@ const OutdoorCabinetsForm = () => {
                 </tr>
 
                 {/* AC Power Feed */}
-                <tr>
-                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-white z-10">
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                     Does the cabinet has AC power feed from the main AC panel?
                   </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className="border px-2 py-2">
                       <div className="flex gap-4">
                         {['Yes', 'No'].map(option => (
@@ -417,24 +510,22 @@ const OutdoorCabinetsForm = () => {
                 {/* CB Number - Only show if any cabinet has AC power feed */}
                 {hasAnyACPowerFeed() && (
                   <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-white z-10">
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
                       what is the CB number in the AC panel?
                     </td>
-                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                       <td key={cabinetIndex} className="border px-2 py-2">
                         <select
                           value={cabinet.cbNumber}
                           onChange={(e) => handleChange(cabinetIndex, 'cbNumber', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
+                          className="w-full p-2 border rounded text-sm "
                           disabled={cabinet.acPowerFeed !== 'Yes'}
                         >
                           <option value="">Select</option>
                           {connectedModules.map((module, index) => (
                             <option key={index} value={module}>{module}</option>
                           ))}
-                         
                         </select>
-                        
                       </td>
                     ))}
                   </tr>
@@ -442,19 +533,19 @@ const OutdoorCabinetsForm = () => {
 
                 {/* Power Cable Length - Only show if any cabinet has AC power feed */}
                 {hasAnyACPowerFeed() && (
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-gray-50 z-10">
+                  <tr >
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
                       Length of power cable from the AC panel to the CB inside the cabinet (meter)
                     </td>
-                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                       <td key={cabinetIndex} className="border px-2 py-2">
                         <input
                           type="number"
                           value={cabinet.powerCableLength}
                           onChange={(e) => handleChange(cabinetIndex, 'powerCableLength', e.target.value)}
                           className={`w-full p-2 border rounded text-sm ${cabinet.acPowerFeed !== 'Yes'
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                              : ''
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : ''
                             }`}
                           placeholder={cabinet.acPowerFeed === 'Yes' ? '000' : 'N/A'}
                           disabled={cabinet.acPowerFeed !== 'Yes'}
@@ -467,18 +558,18 @@ const OutdoorCabinetsForm = () => {
                 {/* Power Cable Cross Section - Only show if any cabinet has AC power feed */}
                 {hasAnyACPowerFeed() && (
                   <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-white z-10">
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
                       Cross section of power cable from the AC panel to the CB inside the cabinet (mm)
                     </td>
-                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                       <td key={cabinetIndex} className="border px-2 py-2">
                         <input
                           type="number"
                           value={cabinet.powerCableCrossSection}
                           onChange={(e) => handleChange(cabinetIndex, 'powerCableCrossSection', e.target.value)}
                           className={`w-full p-2 border rounded text-sm ${cabinet.acPowerFeed !== 'Yes'
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                              : ''
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : ''
                             }`}
                           placeholder={cabinet.acPowerFeed === 'Yes' ? '000' : 'N/A'}
                           disabled={cabinet.acPowerFeed !== 'Yes'}
@@ -490,10 +581,10 @@ const OutdoorCabinetsForm = () => {
 
                 {/* BLVD */}
                 <tr className="bg-gray-50">
-                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-gray-50 z-10">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                     Is there BLVD in the cabinet?
                   </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className="border px-2 py-2">
                       <div className="flex gap-4">
                         {['Yes', 'No'].map(option => (
@@ -516,11 +607,11 @@ const OutdoorCabinetsForm = () => {
 
                 {/* BLVD Free CBs - Only show if any cabinet has BLVD */}
                 {hasAnyBLVD() && (
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-white z-10">
+                  <tr >
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
                       Does the BLVD has free CBs?
                     </td>
-                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                       <td key={cabinetIndex} className="border px-2 py-2">
                         <div className="flex gap-4">
                           {['Yes', 'No'].map(option => (
@@ -546,35 +637,47 @@ const OutdoorCabinetsForm = () => {
                 )}
 
                 {/* BLVD CBs Ratings - Only show if any cabinet has BLVD */}
-                {/* {hasAnyBLVD() && (
-                  <tr className="bg-red-100">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-red-100 z-10">
+                {hasAnyBLVD() && (
+                  <tr className="bg-gray-50">
+                    <td className="border px-4  font-semibold sticky left-0 bg-blue-300 text-white z-10">
                       Existing BLVD CBs ratings & connected loads
                     </td>
-                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
-                      <td key={cabinetIndex} className="border px-2 py-2">
-                        <textarea
-                          value={cabinet.blvdCBsRatings}
-                          onChange={(e) => handleChange(cabinetIndex, 'blvdCBsRatings', e.target.value)}
-                          className={`w-full p-2 border rounded text-sm resize-none ${cabinet.blvd !== 'Yes'
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                              : ''
-                            }`}
-                          rows="3"
-                          placeholder={cabinet.blvd === 'Yes' ? "Table with 3 rows & 10 columns, see 'Tables' tab fig #2" : 'N/A'}
-                          disabled={cabinet.blvd !== 'Yes'}
-                        />
+                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
+                      <td key={cabinetIndex} className="border">
+                        {cabinet.blvd === 'Yes' ? (
+                          <div className="">
+                            <DynamicTable
+                              title=""
+                              rows={cbRatingsTableRows}
+                              initialData={getCBRatingsTableData(cabinetIndex, 'blvd')}
+                              onChange={(newData) => handleCBRatingsChange(cabinetIndex, 'blvd', newData)}
+                              minColumns={1}
+                              autoExpand={true}
+                              enableDragDrop={true}
+                              enableDelete={true}
+                              className=""
+                              tableClassName="w-full border border-gray-300"
+                              headerClassName="bg-gray-200"
+                              cellClassName="border px-2 py-2"
+                              labelClassName="border px-2 py-2 font-semibold bg-gray-50 text-xs"
+                            />
+                          </div>
+                        ) : (
+                          <div className="text-gray-400 text-sm p-4 text-center">
+                            N/A (No BLVD)
+                          </div>
+                        )}
                       </td>
                     ))}
                   </tr>
-                )} */}
+                )}
 
                 {/* LLVD */}
-                <tr>
-                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-white z-10">
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                     Is there LLVD in the cabinet?
                   </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className="border px-2 py-2">
                       <div className="flex gap-4">
                         {['Yes', 'No'].map(option => (
@@ -597,11 +700,11 @@ const OutdoorCabinetsForm = () => {
 
                 {/* LLVD Free CBs - Only show if any cabinet has LLVD */}
                 {hasAnyLLVD() && (
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-gray-50 z-10">
+                  <tr >
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
                       Does the LLVD has free CBs?
                     </td>
-                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                       <td key={cabinetIndex} className="border px-2 py-2">
                         <div className="flex gap-4">
                           {['Yes', 'No'].map(option => (
@@ -627,35 +730,47 @@ const OutdoorCabinetsForm = () => {
                 )}
 
                 {/* LLVD CBs Ratings - Only show if any cabinet has LLVD */}
-                {/* {hasAnyLLVD() && (
-                  <tr className="bg-red-100">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-red-100 z-10">
+                {hasAnyLLVD() && (
+                  <tr className="bg-gray-50">
+                    <td className="border px-4  font-semibold sticky left-0 bg-blue-300 text-white z-10">
                       Existing LLVD CBs ratings & connected loads
                     </td>
-                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
-                      <td key={cabinetIndex} className="border px-2 py-2">
-                        <textarea
-                          value={cabinet.llvdCBsRatings}
-                          onChange={(e) => handleChange(cabinetIndex, 'llvdCBsRatings', e.target.value)}
-                          className={`w-full p-2 border rounded text-sm resize-none ${cabinet.llvd !== 'Yes'
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                              : ''
-                            }`}
-                          rows="3"
-                          placeholder={cabinet.llvd === 'Yes' ? "Table with 3 rows & 10 columns, see 'Tables' tab fig #2" : 'N/A'}
-                          disabled={cabinet.llvd !== 'Yes'}
-                        />
+                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
+                      <td key={cabinetIndex} className="border">
+                        {cabinet.llvd === 'Yes' ? (
+                          <div className="">
+                            <DynamicTable
+                              title=""
+                              rows={cbRatingsTableRows}
+                              initialData={getCBRatingsTableData(cabinetIndex, 'llvd')}
+                              onChange={(newData) => handleCBRatingsChange(cabinetIndex, 'llvd', newData)}
+                              minColumns={1}
+                              autoExpand={true}
+                              enableDragDrop={true}
+                              enableDelete={true}
+                              className=""
+                              tableClassName="w-full border border-gray-300"
+                              headerClassName="bg-gray-200"
+                              cellClassName="border px-2 py-2"
+                              labelClassName="border px-2 py-2 font-semibold bg-gray-50 text-xs"
+                            />
+                          </div>
+                        ) : (
+                          <div className="text-gray-400 text-sm p-4 text-center">
+                            N/A (No LLVD)
+                          </div>
+                        )}
                       </td>
                     ))}
                   </tr>
-                )} */}
+                )}
 
                 {/* PDU */}
-                <tr>
-                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-white z-10">
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                     Is there PDU in the cabinet?
                   </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className="border px-2 py-2">
                       <div className="flex gap-4">
                         {['Yes', 'No'].map(option => (
@@ -678,11 +793,11 @@ const OutdoorCabinetsForm = () => {
 
                 {/* PDU Free CBs - Only show if any cabinet has PDU */}
                 {hasAnyPDU() && (
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-gray-50 z-10">
+                  <tr >
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
                       Does the PDU has free CBs?
                     </td>
-                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                       <td key={cabinetIndex} className="border px-2 py-2">
                         <div className="flex gap-4">
                           {['Yes', 'No'].map(option => (
@@ -708,35 +823,47 @@ const OutdoorCabinetsForm = () => {
                 )}
 
                 {/* PDU CBs Ratings - Only show if any cabinet has PDU */}
-                {/* {hasAnyPDU() && (
-                  <tr className="bg-red-100">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-red-100 z-10">
+                {hasAnyPDU() && (
+                  <tr className="bg-gray-50">
+                    <td className="border px-4  font-semibold sticky left-0 bg-blue-300 text-white z-10">
                       Existing PDU CBs ratings & connected loads
                     </td>
-                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
-                      <td key={cabinetIndex} className="border px-2 py-2">
-                        <textarea
-                          value={cabinet.pduCBsRatings}
-                          onChange={(e) => handleChange(cabinetIndex, 'pduCBsRatings', e.target.value)}
-                          className={`w-full p-2 border rounded text-sm resize-none ${cabinet.pdu !== 'Yes'
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                              : ''
-                            }`}
-                          rows="3"
-                          placeholder={cabinet.pdu === 'Yes' ? "Table with 3 rows & 10 columns, see 'Tables' tab fig #2" : 'N/A'}
-                          disabled={cabinet.pdu !== 'Yes'}
-                        />
+                    {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
+                      <td key={cabinetIndex} className="border">
+                        {cabinet.pdu === 'Yes' ? (
+                          <div className="">
+                            <DynamicTable
+                              title=""
+                              rows={cbRatingsTableRows}
+                              initialData={getCBRatingsTableData(cabinetIndex, 'pdu')}
+                              onChange={(newData) => handleCBRatingsChange(cabinetIndex, 'pdu', newData)}
+                              minColumns={1}
+                              autoExpand={true}
+                              enableDragDrop={true}
+                              enableDelete={true}
+                              className=""
+                              tableClassName="w-full border border-gray-300"
+                              headerClassName="bg-gray-200"
+                              cellClassName="border px-2 py-2"
+                              labelClassName="border px-2 py-2 font-semibold bg-gray-50 text-xs"
+                            />
+                          </div>
+                        ) : (
+                          <div className="text-gray-400 text-sm p-4 text-center">
+                            N/A (No PDU)
+                          </div>
+                        )}
                       </td>
                     ))}
                   </tr>
-                )} */}
+                )}
 
                 {/* Internal Layout */}
                 <tr>
-                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-white z-10">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                     Internal cabinet layout suitable for the installation of new Nokia base band? 19'' rack, internal spacing...
                   </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className="border px-2 py-2">
                       <div className="grid grid-cols-1 gap-1">
                         {['Yes', 'No', 'Yes, with some modifications'].map(option => (
@@ -759,10 +886,10 @@ const OutdoorCabinetsForm = () => {
 
                 {/* Free U */}
                 <tr className="bg-gray-50">
-                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-gray-50 z-10">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                     How many free 19'' U available for telecom hardware installation?
                   </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 0).map((cabinet, cabinetIndex) => (
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className="border px-2 py-2">
                       <input
                         type="number"
@@ -783,7 +910,7 @@ const OutdoorCabinetsForm = () => {
               type="submit"
               className="px-6 py-3 text-white bg-blue-500 rounded hover:bg-blue-700 font-semibold"
             >
-              Submit Outdoor Cabinets Data
+              Save and Continue
             </button>
           </div>
         </form>

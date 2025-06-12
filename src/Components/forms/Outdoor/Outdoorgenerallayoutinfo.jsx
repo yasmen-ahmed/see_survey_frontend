@@ -113,165 +113,170 @@ const OutdoorForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className='p-6 space-y-6 bg-white rounded-xl shadow-md'>
+    <div className="max-h-screen flex  items-start space-x-2 justify-start bg-gray-100 p-2">
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+        <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" onSubmit={handleSubmit}>
 
 
-      {/* Sunshade Field */}
-      <div>
-        <label className='block font-semibold mb-2'>Equipment area covered with sunshade?</label>
-        <div className='flex gap-4'>
-        {['yes', 'no', 'partially'].map((option) => (
-            <label key={option} className='flex items-center'>
+
+          {/* Sunshade Field */}
+          <div>
+            <label className='block font-semibold mb-2'>Equipment area covered with sunshade?</label>
+            <div className='flex gap-4'>
+              {['yes', 'no', 'partially'].map((option) => (
+                <label key={option} className='flex items-center'>
+                  <input
+                    type='radio'
+                    name='sunshade'
+                    value={option}
+                    checked={formData.sunshade === option}
+                    onChange={handleChange}
+                    className='mr-2'
+                  />
+                  {option.charAt(0).toUpperCase() + option.slice(1)}
+                </label>
+              ))}
+            </div>
+            <hr className="my-4" />
+          </div>
+
+          {/* Space for New Cables */}
+          <div>
+            <label className='block font-semibold mb-2'>Is there available space on existing cable tray for new cables?</label>
+            <div className='flex gap-4'>
+              {['Yes', 'No'].map((option) => (
+                <label key={option} className='flex items-center'>
+                  <input
+                    type='radio'
+                    name='spaceForNewCables'
+                    value={option}
+                    checked={formData.spaceForNewCables === option}
+                    onChange={handleChange}
+                    className='mr-2'
+                  />
+                  {option}
+                </label>
+              ))}
+            </div>
+            <hr className="my-4" />
+          </div>
+          {/* Free Positions Field */}
+          <div>
+            <label className='block font-semibold mb-2'>How many free positions available for new cabinets installation?</label>
+            <select
+              name='freePositions'
+              value={formData.freePositions}
+              onChange={handleChange}
+              className='border p-2 rounded w-full'
+            >
+              <option value=''>Select</option>
+              {[0, 1, 2, 3, 4, 5].map((num) => (
+                <option key={num} value={num}>
+                  {num}
+                </option>
+              ))}
+            </select>
+            <hr className="my-4" />
+          </div>
+
+          {/* Cable Tray Fields */}
+          {['Height of existing cable tray from site floor level (cm)', 'Width of existing cable tray (cm)', 'Depth of existing cable tray (cm)'].map((label, index) => (
+            <div key={index}>
+              <label className='block font-semibold mb-2'>{label}</label>
               <input
-                type='radio'
-                name='sunshade'
-                value={option}
-                checked={formData.sunshade === option}
+                type='number'
+                name={['cableTrayHeight', 'cableTrayWidth', 'cableTrayDepth'][index]}
+                value={formData[['cableTrayHeight', 'cableTrayWidth', 'cableTrayDepth'][index]]}
                 onChange={handleChange}
-                className='mr-2'
+                className='border p-2 rounded w-full'
               />
-               {option.charAt(0).toUpperCase() + option.slice(1)}
-            </label>
+              <hr className="my-4" />
+            </div>
           ))}
-        </div>
+
+
+
+          {/* Earth Bus Bars Field */}
+          <div>
+            <label className='block font-semibold mb-2'>How many Earth bus bar available in cabinets location?</label>
+            <select
+              name='earthBusBars'
+              value={formData.earthBusBars}
+              onChange={handleChange}
+              className='border p-2 rounded w-full'
+            >
+              <option value=''>Select</option>
+              {[1, 2, 3].map((num) => (
+                <option key={num} value={num}>
+                  {num}
+                </option>
+              ))}
+            </select>
+            <hr className="my-4" />
+          </div>
+
+          {/* Free Holes in Existing Bus Bars */}
+          <div>
+            <label className='block font-semibold mb-2'>How many free holes in existing bus bars?</label>
+            <select
+              name='freeHolesInBusBars'
+              value={formData.freeHolesInBusBars}
+              onChange={handleChange}
+              className='border p-2 rounded w-full'
+            >
+              <option value=''>Select</option>
+              {[1, 2, 3].map((num) => (
+                <option key={num} value={num}>
+                  {num}
+                </option>
+              ))}
+            </select>
+            <hr className="my-4" />
+          </div>
+
+          {/* Sketch with Measurements */}
+          <div>
+            <label className='block font-semibold mb-2'>Do you have a sketch with measurements for the site including cabinets?</label>
+
+            <div className="flex gap-6">
+              {[{ label: "Yes", value: true }, { label: "No", value: false }].map(({ label, value }) => (
+                <label key={label} className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="hasSketch"
+                    value={value}
+                    checked={formData.hasSketch === value}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "hasSketch",
+                          value: e.target.value === "true", // convert string to boolean
+                        },
+                      })
+                    }
+                    className="mr-2"
+                    required
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+            <hr className="my-4" />
+          </div>
+          <div className="md:col-span-2 flex justify-center">
+            <button
+              type="submit"
+              className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700"
+            >
+              Save and Continue
+            </button>
+          </div>
+
+        </form>
+
+
       </div>
-
-      {/* Free Positions Field */}
-      <div>
-        <label className='block font-semibold mb-2'>How many free positions available for new cabinets installation?</label>
-        <select
-          name='freePositions'
-          value={formData.freePositions}
-          onChange={handleChange}
-          className='border p-2 rounded w-full'
-        >
-          <option value=''>Select</option>
-          {[0, 1, 2, 3, 4, 5].map((num) => (
-            <option key={num} value={num}>
-              {num}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Cable Tray Fields */}
-      {['Height of existing cable tray from site floor level (cm)', 'Width of existing cable tray (cm)', 'Depth of existing cable tray (cm)'].map((label, index) => (
-        <div key={index}>
-          <label className='block font-semibold mb-2'>{label}</label>
-          <input
-            type='number'
-            name={['cableTrayHeight', 'cableTrayWidth', 'cableTrayDepth'][index]}
-            value={formData[['cableTrayHeight', 'cableTrayWidth', 'cableTrayDepth'][index]]}
-            onChange={handleChange}
-            className='border p-2 rounded w-full'
-          />
-        </div>
-      ))}
-
-      {/* Space for New Cables */}
-      <div>
-        <label className='block font-semibold mb-2'>Is there available space on existing cable tray for new cables?</label>
-        <div className='flex gap-4'>
-          {['Yes', 'No'].map((option) => (
-            <label key={option} className='flex items-center'>
-              <input
-                type='radio'
-                name='spaceForNewCables'
-                value={option}
-                checked={formData.spaceForNewCables === option}
-                onChange={handleChange}
-                className='mr-2'
-              />
-              {option}
-            </label>
-          ))}
-        </div>
-
-      </div>
-
-      {/* Earth Bus Bars Field */}
-      <div>
-        <label className='block font-semibold mb-2'>How many Earth bus bar available in cabinets location?</label>
-        <select
-          name='earthBusBars'
-          value={formData.earthBusBars}
-          onChange={handleChange}
-          className='border p-2 rounded w-full'
-        >
-          <option value=''>Select</option>
-          {[1, 2, 3].map((num) => (
-            <option key={num} value={num}>
-              {num}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Free Holes in Existing Bus Bars */}
-      <div>
-        <label className='block font-semibold mb-2'>How many free holes in existing bus bars?</label>
-        <select
-          name='freeHolesInBusBars'
-          value={formData.freeHolesInBusBars}
-          onChange={handleChange}
-          className='border p-2 rounded w-full'
-        >
-          <option value=''>Select</option>
-          {[1, 2, 3].map((num) => (
-            <option key={num} value={num}>
-              {num}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Sketch with Measurements */}
-      <div>
-        <label className='block font-semibold mb-2'>Do you have a sketch with measurements for the site including cabinets?</label>
-        {/* <div className='flex gap-4'>
-          {['Yes', 'No'].map((option) => (
-            <label key={option} className='flex items-center'>
-              <input
-                type='radio'
-                name='hasSketch'
-                value={option}
-                checked={formData.hasSketch === option}
-                onChange={handleChange}
-                className='mr-2'
-              />
-              {option}
-            </label>
-          ))}
-        </div> */}
-        <div className="flex gap-6">
-          {[{ label: "Yes", value: true }, { label: "No", value: false }].map(({ label, value }) => (
-            <label key={label} className="inline-flex items-center">
-              <input
-                type="radio"
-                name="hasSketch"
-                value={value}
-                checked={formData.hasSketch === value}
-                onChange={(e) =>
-                  handleChange({
-                    target: {
-                      name: "hasSketch",
-                      value: e.target.value === "true", // convert string to boolean
-                    },
-                  })
-                }
-                className="mr-2"
-                required
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <button type='submit' className='bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700'>
-        Submit
-      </button>
-    </form>
+    </div>
   );
 };
 
