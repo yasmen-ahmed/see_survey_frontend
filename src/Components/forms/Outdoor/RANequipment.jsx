@@ -28,11 +28,13 @@ const RANBaseBandForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className='p-6 space-y-6 bg-white rounded-xl shadow-md'>
-      <h2 className='text-2xl font-bold text-blue-700 mb-4'>RAN Base Band Information</h2>
+    <div className="max-h-screen flex  items-start space-x-2 justify-start bg-gray-100 p-2">
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+        <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" onSubmit={handleSubmit}>
+ 
 
       <div className='mb-4'>
-        <label className='block font-semibold mb-2'>Existing RAN base band located in?</label>
+        <label className='block font-semibold '>Existing RAN base band located in?</label>
         <select
           className='border p-2 rounded w-full'
           value={formData.ranBaseBandLocation}
@@ -43,10 +45,12 @@ const RANBaseBandForm = () => {
           <option value='Existing cabinet #n'>Existing cabinet #n</option>
           <option value='Other'>Other</option>
         </select>
+        <hr className='my-5'/>
       </div>
+     
 
-      <div className='mb-4'>
-        <label className='block font-semibold mb-2'>Existing RAN base band vendor</label>
+      <div className=''>
+        <label className='block font-semibold '>Existing RAN base band vendor</label>
         <select
           className='border p-2 rounded w-full'
           value={formData.ranBaseBandVendor}
@@ -59,11 +63,12 @@ const RANBaseBandForm = () => {
           <option value='ZTE'>ZTE</option>
           <option value='Other'>Other</option>
         </select>
+        <hr className='my-5'/>
       </div>
 
-      <div className='mb-4'>
-        <label className='block font-semibold mb-2'>Existing RAN base band type/model</label>
-        <div className='space-y-2'>
+      <div className=''>
+        <label className='block font-semibold '>Existing RAN base band type/model</label>
+        <div className=' grid grid-cols-3'>
           {['Nokia Air Scale', 'Nokia Felix', 'Other'].map((type) => (
             <div key={type}>
               <input
@@ -76,11 +81,12 @@ const RANBaseBandForm = () => {
             </div>
           ))}
         </div>
+        <hr className='my-5'/>
       </div>
 
-      <div className='mb-4'>
-        <label className='block font-semibold mb-2'>Where new Nokia base band can be installed? Choose all applicable</label>
-        <div className='space-y-2'>
+      <div className=''>
+        <label className='block font-semibold '>Where new Nokia base band can be installed? Choose all applicable</label>
+        <div className='grid grid-cols-5'>
           {[
             'Existing cabinet #1',
             'Existing cabinet #n',
@@ -98,10 +104,11 @@ const RANBaseBandForm = () => {
             </div>
           ))}
         </div>
+        <hr className='my-5'/>
       </div>
 
-      <div className='mb-4'>
-        <label className='block font-semibold mb-2'>Length of Transmission cable (Optical / Electrical) from new Nokia base band to MW IDU/ODF (meter)</label>
+      <div className=''>
+        <label className='block font-semibold '>Length of Transmission cable (Optical / Electrical) from new Nokia base band to MW IDU/ODF (meter)</label>
         <input
           type='number'
           className='border p-2 rounded w-full'
@@ -109,12 +116,24 @@ const RANBaseBandForm = () => {
           onChange={(e) => handleChange('transmissionCableLength', e.target.value)}
           placeholder='000'
         />
+          <hr className='my-5'/>
       </div>
 
-      <button type='submit' className='bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700'>
-        Submit
-      </button>
+ 
+
+    
+
+      <div className="md:col-span-2 flex justify-center">
+            <button
+              type="submit"
+              className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700"
+            >
+              Save and Continue
+            </button>
+          </div>
     </form>
+    </div>
+     </div>
   );
 };
 
