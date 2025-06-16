@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { showSuccess, showError } from '../../../utils/notifications';
@@ -165,24 +165,59 @@ const OutdoorCabinetsForm = () => {
     }));
   };
 
-  // Handle CB ratings table data changes
-  const handleCBRatingsChange = (cabinetIndex, equipmentType, newData) => {
+  // Get table data for a specific cabinet and equipment type with proper formatting
+  const getCBRatingsTableData = useCallback((cabinetIndex, equipmentType) => {
+    const cabinet = formData.cabinets[cabinetIndex];
+    const ratings = cabinet?.[`${equipmentType}CBsRatings`] || [];
+    
+    if (ratings && ratings.length > 0) {
+      return ratings.map((item, index) => ({
+        id: index + 1,
+        rating: item.rating?.toString() || "",
+        connected_load: item.connected_load || ""
+      }));
+    }
+    return [];
+  }, [formData.cabinets]);
+
+  // Handle CB ratings table data changes with proper data processing
+  const handleCBRatingsChange = useCallback((cabinetIndex, equipmentType, newTableData) => {
+    console.log(`Updating ${equipmentType} CB ratings for cabinet ${cabinetIndex}:`, newTableData);
+    
+    if (!newTableData || newTableData.length === 0) {
+      // If no data, keep empty array but don't return early
+      setFormData(prev => ({
+        ...prev,
+        cabinets: prev.cabinets.map((cabinet, index) =>
+          index === cabinetIndex
+            ? { ...cabinet, [`${equipmentType}CBsRatings`]: [] }
+            : cabinet
+        )
+      }));
+      return;
+    }
+
+    // Process and filter the data
+    const processedData = newTableData
+      .filter(item => {
+        const rating = item.rating?.toString().trim() || '';
+        const load = item.connected_load?.toString().trim() || '';
+        return rating !== '' || load !== '';
+      })
+      .map(item => ({
+        rating: parseFloat(item.rating) || 0,
+        connected_load: item.connected_load || ""
+      }));
+    
     setFormData(prev => ({
       ...prev,
       cabinets: prev.cabinets.map((cabinet, index) =>
         index === cabinetIndex
-          ? { ...cabinet, [`${equipmentType}CBsRatings`]: newData }
+          ? { ...cabinet, [`${equipmentType}CBsRatings`]: processedData }
           : cabinet
       )
     }));
-  };
-
-  // Get table data for a specific cabinet and equipment type
-  const getCBRatingsTableData = (cabinetIndex, equipmentType) => {
-    const cabinet = formData.cabinets[cabinetIndex];
-    const ratings = cabinet?.[`${equipmentType}CBsRatings`] || [];
-    return ratings.length > 0 ? ratings : [];
-  };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -198,11 +233,11 @@ const OutdoorCabinetsForm = () => {
   };
 
   const images = [
-    { label: 'Cabinet Overview Photo', name: 'cabinet_overview_photo' },
-    { label: 'Cabinet Front Photo', name: 'cabinet_front_photo' },
-    { label: 'Cabinet Back Photo', name: 'cabinet_back_photo' },
-    { label: 'Cabinet Interior Photo', name: 'cabinet_interior_photo' },
-    { label: 'Hardware Photo', name: 'hardware_photo' },
+    { label: 'Site outdoor location general photo', name: 'site_outdoor_location_general_photo' },
+    { label: 'Free Position #1 ', name: 'free_position_1' },
+    { label: 'Cabinet #1 photo general photo', name: 'cabinet_1_photo_general_photo' },
+    { label: 'Cabinet #1 Photo 1/4', name: 'cabinet_1_photo_1_4' },
+    { label: 'Cabinet #1 Photo 2/4', name: 'hardware_photo' },
     { label: 'Cooling System Photo', name: 'cooling_system_photo' },
     { label: 'Power Connection Photo', name: 'power_connection_photo' },
     { label: 'Cable Management Photo', name: 'cable_management_photo' },
@@ -647,6 +682,7 @@ const OutdoorCabinetsForm = () => {
                         {cabinet.blvd === 'Yes' ? (
                           <div className="">
                             <DynamicTable
+                              key={`blvd-${cabinetIndex}-${cabinet.blvdCBsRatings?.length || 0}`}
                               title=""
                               rows={cbRatingsTableRows}
                               initialData={getCBRatingsTableData(cabinetIndex, 'blvd')}
@@ -740,6 +776,7 @@ const OutdoorCabinetsForm = () => {
                         {cabinet.llvd === 'Yes' ? (
                           <div className="">
                             <DynamicTable
+                              key={`llvd-${cabinetIndex}-${cabinet.llvdCBsRatings?.length || 0}`}
                               title=""
                               rows={cbRatingsTableRows}
                               initialData={getCBRatingsTableData(cabinetIndex, 'llvd')}
@@ -833,6 +870,7 @@ const OutdoorCabinetsForm = () => {
                         {cabinet.pdu === 'Yes' ? (
                           <div className="">
                             <DynamicTable
+                              key={`pdu-${cabinetIndex}-${cabinet.pduCBsRatings?.length || 0}`}
                               title=""
                               rows={cbRatingsTableRows}
                               initialData={getCBRatingsTableData(cabinetIndex, 'pdu')}

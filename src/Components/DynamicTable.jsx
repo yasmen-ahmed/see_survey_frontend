@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FaRegTrashAlt } from 'react-icons/fa';
 
 const DynamicTable = ({
@@ -24,6 +24,10 @@ const DynamicTable = ({
     });
     return emptyColumn;
   };
+
+  // Use ref to track user interaction state
+  const userInteractionRef = useRef(false);
+  const initializedRef = useRef(false);
 
   const [tableData, setTableData] = useState(() => {
     if (initialData && initialData.length > 0) {
@@ -69,17 +73,22 @@ const DynamicTable = ({
     }
   }, [onChange, rows]);
 
-  // Update parent component when data changes (with debouncing only for parent updates)
+  // Update parent component when data changes (with debouncing)
   useEffect(() => {
     const timer = setTimeout(() => {
       memoizedOnChange(tableData);
-    }, 300); // Increased debounce time for parent updates only
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [tableData, memoizedOnChange]);
 
-  // Update internal state when initialData changes
+  // Update internal state when initialData changes (only on initial load or external changes)
   useEffect(() => {
+    // Skip if this is from user interaction or already initialized with data
+    if (userInteractionRef.current || initializedRef.current) {
+      return;
+    }
+
     if (initialData && initialData.length > 0) {
       const newData = initialData.map((item, index) => ({
         ...item,
@@ -100,27 +109,41 @@ const DynamicTable = ({
         }
       }
       
-      // Only update if data structure has actually changed
-      const currentDataString = JSON.stringify(tableData.map(item => {
-        const { id, ...rest } = item;
-        return rest;
-      }));
-      const newDataString = JSON.stringify(newData.map(item => {
-        const { id, ...rest } = item;
-        return rest;
-      }));
-      
-      if (currentDataString !== newDataString) {
-        setTableData(newData);
-      }
-    } else if (tableData.length === 0) {
-      // If initialData is empty and we have no data, create initial empty column
-      setTableData([createEmptyColumn(1)]);
+      setTableData(newData);
+      initializedRef.current = true;
     }
   }, [initialData, autoExpand, rows]);
 
+  // Ensure we always have an empty column at the end for auto-expansion
+  useEffect(() => {
+    if (!autoExpand || userInteractionRef.current) return;
+    
+    setTableData(prev => {
+      const lastColumn = prev[prev.length - 1];
+      if (!lastColumn) return prev;
+      
+      const hasContent = rows.some(row => {
+        const value = lastColumn[row.key];
+        return value && value.toString().trim() !== '';
+      });
+      
+      // If the last column has content, add a new empty column
+      if (hasContent) {
+        const maxId = Math.max(...prev.map(item => item.id));
+        const newColumn = createEmptyColumn(maxId + 1);
+        console.log("Adding maintenance empty column");
+        return [...prev, newColumn];
+      }
+      
+      return prev;
+    });
+  }, [tableData, autoExpand, rows]); // Run whenever tableData changes
+
   // Handle input changes with immediate auto-expansion
   const handleTableChange = (columnId, fieldKey, value) => {
+    console.log(`Typing in column ${columnId}, field ${fieldKey}, value: "${value}"`);
+    userInteractionRef.current = true;
+    
     setTableData(prev => {
       // Update the specific cell
       const updated = prev.map(item =>
@@ -133,21 +156,31 @@ const DynamicTable = ({
         const isLastColumn = columnIndex === updated.length - 1;
         const hasContent = value && value.toString().trim() !== '';
 
+        console.log(`Column index: ${columnIndex}, is last: ${isLastColumn}, has content: ${hasContent}, total columns: ${updated.length}`);
+
         // If user typed in the last column and it has content, add a new empty column
         if (isLastColumn && hasContent) {
           const maxId = Math.max(...updated.map(item => item.id));
           const newColumn = createEmptyColumn(maxId + 1);
           updated.push(newColumn);
+          console.log(`Added new column with ID ${newColumn.id}, total columns now: ${updated.length}`);
         }
       }
 
       return updated;
     });
+    
+    // Reset user interaction flag after a delay
+    setTimeout(() => {
+      userInteractionRef.current = false;
+    }, 1000);
   };
 
   // Delete a specific column
   const deleteColumn = (columnId) => {
     if (!enableDelete) return;
+    
+    userInteractionRef.current = true;
     
     setTableData(prev => {
       const filtered = prev.filter(item => item.id !== columnId);
@@ -180,6 +213,11 @@ const DynamicTable = ({
       
       return filtered;
     });
+    
+    // Reset user interaction flag after a delay
+    setTimeout(() => {
+      userInteractionRef.current = false;
+    }, 1000);
   };
 
   // Drag and drop handlers
@@ -231,13 +269,17 @@ const DynamicTable = ({
     setDraggedColumnIndex(null);
   };
 
-  // Clean up empty columns (except the last one for auto-expansion)
+  // Clean up empty columns (except the last one for auto-expansion) - IMPROVED VERSION
   const cleanupTable = () => {
     if (!autoExpand) return;
     
+    console.log("Cleanup triggered, current table data:", tableData.length);
+    userInteractionRef.current = true;
+    
     setTableData(prev => {
-      // Keep columns that have content, plus always keep the last column for typing
-      const cleaned = [];
+      // Keep columns that have content
+      const withContent = [];
+      const withoutContent = [];
       
       for (let i = 0; i < prev.length; i++) {
         const item = prev[i];
@@ -246,32 +288,49 @@ const DynamicTable = ({
           return value && value.toString().trim() !== '';
         });
         
-        // Keep if it has content, or if it's the last column
-        if (hasContent || i === prev.length - 1) {
-          cleaned.push(item);
+        if (hasContent) {
+          withContent.push(item);
+        } else {
+          withoutContent.push(item);
         }
       }
       
-      // Ensure we have at least minColumns
-      while (cleaned.length < minColumns) {
+      console.log(`Columns with content: ${withContent.length}, without content: ${withoutContent.length}`);
+      
+      // Start with all columns that have content
+      let cleaned = [...withContent];
+      
+      // Always keep at least one empty column at the end for typing
+      if (withoutContent.length > 0) {
+        // Keep the last empty column (highest ID)
+        const lastEmpty = withoutContent.reduce((latest, current) => 
+          current.id > latest.id ? current : latest
+        );
+        cleaned.push(lastEmpty);
+      } else {
+        // No empty columns exist, create one
         const maxId = cleaned.length > 0 ? Math.max(...cleaned.map(item => item.id)) : 0;
         cleaned.push(createEmptyColumn(maxId + 1));
       }
       
-      // Ensure there's always an empty column at the end
-      const lastColumn = cleaned[cleaned.length - 1];
-      const lastHasContent = rows.some(row => {
-        const value = lastColumn[row.key];
-        return value && value.toString().trim() !== '';
-      });
-      
-      if (lastHasContent) {
+      // Ensure we have at least minColumns
+      while (cleaned.length < minColumns) {
         const maxId = Math.max(...cleaned.map(item => item.id));
         cleaned.push(createEmptyColumn(maxId + 1));
       }
       
+      // Sort by ID to maintain order
+      cleaned.sort((a, b) => a.id - b.id);
+      
+      console.log(`After cleanup: ${cleaned.length} columns`);
+      
       return cleaned;
     });
+    
+    // Reset user interaction flag after a delay
+    setTimeout(() => {
+      userInteractionRef.current = false;
+    }, 1000);
   };
 
   // Render input based on type
