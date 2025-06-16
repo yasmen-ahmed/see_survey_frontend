@@ -309,14 +309,14 @@ const OutdoorCabinetsForm = () => {
                 <tr>
                   <th
                     className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-30"
-                    style={{ width: '300px', minWidth: '300px', maxWidth: '300px' }}
+                    style={{ width: '200px', minWidth: '200px', maxWidth: '200px' }}
                   >
                     Field Description
                   </th>
                   {Array.from({ length: parseInt(formData.numberOfCabinets) || 1 }, (_, i) => (
                     <th
                       key={i}
-                      className="border px-4 py-3 text-center font-semibold min-w-[430px] sticky top-0 bg-blue-500 z-20"
+                      className="border px-4 py-3 text-center font-semibold min-w-[340px] sticky top-0 bg-blue-500 z-20"
                     >
                       Existing outdoor cabinet #{i + 1}
                     </th>
@@ -332,7 +332,7 @@ const OutdoorCabinetsForm = () => {
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className="border px-2 py-2">
-                      <div className="grid grid-cols-1 md:grid-cols-5 gap-1">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-1">
                         {cabinetTypes.map(type => (
                           <label key={type} className="flex items-center gap-1 text-sm">
                             <input
@@ -356,7 +356,7 @@ const OutdoorCabinetsForm = () => {
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className="border px-2 py-2">
-                      <div className="grid grid-cols-6 gap-1">
+                      <div className="grid grid-cols-3 gap-1">
                         {vendors.map(vendor => (
                           <label key={vendor} className="flex items-center gap-1 text-sm">
                             <input
@@ -499,7 +499,7 @@ const OutdoorCabinetsForm = () => {
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className="border px-2 py-2">
-                      <div className="grid grid-cols-3 gap-1">
+                      <div className="grid grid-cols-2 gap-1">
                         {hardwareOptions.map(option => (
                           <label key={option} className="flex items-center gap-1 text-sm">
                             <input
