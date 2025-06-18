@@ -65,7 +65,7 @@ export const tabsConfig ={
   "existing-radio":[
     {label:"Antenna Structure Form",key:"antennas-strut",component:AntennaStructure},
     {label:"MW Antenna",key:"mw-antennas",component:MwAntennas},
-    {label:"External DC,PDU (DC panels,FPFH,…,)",key:"dc-pdu",component:DcDistribution},
+    {label:"External DC PDUs",key:"dc-pdu",component:DcDistribution},
     {label:"Radio Antennas",key:"radio-antenaas",component:RadioAntennas},
     {label:"Radio Units",key:"radio-units",component:RadioUNIT}
 
