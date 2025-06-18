@@ -11,6 +11,82 @@ const DcDistributionForm = () => {
   const [pduCount, setPduCount] = useState("");
   const [pdus, setPdus] = useState([]);
   const [error, setError] = useState("");
+  const [numberOfCabinets, setNumberOfCabinets] = useState(0);
+  // Add state for CB options for each PDU
+  const [cbOptions, setCbOptions] = useState({});
+  const [loadingCbOptions, setLoadingCbOptions] = useState({});
+
+  // Function to fetch CB options for a specific PDU
+  const fetchCbOptions = useCallback(async (pduIndex, feedCabinet, feedDistribution) => {
+    if (!feedCabinet || !feedDistribution) {
+      // Clear options if no valid selections
+      setCbOptions(prev => ({
+        ...prev,
+        [pduIndex]: []
+      }));
+      return;
+    }
+
+    // Extract cabinet number from selection like "Existing cabinet #1"
+    const cabinetMatch = feedCabinet.match(/Existing cabinet #(\d+)/);
+    const cabinetNumber = cabinetMatch ? cabinetMatch[1] : null;
+    
+    if (!cabinetNumber) {
+      // Clear options if no valid cabinet number
+      setCbOptions(prev => ({
+        ...prev,
+        [pduIndex]: []
+      }));
+      return;
+    }
+
+    const optionsKey = `${pduIndex}`;
+    setLoadingCbOptions(prev => ({ ...prev, [optionsKey]: true }));
+
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/external-dc-distribution/cabinet-data/${sessionId}/${cabinetNumber}/${feedDistribution}`
+      );
+      
+      const data = response.data;
+      const cabinetData = data.data || [];
+      
+      // Transform cabinet data to options format
+      const transformedOptions = cabinetData.map(item => ({
+        id: `field_${item.field_number}`,
+        field_number: item.field_number,
+        cb_rating_amp: item.cb_rating_amp,
+        connected_load: item.connected_load,
+        value: `CB${item.field_number}`,
+        display_text: `CB${item.field_number} - ${item.cb_rating_amp}A - ${item.connected_load}`,
+        recommended: false // You can add logic here if needed
+      }));
+
+      setCbOptions(prev => ({
+        ...prev,
+        [pduIndex]: transformedOptions
+      }));
+    } catch (err) {
+      console.error("Error fetching CB options:", err);
+      // Set empty options on error
+      setCbOptions(prev => ({
+        ...prev,
+        [pduIndex]: []
+      }));
+    } finally {
+      setLoadingCbOptions(prev => ({ ...prev, [optionsKey]: false }));
+    }
+  }, [sessionId]);
+
+  // Function to get CB options for a specific PDU
+  const getCbOptionsForPdu = useCallback((pduIndex) => {
+    return cbOptions[pduIndex] || [];
+  }, [cbOptions]);
+
+  // Function to check if CB options are loading for a PDU
+  const isCbOptionsLoading = useCallback((pduIndex) => {
+    return loadingCbOptions[pduIndex] || false;
+  }, [loadingCbOptions]);
 
   const handlePduCountChange = (count) => {
     setPduCount(count);
@@ -28,11 +104,37 @@ const DcDistributionForm = () => {
       cbDetails: Array.from({ length: 3 }, () => ({ rating: "", connected_module: "" })),
     }));
     setPdus(newPdus);
+    // Clear CB options when PDU count changes
+    setCbOptions({});
+    setLoadingCbOptions({});
   };
 
   const updatePdu = (index, field, value) => {
     const updated = [...pdus];
     updated[index][field] = value;
+    
+    // Clear CB selection and fetch new options when cabinet or distribution changes
+    if (field === 'feedCabinet' || field === 'feedDistribution') {
+      updated[index].cbFuse = ""; // Clear current CB selection
+      
+      // Fetch new CB options if both cabinet and distribution are selected
+      const cabinet = field === 'feedCabinet' ? value : updated[index].feedCabinet;
+      const distribution = field === 'feedDistribution' ? value : updated[index].feedDistribution;
+      
+      if (cabinet && distribution) {
+        // Debounce the API call slightly to avoid rapid requests
+        setTimeout(() => {
+          fetchCbOptions(index, cabinet, distribution);
+        }, 100);
+      } else {
+        // Clear options if either field is empty
+        setCbOptions(prev => ({
+          ...prev,
+          [index]: []
+        }));
+      }
+    }
+    
     setPdus(updated);
   };
 
@@ -65,7 +167,7 @@ const DcDistributionForm = () => {
                 location: pdu.dc_distribution_location || "",
                 towerBaseHeight: pdu.pdu_height_from_base || "",
                 feedCabinet: pdu.dc_feed_cabinet || "",
-                feedDistribution: pdu.dc_feed_distribution_type || "",
+                feedDistribution: pdu.dc_feed_distribution_type ? mapDistributionTypeFromApi(pdu.dc_feed_distribution_type) : "",
                 cbFuse: pdu.feeding_dc_cbs || "",
                 cableLength: pdu.dc_cable_length || "",
                 cableCrossSection: pdu.dc_cable_cross_section || "",
@@ -79,6 +181,16 @@ const DcDistributionForm = () => {
             
             console.log("Processed PDUs:", processedPdus);
             setPdus(processedPdus);
+            
+            // Fetch CB options for each PDU that has cabinet and distribution selected
+            processedPdus.forEach((pdu, index) => {
+              if (pdu.feedCabinet && pdu.feedDistribution) {
+                // Small delay to ensure state is updated
+                setTimeout(() => {
+                  fetchCbOptions(index, pdu.feedCabinet, pdu.feedDistribution);
+                }, 200 * (index + 1)); // Stagger the requests
+              }
+            });
           }
         }
       })
@@ -88,7 +200,7 @@ const DcDistributionForm = () => {
           showError('Error loading existing data');
         }
       });
-  }, [sessionId]);
+  }, [sessionId, fetchCbOptions]);
 
 
   const tableRows = [
@@ -143,7 +255,7 @@ const DcDistributionForm = () => {
     { label: 'DC PDU Detail Photo', name: 'dc_pdu_detail_photo' },
     { label: 'DC Cable Installation Photo', name: 'dc_cable_installation_photo' },
   ];
-  const [numberOfCabinets, setNumberOfCabinets] = useState(0);
+  
   const generateCabinetOptions = () => {
     const options = [];
     for (let i = 1; i <= numberOfCabinets; i++) {
@@ -154,6 +266,28 @@ const DcDistributionForm = () => {
   };
   const cabinetOptions = generateCabinetOptions();
 
+  // Function to map form distribution types to API values
+  const mapDistributionTypeToApi = (formValue) => {
+    const distributionTypeMapping = {
+      'BLVD': 'BLVD-48V',           // Try with voltage specification
+      'LLVD': 'LLVD-48V',           // Try with voltage specification
+      'PDU': 'DC_PDU'               // Try with underscore
+    };
+    return distributionTypeMapping[formValue] || formValue;
+  };
+
+  // Function to map API distribution types back to form values
+  const mapDistributionTypeFromApi = (apiValue) => {
+    const distributionTypeMapping = {
+      'BLVD-48V': 'BLVD',
+      'LLVD-48V': 'LLVD',
+      'DC_PDU': 'PDU',
+      'blvd': 'BLVD',               // Keep backward compatibility
+      'llvd': 'LLVD',
+      'pdu': 'PDU'
+    };
+    return distributionTypeMapping[apiValue] || apiValue;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -180,7 +314,7 @@ const DcDistributionForm = () => {
           dc_distribution_location: pdu.location || null,
           pdu_height_from_base: pdu.location === "On ground level" ? null : (parseFloat(pdu.towerBaseHeight) || null),
           dc_feed_cabinet: pdu.feedCabinet || null,
-          dc_feed_distribution_type: pdu.feedDistribution || null,
+          dc_feed_distribution_type: pdu.feedDistribution ? pdu.feedDistribution.toLowerCase() : null, // Send lowercase
           feeding_dc_cbs: pdu.cbFuse || null,
           dc_cable_length: parseFloat(pdu.cableLength) || null,
           dc_cable_cross_section: parseFloat(pdu.cableCrossSection) || null,
@@ -193,6 +327,7 @@ const DcDistributionForm = () => {
       };
 
       console.log("Submitting External DC Distribution data:", submitData);
+      console.log("Original form distribution values:", pdus.map(pdu => pdu.feedDistribution));
 
       const response = await axios.put(`${import.meta.env.VITE_API_URL}/api/external-dc-distribution/${sessionId}`, submitData);
       showSuccess('External DC Distribution data submitted successfully!');
@@ -200,6 +335,7 @@ const DcDistributionForm = () => {
       setError(""); // Clear any previous errors
     } catch (err) {
       console.error("Error submitting External DC Distribution data:", err);
+      console.error("Full error response:", err.response?.data);
       showError(`Error submitting data: ${err.response?.data?.error || 'Please try again.'}`);
     }
   };
@@ -427,21 +563,54 @@ const DcDistributionForm = () => {
                       <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-500 text-white z-10">
                         Which DC CB/fuse is feeding the PDU?
                       </td>
-                      {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className="border px-2 py-2">
-                          <select
-                            value={pdu.cbFuse}
-                            onChange={(e) => updatePdu(pduIndex, "cbFuse", e.target.value)}
-                            className="w-full p-2 border rounded text-sm"
-                          >
-                            <option value="">-- Select --</option>
-                            <option value="CB1">CB1</option>
-                            <option value="CB2">CB2</option>
-                            <option value="CB3">CB3</option>
-                            <option value="Other">Other</option>
-                          </select>
-                        </td>
-                      ))}
+                      {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => {
+                        const cbOptionsForPdu = getCbOptionsForPdu(pduIndex);
+                        const isLoading = isCbOptionsLoading(pduIndex);
+                        const hasOptions = cbOptionsForPdu.length > 0;
+                        const canShowOptions = pdu.feedCabinet && pdu.feedDistribution;
+                        
+                        return (
+                          <td key={pduIndex} className="border px-2 py-2">
+                            <select
+                              value={pdu.cbFuse}
+                              onChange={(e) => updatePdu(pduIndex, "cbFuse", e.target.value)}
+                              className="w-full p-2 border rounded text-sm"
+                              disabled={isLoading || !canShowOptions}
+                            >
+                              <option value="">
+                                {isLoading 
+                                  ? "Loading options..." 
+                                  : !canShowOptions 
+                                    ? "Select cabinet & distribution first"
+                                    : "-- Select --"
+                                }
+                              </option>
+                              
+                              {hasOptions && cbOptionsForPdu.map((option) => (
+                                <option 
+                                  key={option.id} 
+                                  value={option.value}
+                                  className={option.recommended ? "font-semibold" : ""}
+                                >
+                                  {option.display_text}
+                                </option>
+                              ))}
+                              
+                              {!hasOptions && canShowOptions && !isLoading && (
+                                <option value="custom">No options available</option>
+                              )}
+                            </select>
+                            
+                            {isLoading && (
+                              <div className="text-xs text-blue-600 mt-1">
+                                Fetching CB options...
+                              </div>
+                            )}
+                            
+                          
+                          </td>
+                        );
+                      })}
                     </tr>
 
                     {/* Cable length */}
