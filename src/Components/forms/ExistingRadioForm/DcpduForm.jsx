@@ -90,23 +90,44 @@ const DcDistributionForm = () => {
 
   const handlePduCountChange = (count) => {
     setPduCount(count);
-    const newPdus = Array.from({ length: count }, () => ({
-      shared: "",
-      model: "",
-      location: "",
-      towerBaseHeight: "",
-      feedCabinet: "",
-      feedDistribution: "",
-      cbFuse: "",
-      cableLength: "",
-      cableCrossSection: "",
-      hasFreeCbs: "",
-      cbDetails: Array.from({ length: 3 }, () => ({ rating: "", connected_module: "" })),
-    }));
+    
+    // Create new PDUs array preserving existing data
+    const newPdus = Array.from({ length: count }, (_, index) => {
+      // If PDU already exists at this index, keep its data
+      if (pdus[index]) {
+        return pdus[index];
+      }
+      // Otherwise create new empty PDU
+      return {
+        shared: "",
+        model: "",
+        location: "",
+        towerBaseHeight: "",
+        feedCabinet: "",
+        feedDistribution: "",
+        cbFuse: "",
+        cableLength: "",
+        cableCrossSection: "",
+        hasFreeCbs: "",
+        cbDetails: Array.from({ length: 3 }, () => ({ rating: "", connected_module: "" })),
+      };
+    });
+    
     setPdus(newPdus);
-    // Clear CB options when PDU count changes
-    setCbOptions({});
-    setLoadingCbOptions({});
+    
+    // Clear CB options for PDUs that are being removed (beyond the new count)
+    if (count < pdus.length) {
+      const newCbOptions = { ...cbOptions };
+      const newLoadingCbOptions = { ...loadingCbOptions };
+      
+      for (let i = count; i < pdus.length; i++) {
+        delete newCbOptions[i];
+        delete newLoadingCbOptions[i];
+      }
+      
+      setCbOptions(newCbOptions);
+      setLoadingCbOptions(newLoadingCbOptions);
+    }
   };
 
   const updatePdu = (index, field, value) => {

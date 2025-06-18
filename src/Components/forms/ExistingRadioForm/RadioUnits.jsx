@@ -466,35 +466,78 @@ const RadioUnitsForm = () => {
 
   const handleRadioUnitCountChange = (e) => {
     const count = parseInt(e.target.value, 10);
-    const newRadioUnits = Array(count).fill(null).map((_, index) =>
-      formData.radioUnits[index] || {
-        operator: '',
-        baseHeight: '',
-        towerLeg: '',
-        vendor: '',
-        nokiaModel: '',
-        nokiaPortCount: '',
-        nokiaPortConnectivity: [{ sector: '', antenna: '', jumperLength: '' }],
-        otherModel: '',
-        otherLength: '',
-        otherWidth: '',
-        otherDepth: '',
-        sideArmType: '',
-        sideArmLength: '',
-        sideArmDiameter: '',
-        sideArmOffset: '',
-        dcPowerSource: '',
-        dcCbFuse: '',
-        dcCableLength: '',
-        dcCableCrossSection: '',
-        fiberCableLength: '',
-        jumperLength: '',
-        feederType: '',
-        feederLength: '',
-        includeInPlan: '',
-        earthCableLength: ''
+    
+    // Create new array with the desired length
+    const newRadioUnits = Array(20).fill(null).map((_, index) => {
+      if (index < count) {
+        // Keep existing data for units within the new count
+        return formData.radioUnits[index] || {
+          operator: '',
+          baseHeight: '',
+          towerLeg: '',
+          vendor: '',
+          nokiaModel: '',
+          nokiaPortCount: '',
+          nokiaPortConnectivity: [{ sector: '', antenna: '', jumperLength: '' }],
+          otherModel: '',
+          otherLength: '',
+          otherWidth: '',
+          otherDepth: '',
+          sideArmType: '',
+          sideArmLength: '',
+          sideArmDiameter: '',
+          sideArmOffset: '',
+          dcPowerSource: '',
+          dcCbFuse: '',
+          dcCableLength: '',
+          dcCableCrossSection: '',
+          fiberCableLength: '',
+          jumperLength: '',
+          feederType: '',
+          feederLength: '',
+          includeInPlan: '',
+          earthCableLength: ''
+        };
+      } else {
+        // Clear data for units beyond the new count
+        return {
+          operator: '',
+          baseHeight: '',
+          towerLeg: '',
+          vendor: '',
+          nokiaModel: '',
+          nokiaPortCount: '',
+          nokiaPortConnectivity: [{ sector: '', antenna: '', jumperLength: '' }],
+          otherModel: '',
+          otherLength: '',
+          otherWidth: '',
+          otherDepth: '',
+          sideArmType: '',
+          sideArmLength: '',
+          sideArmDiameter: '',
+          sideArmOffset: '',
+          dcPowerSource: '',
+          dcCbFuse: '',
+          dcCableLength: '',
+          dcCableCrossSection: '',
+          fiberCableLength: '',
+          jumperLength: '',
+          feederType: '',
+          feederLength: '',
+          includeInPlan: '',
+          earthCableLength: ''
+        };
       }
-    );
+    });
+
+    // Clear DC options for units that are being removed (beyond the new count)
+    if (count < formData.numberOfRadioUnits) {
+      const newDcOptions = { ...dcOptions };
+      for (let i = count; i < formData.numberOfRadioUnits; i++) {
+        delete newDcOptions[i];
+      }
+      setDcOptions(newDcOptions);
+    }
 
     setFormData({
       ...formData,
