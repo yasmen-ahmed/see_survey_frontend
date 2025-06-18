@@ -113,7 +113,7 @@ const RadioAntenasForm = () => {
         otherPortCount: apiAntenna.other_total_ports || '',
         otherFreePorts: apiAntenna.other_free_ports || '',
         otherFreeBands: Array.isArray(apiAntenna.other_free_port_bands) ? apiAntenna.other_free_port_bands : [],
-        otherRadioUnits: apiAntenna.other_connected_radio_units || '',
+        otherRadioUnits: apiAntenna.other_connected_radio_units?.toString() || '',
         sideArmLength: apiAntenna.side_arm_length || '',
         sideArmDiameter: apiAntenna.side_arm_diameter || '',
         sideArmOffset: apiAntenna.side_arm_offset || '',
@@ -644,9 +644,9 @@ const RadioAntenasForm = () => {
                                   className="w-4 h-4"
                                   disabled={antenna.vendor !== 'Nokia'}
                                 />
-                                <span className={antenna.vendor !== 'Nokia' ? 'text-gray-400' : ''}>
+                               
                                   {option}
-                                </span>
+                           
                               </label>
                             ))}
                           </div>
@@ -693,7 +693,7 @@ const RadioAntenasForm = () => {
                                   checked={antenna.nokiaFiberCount === option}
                                   onChange={(e) => handleChange(antennaIndex, 'nokiaFiberCount', e.target.value)}
                                   className="w-4 h-4"
-                                  disabled={antenna.vendor !== 'Nokia' || antenna.isNokiaActive !== 'Yes'}
+                                
                                 />
                               
                                   {option}
@@ -724,84 +724,9 @@ const RadioAntenasForm = () => {
                     </>
                   )}
 
-                  {/* Nokia Module Name - Only show if Nokia active antenna */}
-                  {hasNokiaActiveAntenna() && (
-                    <tr className="bg-gray-50">
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                        If Nokia active antenna, what is the module name?
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                        <td key={antennaIndex} className="border px-2 py-2">
-                          <select
-                            value={antenna.nokiaModuleName}
-                            onChange={(e) => handleChange(antennaIndex, 'nokiaModuleName', e.target.value)}
-                            className={`w-full p-2 border rounded text-sm ${antenna.vendor !== 'Nokia' || antenna.isNokiaActive !== 'Yes' 
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                              : ''}`}
-                            disabled={antenna.vendor !== 'Nokia' || antenna.isNokiaActive !== 'Yes'}
-                          >
-                            <option value="">-- Select --</option>
-                            <option value="List will be provided by SE">List will be provided by SE</option>
-                          </select>
-                        </td>
-                      ))}
-                    </tr>
-                  )}
+              
 
-                  {/* Nokia Fiber Count - Only show if Nokia active antenna */}
-                  {hasNokiaActiveAntenna() && (
-                    <tr>
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                        If Nokia active antenna, how many fiber connected to base band?
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                        <td key={antennaIndex} className="border px-2 py-2">
-                          <div className="flex gap-2">
-                            {['1', '2', '3', '4'].map(count => (
-                              <label key={count} className="flex items-center gap-1 text-sm">
-                                <input
-                                  type="radio"
-                                  name={`nokiaFiberCount-${antennaIndex}`}
-                                  value={count}
-                                  checked={antenna.nokiaFiberCount === count}
-                                  onChange={(e) => handleChange(antennaIndex, 'nokiaFiberCount', e.target.value)}
-                                  className="w-4 h-4"
-                                  disabled={antenna.vendor !== 'Nokia' || antenna.isNokiaActive !== 'Yes'}
-                                />
-                                <span className={antenna.vendor !== 'Nokia' || antenna.isNokiaActive !== 'Yes' ? 'text-gray-400' : ''}>
-                                  {count}
-                                </span>
-                              </label>
-                            ))}
-                          </div>
-                        </td>
-                      ))}
-                    </tr>
-                  )}
-
-                  {/* Nokia UBS Length - Only show if Nokia active antenna */}
-                  {hasNokiaActiveAntenna() && (
-                    <tr className="bg-gray-50">
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                        If Nokia active antenna, length of ubs to base band? (meter)
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                        <td key={antennaIndex} className="border px-2 py-2">
-                          <input
-                            type="number"
-                            value={antenna.nokiaFiberLength}
-                            onChange={(e) => handleChange(antennaIndex, 'nokiaFiberLength', e.target.value)}
-                            className={`w-full p-2 border rounded text-sm ${antenna.vendor !== 'Nokia' || antenna.isNokiaActive !== 'Yes' 
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                              : ''}`}
-                            placeholder={antenna.vendor === 'Nokia' && antenna.isNokiaActive === 'Yes' ? '000' : 'N/A'}
-                            disabled={antenna.vendor !== 'Nokia' || antenna.isNokiaActive !== 'Yes'}
-                          />
-                        </td>
-                      ))}
-                    </tr>
-                  )}
-
+              
                   {/* Other Vendor Model - Only show if other vendor */}
                   {hasOtherVendor() && (
                     <>
