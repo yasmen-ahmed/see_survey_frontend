@@ -53,11 +53,12 @@ export const tabsConfig ={
 
   ],
   "new-radio":[
+    {label:"New radio installations",key:"radio-installation",component:radioinstallation},
      {label:"New antennas",key:"new-antennas",component:NewAntenna},
      {label:"New FPFHs",key:"new-fphs",component:new_FPFH},
      {label:"New radio units",key:"new-radio-units",component:newradio},
      {label:"GPS",key:"gps",component:gps},
-     {label:"New radio installations",key:"radio-installation",component:radioinstallation}
+    
 
 
 

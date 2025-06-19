@@ -334,7 +334,7 @@ const TransmissionInformationForm = () => {
                       <tr>
                         <th
                           className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-30"
-                          style={{ width: '300px', minWidth: '300px', maxWidth: '300px' }}
+                          style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
                         >
                           Field Description
                         </th>

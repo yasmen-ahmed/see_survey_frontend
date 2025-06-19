@@ -427,14 +427,14 @@ const DcDistributionForm = () => {
                     <tr>
                       <th
                         className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-30"
-                        style={{ width: '300px', minWidth: '300px', maxWidth: '300px' }}
+                        style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
                       >
                         Field Description
                       </th>
                       {Array.from({ length: parseInt(pduCount) }, (_, i) => (
                         <th
                           key={i}
-                          className="border px-4 py-3 text-center font-semibold min-w-[400px] sticky top-0 bg-blue-500 z-20"
+                          className="border px-4 py-3 text-center font-semibold min-w-[300px] sticky top-0 bg-blue-500 z-20"
                         >
                           DC PDU #{i + 1}
                         </th>

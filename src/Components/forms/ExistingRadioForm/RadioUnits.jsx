@@ -35,11 +35,6 @@ const DynamicTable = ({ data, onChange, unitIndex }) => {
     onChange(newData);
   };
 
-  const addColumn = () => {
-    const newData = [...data, { sector: '', antenna: '', jumperLength: '' }];
-    onChange(newData);
-  };
-
   const removeColumn = (colIndex) => {
     if (data.length <= 1) return;
     const newData = [...data];
@@ -583,33 +578,6 @@ const RadioUnitsForm = () => {
     handleChange(unitIndex, 'nokiaPortConnectivity', newData);
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-
-    formData.radioUnits.forEach((unit, index) => {
-      if (!unit.vendor) {
-        newErrors[`${index}.vendor`] = 'Please select a vendor';
-      }
-      if (!unit.baseHeight) {
-        newErrors[`${index}.baseHeight`] = 'Please enter base height';
-      }
-      if (!unit.towerLeg) {
-        newErrors[`${index}.towerLeg`] = 'Please select tower leg';
-      }
-      if (unit.vendor === 'Nokia' && !unit.nokiaModel) {
-        newErrors[`${index}.nokiaModel`] = 'Please select Nokia model';
-      }
-      if (unit.vendor === 'Nokia' && !unit.nokiaPortCount) {
-        newErrors[`${index}.nokiaPortCount`] = 'Please select port count';
-      }
-      if (unit.vendor !== 'Nokia' && unit.vendor && !unit.otherModel) {
-        newErrors[`${index}.otherModel`] = 'Please enter model';
-      }
-    });
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();

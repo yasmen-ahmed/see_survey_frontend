@@ -18,7 +18,7 @@ const SidebarTabs = () => {
     { label: "Room", icon: <Calendar size={20} />, path: `/sites/${sessionId}/${siteId}/room/room-info` },
     { label: "Outdoor", icon: <TentTree size={20} />, path: `/sites/${sessionId}/${siteId}/outdoor/general-lyout` },
     { label: "Existing Radio", icon: <RadioTower size={20} />, path: `/sites/${sessionId}/${siteId}/existing-radio/antennas-strut` },
-    { label: "New Radio", icon: <RadioTower size={20} />, path: `/sites/${sessionId}/${siteId}/new-radio/new-antennas/` },
+    { label: "New Radio", icon: <RadioTower size={20} />, path: `/sites/${sessionId}/${siteId}/new-radio/radio-installation` },
     { label: "H&S", icon: <CircleHelp size={20} />, path: `/sites/${sessionId}/${siteId}/H&S/h&s` }
   ];
 
