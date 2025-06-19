@@ -1,0 +1,20 @@
+name: Auto Pull on Push
+
+on:
+  push:
+    branches:
+      - main  # Adjust to your branch name
+
+jobs:
+  pull:
+    runs-on: self-hosted  # Use your self-hosted runner
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Perform git pull
+        run: |
+          cd $GITHUB_WORKSPACE
+          git pull origin main  # Adjust to your branch name
