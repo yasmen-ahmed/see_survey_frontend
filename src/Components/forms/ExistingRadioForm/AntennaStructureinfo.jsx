@@ -8,14 +8,14 @@ const AntennaStructureForm = () => {
   const { sessionId } = useParams();
 
   const [formData, setFormData] = useState({
-    hasSketch: "no",
+    hasSketch: "No",
     towerType: [],
     gfHeight: "",
     rtStructureCount: "",
     rtHeights: [],
     buildingHeight: "",
-    lightningSystem: "no",
-    earthingBusBar: "no",
+    lightningSystem: "No",
+    earthingBusBar: "No",
     freeHoles: "",
   });
   useEffect(() => {
@@ -115,8 +115,8 @@ const handleSubmit = async (e) => {
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Do you have a sketch with measurements for the site layout?</label>
             <div className="space-x-4">
-              <label><input type="radio" name="hasSketch" value="yes" onChange={handleChange} checked={formData.hasSketch === "yes"} /> Yes</label>
-              <label><input type="radio" name="hasSketch" value="no" onChange={handleChange} checked={formData.hasSketch === "no"} /> No</label>
+              <label><input type="radio" name="hasSketch" value="Yes" onChange={handleChange} checked={formData.hasSketch === "Yes"} /> Yes</label>
+              <label><input type="radio" name="hasSketch" value="No" onChange={handleChange} checked={formData.hasSketch === "No"} /> No</label>
             </div>
             <hr className='mt-2' />     
           </div>
@@ -217,8 +217,8 @@ const handleSubmit = async (e) => {
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Lightning system installed on existing towers?</label>
             <div className="space-x-4">
-              <label><input type="radio" name="lightningSystem" value="yes" onChange={handleChange} checked={formData.lightningSystem === "yes"} /> Yes</label>
-              <label><input type="radio" name="lightningSystem" value="no" onChange={handleChange} checked={formData.lightningSystem === "no"} /> No</label>
+              <label><input type="radio" name="lightningSystem" value="Yes" onChange={handleChange} checked={formData.lightningSystem === "Yes"} /> Yes</label>
+              <label><input type="radio" name="lightningSystem" value="No" onChange={handleChange} checked={formData.lightningSystem === "No"} /> No</label>
             </div>
             <hr className='mt-2' /> 
           </div>
@@ -227,8 +227,8 @@ const handleSubmit = async (e) => {
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Earthing bus bars exist on towers?</label>
             <div className="space-x-4">
-              <label><input type="radio" name="earthingBusBar" value="yes" onChange={handleChange} checked={formData.earthingBusBar === "yes"} /> Yes</label>
-              <label><input type="radio" name="earthingBusBar" value="no" onChange={handleChange} checked={formData.earthingBusBar === "no"} /> No</label>
+              <label><input type="radio" name="earthingBusBar" value="Yes" onChange={handleChange} checked={formData.earthingBusBar === "Yes"} /> Yes</label>
+              <label><input type="radio" name="earthingBusBar" value="No" onChange={handleChange} checked={formData.earthingBusBar === "No"} /> No</label>
             </div>
             <hr className='mt-2' /> 
           </div>

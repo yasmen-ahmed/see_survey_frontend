@@ -598,7 +598,7 @@ const RadioUnitsForm = () => {
     } catch (err) {
       console.error("Error submitting radio units data:", err);
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
-    } 
+    }
   };
 
   const hasNokiaVendor = () => {
@@ -617,23 +617,23 @@ const RadioUnitsForm = () => {
             <div className="text-gray-600">Loading radio units data...</div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-lg font-semibold mb-1">
-                How many radio units on site?
-              </label>
-              <select
-                className="w-full border border-gray-300 rounded-md p-2"
+      <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-lg font-semibold mb-1">
+          How many radio units on site?
+        </label>
+        <select
+          className="w-full border border-gray-300 rounded-md p-2"
                 value={formData.numberOfRadioUnits}
                 onChange={handleRadioUnitCountChange}
-              >
-                {Array.from({ length: 20 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {i + 1}
-                  </option>
-                ))}
-              </select>
-            </div>
+        >
+          {Array.from({ length: 20 }, (_, i) => (
+            <option key={i + 1} value={i + 1}>
+              {i + 1}
+            </option>
+          ))}
+        </select>
+      </div>
 
             {errors.submit && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -641,142 +641,142 @@ const RadioUnitsForm = () => {
               </div>
             )}
 
-            {/* Table Layout */}
-            <div className="overflow-auto max-h-[600px]">
-              <table className="table-auto w-full border-collapse">
-                <thead className="bg-blue-500 text-white">
-                  <tr>
-                    <th
-                      className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-30"
-                      style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
-                    >
-                      Field Description
-                    </th>
+  {/* Table Layout */}
+  <div className="overflow-auto max-h-[600px]">
+            <table className="table-auto w-full border-collapse">
+              <thead className="bg-blue-500 text-white">
+                <tr>
+                  <th
+                    className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-30"
+                    style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
+                  >
+                    Field Description
+                  </th>
                     {Array.from({ length: formData.numberOfRadioUnits }, (_, i) => (
-                      <th
-                        key={i}
-                        className="border px-4 py-3 text-center font-semibold min-w-[300px] sticky top-0 bg-blue-500 z-20"
-                      >
-                        Radio Unit #{i + 1}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
+                    <th
+                      key={i}
+                      className="border px-4 py-3 text-center font-semibold min-w-[300px] sticky top-0 bg-blue-500 z-20"
+                    >
+                      Radio Unit #{i + 1}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
 
-                <tbody>
-                  {/* Operator */}
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                      If shared site, radio unit belongs to which operator?
-                    </td>
+              <tbody>
+                {/* Operator */}
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                  If shared site, radio unit belongs to which operator?
+                  </td>
                     {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                       <td key={unitIndex} className="border px-2 py-2">
-                        <select
+                      <select
                           value={unit.operator}
                           onChange={(e) => handleChange(unitIndex, 'operator', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
-                        >
-                          <option value="">-- Select --</option>
+                        className="w-full p-2 border rounded text-sm"
+                      >
+                        <option value="">-- Select --</option>
                           {operators.map(op => (
                             <option key={op} value={op}>{op}</option>
                           ))}
-                        </select>
+                      </select>
                         {errors[`${unitIndex}.operator`] && (
                           <div className="text-red-500 text-xs mt-1">{errors[`${unitIndex}.operator`]}</div>
                         )}
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Base Height */}
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                      Radio unit base height from tower base level (m)
                     </td>
+                  ))}
+                </tr>
+
+                {/* Base Height */}
+                <tr>
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                  Radio unit base height from tower base level (m)
+                  </td>
                     {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                       <td key={unitIndex} className="border px-2 py-2">
-                        <input
-                          type="number"
+                      <input
+                        type="number"
                           value={unit.baseHeight}
                           onChange={(e) => handleChange(unitIndex, 'baseHeight', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
-                          placeholder="000"
-                        />
+                        className="w-full p-2 border rounded text-sm"
+                        placeholder="000"
+                      />
                         {errors[`${unitIndex}.baseHeight`] && (
                           <div className="text-red-500 text-xs mt-1">{errors[`${unitIndex}.baseHeight`]}</div>
                         )}
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Tower Leg */}
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                      Radio unit located at tower leg
                     </td>
+                  ))}
+                </tr>
+
+                {/* Tower Leg */}
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                  Radio unit located at tower leg
+                  </td>
                     {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                       <td key={unitIndex} className="border px-2 py-2">
-                        <div className="flex gap-2">
-                          {['A', 'B', 'C', 'D'].map(leg => (
-                            <label key={leg} className="flex items-center gap-1 text-sm">
-                              <input
-                                type="radio"
+                      <div className="flex gap-2">
+                        {['A', 'B', 'C', 'D'].map(leg => (
+                          <label key={leg} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="radio"
                                 name={`towerLeg-${unitIndex}`}
-                                value={leg}
+                              value={leg}
                                 checked={unit.towerLeg === leg}
                                 onChange={(e) => handleChange(unitIndex, 'towerLeg', e.target.value)}
-                                className="w-4 h-4"
-                              />
-                              {leg}
-                            </label>
-                          ))}
-                        </div>
+                              className="w-4 h-4"
+                            />
+                            {leg}
+                          </label>
+                        ))}
+                      </div>
                         {errors[`${unitIndex}.towerLeg`] && (
                           <div className="text-red-500 text-xs mt-1">{errors[`${unitIndex}.towerLeg`]}</div>
                         )}
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Radio Unit Vendor */}
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                      Radio unit vendor
                     </td>
+                  ))}
+                </tr>
+
+                {/* Radio Unit Vendor */}
+                  <tr>
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                  Radio unit vendor
+                  </td>
                     {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                       <td key={unitIndex} className="border px-2 py-2">
                         <div className="grid grid-cols-3 gap-1">
                           {['Nokia', 'Huawei', 'Ericsson', 'ZTE', 'Other'].map(vendor => (
-                            <label key={vendor} className="flex items-center gap-1 text-sm">
-                              <input
-                                type="radio"
+                          <label key={vendor} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="radio"
                                 name={`vendor-${unitIndex}`}
-                                value={vendor}
+                              value={vendor}
                                 checked={unit.vendor === vendor}
                                 onChange={(e) => handleChange(unitIndex, 'vendor', e.target.value)}
-                                className="w-4 h-4"
-                              />
-                              {vendor}
-                            </label>
-                          ))}
-                        </div>
+                              className="w-4 h-4"
+                            />
+                            {vendor}
+                          </label>
+                        ))}
+                      </div>
                         {errors[`${unitIndex}.vendor`] && (
                           <div className="text-red-500 text-xs mt-1">{errors[`${unitIndex}.vendor`]}</div>
                         )}
-                      </td>
-                    ))}
-                  </tr>
+                    </td>
+                  ))}
+                </tr>
 
                   {/* Nokia Model - Only show if Nokia is selected */}
-                  {hasNokiaVendor() && (
-                    <>
+                {hasNokiaVendor() && (
+                  <>
                       <tr className="bg-gray-50">
-                        <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                          If Nokia, what is the radio unit model?
-                        </td>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    If Nokia, what is the radio unit model?
+                    </td>
                         {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                           <td key={unitIndex} className="border px-2 py-2">
-                            <select
+                        <select
                               value={unit.nokiaModel}
                               onChange={(e) => handleChange(unitIndex, 'nokiaModel', e.target.value)}
                               className={`w-full p-2 border rounded text-sm ${unit.vendor !== 'Nokia'
@@ -788,53 +788,53 @@ const RadioUnitsForm = () => {
                               {nokiaModels.map(model => (
                                 <option key={model} value={model}>{model}</option>
                               ))}
-                            </select>
+                      </select>
                             {errors[`${unitIndex}.nokiaModel`] && unit.vendor === 'Nokia' && (
                               <div className="text-red-500 text-xs mt-1">{errors[`${unitIndex}.nokiaModel`]}</div>
                             )}
-                          </td>
-                        ))}
-                      </tr>
+                      </td>
+                    ))}
+                  </tr>
 
-                      <tr>
-                        <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                          If Nokia, how many port?
-                        </td>
+                  <tr>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    If Nokia, how many port?
+                    </td>
                         {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                           <td key={unitIndex} className="border px-2 py-2">
                             <div className="flex gap-2 flex-wrap">
                               {['2', '4', '6', '8', '9'].map(option => (
-                                <label key={option} className="flex items-center gap-1 text-sm">
-                                  <input
-                                    type="radio"
+                            <label key={option} className="flex items-center gap-1 text-sm">
+                              <input
+                                type="radio"
                                     name={`nokiaPortCount-${unitIndex}`}
-                                    value={option}
+                                value={option}
                                     checked={unit.nokiaPortCount === option}
                                     onChange={(e) => handleChange(unitIndex, 'nokiaPortCount', e.target.value)}
-                                    className="w-4 h-4"
+                                className="w-4 h-4"
                                     disabled={unit.vendor !== 'Nokia'}
-                                  />
+                              />
                                   <span className={unit.vendor !== 'Nokia' ? 'text-gray-400' : ''}>
-                                    {option}
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
+                                {option}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
                             {errors[`${unitIndex}.nokiaPortCount`] && unit.vendor === 'Nokia' && (
                               <div className="text-red-500 text-xs mt-1">{errors[`${unitIndex}.nokiaPortCount`]}</div>
                             )}
-                          </td>
-                        ))}
-                      </tr>
+                      </td>
+                    ))}
+                  </tr>
 
                       <tr className="bg-gray-50">
-                        <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                          If Nokia, radio unit port connectivity details
-                        </td>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    If Nokia, radio unit port connectivity details
+                    </td>
                         {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                           <td key={unitIndex} className="border px-2 py-2">
                             {unit.vendor === 'Nokia' ? (
-                              <DynamicTable
+                          <DynamicTable
                                 data={unit.nokiaPortConnectivity}
                                 onChange={(newData) => handleTableDataChange(unitIndex, newData)}
                                 unitIndex={unitIndex}
@@ -843,96 +843,96 @@ const RadioUnitsForm = () => {
                               <div className="text-gray-400 text-sm">Nokia vendor not selected</div>
                             )}
                           </td>
-                        ))}
-                      </tr>
-                    </>
-                  )}
+                    ))}
+                  </tr>
+                  </>
+                )}
 
-                  {/* Other Vendor Model - Only show if other vendor */}
-                  {hasOtherVendor() && (
-                    <>
-                      <tr>
-                        <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                          If other vendor, what is the radio unit model?
-                        </td>
+                {/* Other Vendor Model - Only show if other vendor */}
+                {hasOtherVendor() && (
+                  <>
+                  <tr>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    If other vendor, what is the radio unit model?
+                    </td>
                         {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                           <td key={unitIndex} className="border px-2 py-2">
-                            <input
-                              type="text"
+                        <input
+                          type="text"
                               value={unit.otherModel}
                               onChange={(e) => handleChange(unitIndex, 'otherModel', e.target.value)}
                               className={`w-full p-2 border rounded text-sm ${unit.vendor === 'Nokia' || !unit.vendor
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : ''}`}
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                            : ''}`}
                               placeholder={unit.vendor !== 'Nokia' && unit.vendor ? 'Enter model' : 'N/A'}
                               disabled={unit.vendor === 'Nokia' || !unit.vendor}
-                            />
+                        />
                             {errors[`${unitIndex}.otherModel`] && unit.vendor !== 'Nokia' && unit.vendor && (
                               <div className="text-red-500 text-xs mt-1">{errors[`${unitIndex}.otherModel`]}</div>
                             )}
-                          </td>
-                        ))}
-                      </tr>
+                      </td>
+                    ))}
+                  </tr>
 
                       <tr className="bg-gray-50">
-                        <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
                           If other vendor, radio unit dimensions, length (cm)
-                        </td>
+                    </td>
                         {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                           <td key={unitIndex} className="border px-2 py-2">
-                            <input
-                              type="number"
+                        <input
+                          type="number"
                               value={unit.otherLength}
                               onChange={(e) => handleChange(unitIndex, 'otherLength', e.target.value)}
                               className={`w-full p-2 border rounded text-sm ${unit.vendor === 'Nokia' || !unit.vendor
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : ''}`}
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                            : ''}`}
                               placeholder={unit.vendor !== 'Nokia' && unit.vendor ? '000' : 'N/A'}
                               disabled={unit.vendor === 'Nokia' || !unit.vendor}
-                            />
-                          </td>
-                        ))}
-                      </tr>
+                        />
+                      </td>
+                    ))}
+                  </tr>
 
-                      <tr>
-                        <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                  <tr>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
                           If other vendor, radio unit dimensions, width (cm)
-                        </td>
+                    </td>
                         {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                           <td key={unitIndex} className="border px-2 py-2">
-                            <input
-                              type="number"
+                        <input
+                          type="number"
                               value={unit.otherWidth}
                               onChange={(e) => handleChange(unitIndex, 'otherWidth', e.target.value)}
                               className={`w-full p-2 border rounded text-sm ${unit.vendor === 'Nokia' || !unit.vendor
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : ''}`}
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                            : ''}`}
                               placeholder={unit.vendor !== 'Nokia' && unit.vendor ? '000' : 'N/A'}
                               disabled={unit.vendor === 'Nokia' || !unit.vendor}
-                            />
-                          </td>
-                        ))}
-                      </tr>
+                        />
+                      </td>
+                    ))}
+                  </tr>   
 
                       <tr className="bg-gray-50">
-                        <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
                           If other vendor, radio unit dimensions, depth (cm)
-                        </td>
+                    </td>
                         {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                           <td key={unitIndex} className="border px-2 py-2">
-                            <input
-                              type="number"
+                        <input
+                          type="number"
                               value={unit.otherDepth}
                               onChange={(e) => handleChange(unitIndex, 'otherDepth', e.target.value)}
                               className={`w-full p-2 border rounded text-sm ${unit.vendor === 'Nokia' || !unit.vendor
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : ''}`}
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                            : ''}`}
                               placeholder={unit.vendor !== 'Nokia' && unit.vendor ? '000' : 'N/A'}
                               disabled={unit.vendor === 'Nokia' || !unit.vendor}
-                            />
-                          </td>
-                        ))}
-                      </tr>
+                        />
+                      </td>
+                    ))}
+                  </tr>     
                     </>
                   )}
 
@@ -950,7 +950,7 @@ const RadioUnitsForm = () => {
                             'Shared side arm with other radio units'
                           ].map(option => (
                             <label key={option} className="flex items-center gap-1 text-xs">
-                              <input
+                            <input
                                 type="radio"
                                 name={`sideArmType-${unitIndex}`}
                                 value={option}
@@ -959,11 +959,11 @@ const RadioUnitsForm = () => {
                                 className="w-3 h-3"
                               />
                               {option}
-                            </label>
-                          ))}
-                        </div>
-                      </td>
-                    ))}
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                  ))}
                   </tr>
 
                   {/* Side Arm Length - conditional */}
@@ -973,7 +973,7 @@ const RadioUnitsForm = () => {
                     </td>
                     {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                       <td key={unitIndex} className="border px-2 py-2">
-                        <input
+                            <input
                           type="number"
                           value={unit.sideArmLength}
                           onChange={(e) => handleChange(unitIndex, 'sideArmLength', e.target.value)}
@@ -981,8 +981,8 @@ const RadioUnitsForm = () => {
                           placeholder="000"
                           disabled={unit.sideArmType === 'Same antenna side arm'}
                         />
-                      </td>
-                    ))}
+                    </td>
+                  ))}
                   </tr>
 
                   {/* Side Arm Diameter - conditional */}
@@ -1043,8 +1043,8 @@ const RadioUnitsForm = () => {
                           ))}
                         
                         </select>
-                      </td>
-                    ))}
+                    </td>
+                  ))}
                   </tr>
 
                   {/* DC CB/Fuse */}
@@ -1070,7 +1070,7 @@ const RadioUnitsForm = () => {
                         {!unit.dcPowerSource || !unit.dcPowerSource.startsWith('Cabinet ') ? (
                           <div className="text-xs text-gray-500 mt-1">
                             Select a cabinet first
-                          </div>
+                        </div>
                         ) : null}
                       </td>
                     ))}
@@ -1078,57 +1078,57 @@ const RadioUnitsForm = () => {
 
                   {/* DC Cable Length */}
                   <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                       Length of the DC power cable from the radio unit to the DC CB/fuse location (m)
-                    </td>
+                  </td>
                     {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                       <td key={unitIndex} className="border px-2 py-2">
-                        <input
-                          type="number"
+                      <input
+                        type="number"
                           value={unit.dcCableLength}
                           onChange={(e) => handleChange(unitIndex, 'dcCableLength', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
-                          placeholder="000"
-                        />
-                      </td>
-                    ))}
-                  </tr>
+                        className="w-full p-2 border rounded text-sm"
+                        placeholder="000"
+                      />
+                    </td>
+                  ))}
+                </tr>
 
                   {/* DC Cable Cross Section */}
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                       Cross section of DC power cable from the radio unit to the DC CB/fuse (mm2)
-                    </td>
+                  </td>
                     {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                       <td key={unitIndex} className="border px-2 py-2">
-                        <input
-                          type="number"
+                      <input
+                        type="number"
                           value={unit.dcCableCrossSection}
                           onChange={(e) => handleChange(unitIndex, 'dcCableCrossSection', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
-                          placeholder="000"
-                        />
-                      </td>
-                    ))}
-                  </tr>
+                        className="w-full p-2 border rounded text-sm"
+                        placeholder="000"
+                      />
+                    </td>
+                  ))}
+                </tr>
 
                   {/* Fiber Cable Length */}
                   <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                       Length of fiber cable from the radio unit to the base band (m)
-                    </td>
+                  </td>
                     {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                       <td key={unitIndex} className="border px-2 py-2">
-                        <input
-                          type="number"
+                      <input
+                        type="number"
                           value={unit.fiberCableLength}
                           onChange={(e) => handleChange(unitIndex, 'fiberCableLength', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
-                          placeholder="000"
-                        />
-                      </td>
-                    ))}
-                  </tr>
+                        className="w-full p-2 border rounded text-sm"
+                        placeholder="000"
+                      />
+                    </td>
+                  ))}
+                </tr>
 
                   {/* Jumper Length */}
                   <tr className="bg-gray-50">
@@ -1178,48 +1178,48 @@ const RadioUnitsForm = () => {
                   </tr>
 
                   {/* Feeder Length */}
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                       Feeder length, if exist (m)
-                    </td>
+                  </td>
                     {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                       <td key={unitIndex} className="border px-2 py-2">
-                        <input
-                          type="number"
+                      <input
+                        type="number"
                           value={unit.feederLength}
                           onChange={(e) => handleChange(unitIndex, 'feederLength', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
-                          placeholder="000"
-                        />
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Include in Plan */}
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                      This radio unit included in the swap or upgrade plan
+                        className="w-full p-2 border rounded text-sm"
+                        placeholder="000"
+                      />
                     </td>
+                  ))}
+                </tr>
+
+                {/* Include in Plan */}
+                <tr>
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                      This radio unit included in the swap or upgrade plan
+                  </td>
                     {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                       <td key={unitIndex} className="border px-2 py-2">
-                        <div className="flex gap-4">
-                          {['Yes', 'No'].map(option => (
-                            <label key={option} className="flex items-center gap-1 text-sm">
-                              <input
-                                type="radio"
+                      <div className="flex gap-4">
+                        {['Yes', 'No'].map(option => (
+                          <label key={option} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="radio"
                                 name={`includeInPlan-${unitIndex}`}
-                                value={option}
+                              value={option}
                                 checked={unit.includeInPlan === option}
                                 onChange={(e) => handleChange(unitIndex, 'includeInPlan', e.target.value)}
-                                className="w-4 h-4"
-                              />
-                              {option}
-                            </label>
-                          ))}
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
+                              className="w-4 h-4"
+                            />
+                            {option}
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
 
                   {/* Earth Cable Length */}
                   <tr className="bg-gray-50">
@@ -1238,22 +1238,22 @@ const RadioUnitsForm = () => {
                       </td>
                     ))}
                   </tr>
-                </tbody>
-              </table>
-            </div>
+              </tbody>
+            </table>
+          </div>
 
-           
-            <div className="mt-6 flex justify-center">
-              <button
-                type="submit"
-                className="px-6 py-3 text-white bg-blue-500 rounded hover:bg-blue-700 font-semibold"
-              >
-                Save and Continue
-              </button>
-            </div>
-          </form>
+
+    <div className="mt-6 flex justify-center">
+            <button
+              type="submit"
+              className="px-6 py-3 text-white bg-blue-500 rounded hover:bg-blue-700 font-semibold"
+            >
+              Save and Continue
+            </button>
+          </div>
+      </form>
         )}
-      </div>
+    </div>
     </div>
   );
 };

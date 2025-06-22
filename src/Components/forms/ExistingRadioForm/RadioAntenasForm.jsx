@@ -48,52 +48,52 @@ const RadioAntenasForm = () => {
 
   // Helper function to map API data to form data
   const mapApiToFormData = (apiData) => {
-    const defaultAntenna = {
-      operator: '',
-      baseHeight: '',
-      towerLeg: '',
-      sector: '',
-      technology: [],
-      azimuth: '',
-      mechanicalTiltExist: '',
-      mechanicalTilt: '',
-      electricalTilt: '',
-      retConnectivity: '',
-      vendor: '',
-      isNokiaActive: '',
-      nokiaModuleName: '',
-      nokiaFiberCount: '',
+          const defaultAntenna = {
+            operator: '',
+            baseHeight: '',
+            towerLeg: '',
+            sector: '',
+            technology: [],
+            azimuth: '',
+            mechanicalTiltExist: '',
+            mechanicalTilt: '',
+            electricalTilt: '',
+            retConnectivity: '',
+            vendor: '',
+            isNokiaActive: '',
+            nokiaModuleName: '',
+            nokiaFiberCount: '',
       nokiaFiberLength: '',
-      otherModelNumber: '',
-      otherLength: '',
-      otherWidth: '',
-      otherDepth: '',
-      otherPortType: [],
-      otherBands: [],
-      otherPortCount: '',
+            otherModelNumber: '',
+            otherLength: '',
+            otherWidth: '',
+            otherDepth: '',
+            otherPortType: [],
+            otherBands: [],
+            otherPortCount: '',
       otherFreePorts: '',
       otherFreeBands: [],
-      otherRadioUnits: '',
-      sideArmLength: '',
-      sideArmDiameter: '',
-      sideArmOffset: '',
-      earthCableLength: '',
-      includeInPlan: '',
-    };
+            otherRadioUnits: '',
+            sideArmLength: '',
+            sideArmDiameter: '',
+            sideArmOffset: '',
+            earthCableLength: '',
+            includeInPlan: '',
+          };
 
-    const mergedAntennas = Array(15).fill(null).map((_, index) => {
+          const mergedAntennas = Array(15).fill(null).map((_, index) => {
       const apiAntenna = apiData.antennas?.[index];
       if (!apiAntenna) {
         return { id: index + 1, ...defaultAntenna };
       }
 
-      return {
-        id: index + 1,
+            return {
+              id: index + 1,
         operator: apiAntenna.operator || '',
         baseHeight: apiAntenna.base_height || '',
         towerLeg: apiAntenna.tower_leg || '',
         sector: apiAntenna.sector || '',
-        technology: Array.isArray(apiAntenna.technology) ? apiAntenna.technology : [],
+              technology: Array.isArray(apiAntenna.technology) ? apiAntenna.technology : [],
         azimuth: apiAntenna.azimuth_angle || '',
         mechanicalTiltExist: apiAntenna.mechanical_tilt_exist ? 'Yes' : 'No',
         mechanicalTilt: apiAntenna.mechanical_tilt || '',
@@ -119,12 +119,12 @@ const RadioAntenasForm = () => {
         sideArmOffset: apiAntenna.side_arm_offset || '',
         earthCableLength: apiAntenna.earth_cable_length || '',
         includeInPlan: apiAntenna.included_in_upgrade ? 'Yes' : 'No',
-      };
-    });
+            };
+          });
 
     return {
       numberOfAntennas: apiData.antenna_count?.toString() || '',
-      antennas: mergedAntennas
+            antennas: mergedAntennas
     };
   };
 
@@ -333,186 +333,302 @@ const RadioAntenasForm = () => {
             <div className="text-gray-600">Loading antenna configuration data...</div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           
-            {/* Number of Antennas Selection */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <label className="block font-semibold mb-2">How many antennas on site?</label>
-              <select
-                name="numberOfAntennas"
-                value={formData.numberOfAntennas}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, numberOfAntennas: e.target.value }));
-                  setError("");
-                }}
-                className="border p-3 rounded-md w-48"
-                required
-              >
-            
-                {Array.from({ length: 15 }, (_, i) => i + 1).map((num) => (
-                  <option key={num} value={num}>{num}</option>
-                ))}
-              </select>
-            </div>
+          {/* Number of Antennas Selection */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <label className="block font-semibold mb-2">How many antennas on site?</label>
+            <select
+              name="numberOfAntennas"
+              value={formData.numberOfAntennas}
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, numberOfAntennas: e.target.value }));
+                setError("");
+              }}
+              className="border p-3 rounded-md w-48"
+              required
+            >
+          
+              {Array.from({ length: 15 }, (_, i) => i + 1).map((num) => (
+                <option key={num} value={num}>{num}</option>
+              ))}
+            </select>
+          </div>
 
-            {/* Table Layout */}
-            <div className="overflow-auto max-h-[600px]">
-              <table className="table-auto w-full border-collapse">
-                <thead className="bg-blue-500 text-white">
-                  <tr>
+          {/* Table Layout */}
+          <div className="overflow-auto max-h-[600px]">
+            <table className="table-auto w-full border-collapse">
+              <thead className="bg-blue-500 text-white">
+                <tr>
+                  <th
+                    className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-30"
+                    style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
+                  >
+                    Field Description
+                  </th>
+                  {Array.from({ length: parseInt(formData.numberOfAntennas) || 1 }, (_, i) => (
                     <th
-                      className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-30"
-                      style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
+                      key={i}
+                      className="border px-4 py-3 text-center font-semibold min-w-[300px] sticky top-0 bg-blue-500 z-20"
                     >
-                      Field Description
+                      Antenna #{i + 1}
                     </th>
-                    {Array.from({ length: parseInt(formData.numberOfAntennas) || 1 }, (_, i) => (
-                      <th
-                        key={i}
-                        className="border px-4 py-3 text-center font-semibold min-w-[300px] sticky top-0 bg-blue-500 z-20"
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {/* Operator */}
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    If shared site, antenna belongs to which operator?
+                  </td>
+                  {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <select
+                        value={antenna.operator}
+                        onChange={(e) => handleChange(antennaIndex, 'operator', e.target.value)}
+                        className="w-full p-2 border rounded text-sm"
                       >
-                        Antenna #{i + 1}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {/* Operator */}
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                      If shared site, antenna belongs to which operator?
+                        <option value="">-- Select --</option>
+                        <option value="Operator 1">Operator 1</option>
+                        <option value="Operator 2">Operator 2</option>
+                        <option value="Operator 3">Operator 3</option>
+                        <option value="Operator 4">Operator 4</option>
+                      </select>
                     </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <select
-                          value={antenna.operator}
-                          onChange={(e) => handleChange(antennaIndex, 'operator', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
-                        >
-                          <option value="">-- Select --</option>
-                          <option value="Operator 1">Operator 1</option>
-                          <option value="Operator 2">Operator 2</option>
-                          <option value="Operator 3">Operator 3</option>
-                          <option value="Operator 4">Operator 4</option>
-                        </select>
-                      </td>
-                    ))}
-                  </tr>
+                  ))}
+                </tr>
 
-                  {/* Base Height */}
+                {/* Base Height */}
+                <tr>
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    Antenna's base height from tower base level (meter)
+                  </td>
+                  {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <input
+                        type="number"
+                        value={antenna.baseHeight}
+                        onChange={(e) => handleChange(antennaIndex, 'baseHeight', e.target.value)}
+                        className="w-full p-2 border rounded text-sm"
+                        placeholder="000"
+                      />
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Tower Leg */}
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    Antenna located at tower leg
+                  </td>
+                  {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <div className="flex gap-2">
+                        {['A', 'B', 'C', 'D'].map(leg => (
+                          <label key={leg} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="radio"
+                              name={`towerLeg-${antennaIndex}`}
+                              value={leg}
+                              checked={antenna.towerLeg === leg}
+                              onChange={(e) => handleChange(antennaIndex, 'towerLeg', e.target.value)}
+                              className="w-4 h-4"
+                            />
+                            {leg}
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Sector */}
+                <tr>
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    Antenna's sector
+                  </td>
+                  {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <select
+                        value={antenna.sector}
+                        onChange={(e) => handleChange(antennaIndex, 'sector', e.target.value)}
+                        className="w-full p-2 border rounded text-sm"
+                      >
+                        <option value="">-- Select --</option>
+                        {[1, 2, 3, 4, 5].map(sector => (
+                          <option key={sector} value={sector}>{sector}</option>
+                        ))}
+                      </select>
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Technology */}
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    Antenna's technology
+                  </td>
+                  {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <div className="grid grid-cols-2 gap-1">
+                        {['2G', '3G', '4G', '5G'].map(tech => (
+                          <label key={tech} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={antenna.technology.includes(tech)}
+                              onChange={(e) => handleCheckboxChange(antennaIndex, 'technology', tech, e.target.checked)}
+                              className="w-4 h-4"
+                            />
+                            {tech}
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Azimuth */}
+                <tr>
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    Azimuth, angle shift from zero north direction (degree)
+                  </td>
+                  {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <input
+                        type="number"
+                        value={antenna.azimuth}
+                        onChange={(e) => handleChange(antennaIndex, 'azimuth', e.target.value)}
+                        className="w-full p-2 border rounded text-sm"
+                        placeholder="0000"
+                        min="0"
+                        max="360"
+                      />
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Mechanical Tilt Exist */}
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    Mechanical tilt exist?
+                  </td>
+                  {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <div className="flex gap-4">
+                        {['Yes', 'No'].map(option => (
+                          <label key={option} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="radio"
+                              name={`mechanicalTiltExist-${antennaIndex}`}
+                              value={option}
+                              checked={antenna.mechanicalTiltExist === option}
+                              onChange={(e) => handleChange(antennaIndex, 'mechanicalTiltExist', e.target.value)}
+                              className="w-4 h-4"
+                            />
+                            {option}
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Mechanical Tilt - Only show if mechanical tilt exists */}
+                {hasMechanicalTilt() && (
                   <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                      Antenna's base height from tower base level (meter)
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                      Mechanical tilt (degree)
                     </td>
                     {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                       <td key={antennaIndex} className="border px-2 py-2">
                         <input
                           type="number"
-                          value={antenna.baseHeight}
-                          onChange={(e) => handleChange(antennaIndex, 'baseHeight', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
-                          placeholder="000"
+                          value={antenna.mechanicalTilt}
+                          onChange={(e) => handleChange(antennaIndex, 'mechanicalTilt', e.target.value)}
+                          className={`w-full p-2 border rounded text-sm ${antenna.mechanicalTiltExist !== 'Yes' 
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                            : ''}`}
+                          placeholder={antenna.mechanicalTiltExist === 'Yes' ? '0000' : 'N/A'}
+                          disabled={antenna.mechanicalTiltExist !== 'Yes'}
                         />
                       </td>
                     ))}
                   </tr>
+                )}
 
-                  {/* Tower Leg */}
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                      Antenna located at tower leg
+                {/* Electrical Tilt */}
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    Electrical tilt (degree)
+                  </td>
+                  {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <input
+                        type="number"
+                        value={antenna.electricalTilt}
+                        onChange={(e) => handleChange(antennaIndex, 'electricalTilt', e.target.value)}
+                        className="w-full p-2 border rounded text-sm"
+                        placeholder="0000"
+                      />
                     </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <div className="flex gap-2">
-                          {['A', 'B', 'C', 'D'].map(leg => (
-                            <label key={leg} className="flex items-center gap-1 text-sm">
-                              <input
-                                type="radio"
-                                name={`towerLeg-${antennaIndex}`}
-                                value={leg}
-                                checked={antenna.towerLeg === leg}
-                                onChange={(e) => handleChange(antennaIndex, 'towerLeg', e.target.value)}
-                                className="w-4 h-4"
-                              />
-                              {leg}
-                            </label>
-                          ))}
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
+                  ))}
+                </tr>
 
-                  {/* Sector */}
+                {/* RET Connectivity */}
+                <tr>
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    RET connectivity
+                  </td>
+                  {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <select
+                        value={antenna.retConnectivity}
+                        onChange={(e) => handleChange(antennaIndex, 'retConnectivity', e.target.value)}
+                        className="w-full p-2 border rounded text-sm"
+                      >
+                        <option value="">-- Select --</option>
+                        <option value="Chaining">Chaining</option>
+                        <option value="Direct">Direct</option>
+                        <option value="Not applicable">Not applicable</option>
+                      </select>
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Antenna Vendor */}
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    Antenna vendor
+                  </td>
+                  {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <div className="grid grid-cols-2 gap-1">
+                        {['Nokia', 'Ericsson', 'RADIOSCOPE', 'Kathrine', 'Huawei', 'Andrew', 'Other'].map(vendor => (
+                          <label key={vendor} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="radio"
+                              name={`vendor-${antennaIndex}`}
+                              value={vendor}
+                              checked={antenna.vendor === vendor}
+                              onChange={(e) => handleChange(antennaIndex, 'vendor', e.target.value)}
+                              className="w-4 h-4"
+                            />
+                            {vendor}
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Nokia Active Antenna - Only show if Nokia is selected */}
+                {hasNokiaVendor() && (
+                  <>
                   <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                      Antenna's sector
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <select
-                          value={antenna.sector}
-                          onChange={(e) => handleChange(antennaIndex, 'sector', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
-                        >
-                          <option value="">-- Select --</option>
-                          {[1, 2, 3, 4, 5].map(sector => (
-                            <option key={sector} value={sector}>{sector}</option>
-                          ))}
-                        </select>
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Technology */}
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                      Antenna's technology
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <div className="grid grid-cols-2 gap-1">
-                          {['2G', '3G', '4G', '5G'].map(tech => (
-                            <label key={tech} className="flex items-center gap-1 text-sm">
-                              <input
-                                type="checkbox"
-                                checked={antenna.technology.includes(tech)}
-                                onChange={(e) => handleCheckboxChange(antennaIndex, 'technology', tech, e.target.checked)}
-                                className="w-4 h-4"
-                              />
-                              {tech}
-                            </label>
-                          ))}
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Azimuth */}
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                      Azimuth, angle shift from zero north direction (degree)
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <input
-                          type="number"
-                          value={antenna.azimuth}
-                          onChange={(e) => handleChange(antennaIndex, 'azimuth', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
-                          placeholder="0000"
-                          min="0"
-                          max="360"
-                        />
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Mechanical Tilt Exist */}
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                      Mechanical tilt exist?
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                      If Nokia, is it active antenna?
                     </td>
                     {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                       <td key={antennaIndex} className="border px-2 py-2">
@@ -521,545 +637,429 @@ const RadioAntenasForm = () => {
                             <label key={option} className="flex items-center gap-1 text-sm">
                               <input
                                 type="radio"
-                                name={`mechanicalTiltExist-${antennaIndex}`}
-                                value={option}
-                                checked={antenna.mechanicalTiltExist === option}
-                                onChange={(e) => handleChange(antennaIndex, 'mechanicalTiltExist', e.target.value)}
-                                className="w-4 h-4"
-                              />
-                              {option}
-                            </label>
-                          ))}
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Mechanical Tilt - Only show if mechanical tilt exists */}
-                  {hasMechanicalTilt() && (
-                    <tr>
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                        Mechanical tilt (degree)
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                        <td key={antennaIndex} className="border px-2 py-2">
-                          <input
-                            type="number"
-                            value={antenna.mechanicalTilt}
-                            onChange={(e) => handleChange(antennaIndex, 'mechanicalTilt', e.target.value)}
-                            className={`w-full p-2 border rounded text-sm ${antenna.mechanicalTiltExist !== 'Yes' 
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                              : ''}`}
-                            placeholder={antenna.mechanicalTiltExist === 'Yes' ? '0000' : 'N/A'}
-                            disabled={antenna.mechanicalTiltExist !== 'Yes'}
-                          />
-                        </td>
-                      ))}
-                    </tr>
-                  )}
-
-                  {/* Electrical Tilt */}
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                      Electrical tilt (degree)
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <input
-                          type="number"
-                          value={antenna.electricalTilt}
-                          onChange={(e) => handleChange(antennaIndex, 'electricalTilt', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
-                          placeholder="0000"
-                        />
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* RET Connectivity */}
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                      RET connectivity
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <select
-                          value={antenna.retConnectivity}
-                          onChange={(e) => handleChange(antennaIndex, 'retConnectivity', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
-                        >
-                          <option value="">-- Select --</option>
-                          <option value="Chaining">Chaining</option>
-                          <option value="Direct">Direct</option>
-                          <option value="Not applicable">Not applicable</option>
-                        </select>
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Antenna Vendor */}
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                      Antenna vendor
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <div className="grid grid-cols-2 gap-1">
-                          {['Nokia', 'Ericsson', 'RADIOSCOPE', 'Kathrine', 'Huawei', 'Andrew', 'Other'].map(vendor => (
-                            <label key={vendor} className="flex items-center gap-1 text-sm">
-                              <input
-                                type="radio"
-                                name={`vendor-${antennaIndex}`}
-                                value={vendor}
-                                checked={antenna.vendor === vendor}
-                                onChange={(e) => handleChange(antennaIndex, 'vendor', e.target.value)}
-                                className="w-4 h-4"
-                              />
-                              {vendor}
-                            </label>
-                          ))}
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Nokia Active Antenna - Only show if Nokia is selected */}
-                  {hasNokiaVendor() && (
-                    <>
-                    <tr>
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                        If Nokia, is it active antenna?
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                        <td key={antennaIndex} className="border px-2 py-2">
-                          <div className="flex gap-4">
-                            {['Yes', 'No'].map(option => (
-                              <label key={option} className="flex items-center gap-1 text-sm">
-                                <input
-                                  type="radio"
-                                  name={`isNokiaActive-${antennaIndex}`}
+                                name={`isNokiaActive-${antennaIndex}`}
                                   value={antenna.vendor !== 'Nokia' ? ' ' : option}
-                                  checked={antenna.isNokiaActive === option}
-                                  onChange={(e) => handleChange(antennaIndex, 'isNokiaActive', e.target.value)}
-                                  className="w-4 h-4"
-                                  disabled={antenna.vendor !== 'Nokia'}
-                                />
+                                checked={antenna.isNokiaActive === option}
+                                onChange={(e) => handleChange(antennaIndex, 'isNokiaActive', e.target.value)}
+                                className="w-4 h-4"
+                                disabled={antenna.vendor !== 'Nokia'}
+                              />
                                
-                                  {option}
+                                {option}
                            
-                              </label>
-                            ))}
-                          </div>
-                        </td>
-                      ))}
-                    </tr>
-
-                    <tr>
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                      If Nokia active antenna, what is the module name?
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                        <td key={antennaIndex} className="border px-2 py-2">
-                          <div className="flex gap-4">
-                          <select
-                          value={antenna.nokiaModuleName}
-                          onChange={(e) => handleChange(antennaIndex, 'nokiaModuleName', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
-                        >
-                          <option value="">-- Select --</option>
-                          <option value="A">A</option>
-                          <option value="B">B</option>
-                          <option value="C">C</option>
-                          <option value="D">D</option>
-                        </select>
-                          </div>
-                        </td>
-                      ))}
-                    </tr>
-
-                    <tr>
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                      If Nokia active antenna, how many fiber connected to base band?
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                        <td key={antennaIndex} className="border px-2 py-2">
-                          <div className="flex gap-4">
-                            {['1', '2', '3', '4'].map(option => (
-                              <label key={option} className="flex items-center gap-1 text-sm">
-                                <input
-                                  type="radio"
-                                  name={`nokiaFiberCount-${antennaIndex}`}
-                                  value={option}
-                                  checked={antenna.nokiaFiberCount === option}
-                                  onChange={(e) => handleChange(antennaIndex, 'nokiaFiberCount', e.target.value)}
-                                  className="w-4 h-4"
-                                
-                                />
-                              
-                                  {option}
-                             
-                              </label>
-                            ))}
-                          </div>
-                        </td>
-                      ))}
-                    </tr>
-
-                    <tr>
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                      If Nokia active antenna, length of fiber to base band? (meter)
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                        <td key={antennaIndex} className="border px-2 py-2">
-                          <input
-                            type="number"
-                            value={antenna.nokiaFiberLength}
-                            onChange={(e) => handleChange(antennaIndex, 'nokiaFiberLength', e.target.value)}
-                            className="w-full p-2 border rounded text-sm"
-                            placeholder="0000"
-                          />
-                        </td>
-                      ))}
-                    </tr>
-                    </>
-                  )}
-
-              
-
-              
-                  {/* Other Vendor Model - Only show if other vendor */}
-                  {hasOtherVendor() && (
-                    <>
-                    <tr>
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                        If other vendor, antenna model Number
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                        <td key={antennaIndex} className="border px-2 py-2">
-                          <input
-                            type="text"
-                            value={antenna.otherModelNumber}
-                            onChange={(e) => handleChange(antennaIndex, 'otherModelNumber', e.target.value)}
-                            className={`w-full p-2 border rounded text-sm ${antenna.vendor === 'Nokia' || !antenna.vendor 
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                              : ''}`}
-                            placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? 'Xxxx' : 'N/A'}
-                            disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
-                          />
-                        </td>
-                      ))}
-                    </tr>
-
-                    <tr>
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                      If other vendor, antenna dimensions, length (cm)
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                        <td key={antennaIndex} className="border px-2 py-2">
-                          <input
-                            type="number"
-                            value={antenna.otherLength}
-                            onChange={(e) => handleChange(antennaIndex, 'otherLength', e.target.value)}
-                                className={`w-full p-2 border rounded text-sm ${antenna.vendor === 'Nokia' || !antenna.vendor 
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                              : ''}`}
-                            placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? '0000' : 'N/A'}
-                            disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
-                          />
-                        </td>
-                      ))}
-                    </tr>
-
-                    <tr>
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                        If other vendor, antenna dimensions, width (cm)
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                        <td key={antennaIndex} className="border px-2 py-2">
-                          <input
-                            type="number"
-                            value={antenna.otherWidth}
-                            onChange={(e) => handleChange(antennaIndex, 'otherWidth', e.target.value)}
-                            className={`w-full p-2 border rounded text-sm ${antenna.vendor === 'Nokia' || !antenna.vendor 
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                              : ''}`}
-                            placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? '0000' : 'N/A'}
-                            disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
-                          />
-                        </td>
-                      ))}
-                    </tr>   
-
-                    <tr>
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                        If other vendor, antenna dimensions, depth (cm)
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                        <td key={antennaIndex} className="border px-2 py-2">
-                          <input
-                            type="number"
-                            value={antenna.otherDepth}
-                            onChange={(e) => handleChange(antennaIndex, 'otherDepth', e.target.value)}
-                            className={`w-full p-2 border rounded text-sm ${antenna.vendor === 'Nokia' || !antenna.vendor 
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                              : ''}`}
-                            placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? '0000' : 'N/A'}
-                            disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
-                          />
-                        </td>
-                      ))}
-                    </tr>     
-
-                    <tr>
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                      If other vendor, Antenna port type 
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <div className="grid grid-cols-2 gap-1">
-                          {['7/16', '4.3-10', 'MQ4', 'MQ5'].map(port => (
-                            <label key={port} className="flex items-center gap-1 text-sm">
-                              <input
-                                type="checkbox"
-                                checked={antenna.otherPortType.includes(port)}
-                                onChange={(e) => handleCheckboxChange(antennaIndex, 'otherPortType', port, e.target.checked)}
-                                className="w-4 h-4"
-                              />
-                              {port}
                             </label>
                           ))}
                         </div>
                       </td>
                     ))}
-                    </tr>
-
-                    <tr>
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                      If other vendor, antenna bands
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <div className="grid grid-cols-2 gap-1">
-                          {['700', '800', '900', '1800', '2100', '2600'].map(band => (
-                            <label key={band} className="flex items-center gap-1 text-sm">
-                              <input
-                                type="checkbox"
-                                checked={antenna.otherBands.includes(band)}
-                                onChange={(e) => handleCheckboxChange(antennaIndex, 'otherBands', band, e.target.checked)}
-                                className="w-4 h-4"
-                              />
-                              {band}
-                            </label>
-                          ))}
-                        </div>
-                      </td>
-                    ))}
-                    </tr>
-
-                    <tr>
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                      If other vendor, total number of antenna ports
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                        <td key={antennaIndex} className="border px-2 py-2">
-                          <input
-                            type="number"
-                            value={antenna.otherPortCount}
-                            onChange={(e) => handleChange(antennaIndex, 'otherPortCount', e.target.value)}
-                            className="w-full p-2 border rounded text-sm"
-                            placeholder="0000"
-                          />
-                        </td>
-                      ))}
-                    </tr>
-
-                    <tr>
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                      If other vendor, antenna free ports
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                        <td key={antennaIndex} className="border px-2 py-2">
-                          <input
-                            type="number"
-                            value={antenna.otherFreePorts}
-                            onChange={(e) => handleChange(antennaIndex, 'otherFreePorts', e.target.value)}
-                            className="w-full p-2 border rounded text-sm"
-                            placeholder="0000"
-                          />
-                        </td>
-                      ))}
-                    </tr>
-
-                    <tr>
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                      If other vendor, bands supported by free ports
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <div className="grid grid-cols-2 gap-1">
-                            {['700', '800', '900', '1800', '2100', '2600'].map(freeBand => (
-                              <label key={freeBand} className="flex items-center gap-1 text-sm">
-                              <input
-                                type="checkbox"
-                                checked={antenna.otherFreeBands.includes(freeBand)}
-                                onChange={(e) => handleCheckboxChange(antennaIndex, 'otherFreeBands', freeBand, e.target.checked)}
-                                className="w-4 h-4"
-                              />
-                              {freeBand}
-                            </label>
-                          ))}
-                        </div>
-                      </td>
-                    ))}
-                    </tr>
-
-                    <tr>
-                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                      If other vendor, how many radio units connected with this antenna?
-                      </td>
-                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                        <td key={antennaIndex} className="border px-2 py-2">
-                          <div className="flex gap-4">
-                            {['1', '2', '3', '4', '5', '6'].map(option => (
-                              <label key={option} className="flex items-center gap-1 text-sm">
-                                <input
-                                  type="radio"
-                                  name={`otherRadioUnits-${antennaIndex}`}
-                                  value={option}
-                                  checked={antenna.otherRadioUnits === option}
-                                  onChange={(e) => handleChange(antennaIndex, 'otherRadioUnits', e.target.value)}
-                                  className="w-4 h-4"
-                                 
-                                />
-                               
-                                  {option}
-                             
-                              </label>
-                            ))}
-                          </div>
-                        </td>
-                      ))}
-
-                    </tr>
-
-                    </> 
-                  )}
-
-                  {/* Continue with other conditional fields... */}
-                  {/* Side Arm Length */}
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                      Antenna side arm length (cm)
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <input
-                          type="number"
-                          value={antenna.sideArmLength}
-                          onChange={(e) => handleChange(antennaIndex, 'sideArmLength', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
-                          placeholder="000"
-                        />
-                      </td>
-                    ))}
                   </tr>
 
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                    Antenna side arm diameter (cm)
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <input
-                          type="number"
-                          value={antenna.sideArmDiameter}
-                          onChange={(e) => handleChange(antennaIndex, 'sideArmDiameter', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
-                          placeholder="000"
-                        />
-                      </td>
-                    ))}
-                  </tr>
-
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                    Antenna side arm offset from tower leg (cm)
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <input
-                          type="number"
-                          value={antenna.sideArmOffset}
-                          onChange={(e) => handleChange(antennaIndex, 'sideArmOffset', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
-                          placeholder="000"
-                        />
-                      </td>
-                    ))}
-                  </tr>
-
-                  
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                    Length of earth cable connected to the earth bus bar (m)
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <input
-                          type="number"
-                          value={antenna.earthCableLength}
-                          onChange={(e) => handleChange(antennaIndex, 'earthCableLength', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
-                          placeholder="000"
-                        />
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Include in Plan */}
                   <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                      This antenna included in the swap or upgrade plan
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    If Nokia active antenna, what is the module name?
                     </td>
                     {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                       <td key={antennaIndex} className="border px-2 py-2">
                         <div className="flex gap-4">
-                          {['Yes', 'No'].map(option => (
+                        <select
+                        value={antenna.nokiaModuleName}
+                        onChange={(e) => handleChange(antennaIndex, 'nokiaModuleName', e.target.value)}
+                        className="w-full p-2 border rounded text-sm"
+                      >
+                        <option value="">-- Select --</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                      </select>
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+
+                  <tr>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    If Nokia active antenna, how many fiber connected to base band?
+                    </td>
+                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                      <td key={antennaIndex} className="border px-2 py-2">
+                        <div className="flex gap-4">
+                          {['1', '2', '3', '4'].map(option => (
                             <label key={option} className="flex items-center gap-1 text-sm">
                               <input
                                 type="radio"
-                                name={`includeInPlan-${antennaIndex}`}
+                                name={`nokiaFiberCount-${antennaIndex}`}
                                 value={option}
-                                checked={antenna.includeInPlan === option}
-                                onChange={(e) => handleChange(antennaIndex, 'includeInPlan', e.target.value)}
+                                checked={antenna.nokiaFiberCount === option}
+                                onChange={(e) => handleChange(antennaIndex, 'nokiaFiberCount', e.target.value)}
                                 className="w-4 h-4"
+                                
                               />
-                              {option}
+                              
+                                {option}
+                             
                             </label>
                           ))}
                         </div>
                       </td>
                     ))}
                   </tr>
-                </tbody>
-              </table>
-            </div>
 
-            {error && (
-              <div className="text-red-600 text-sm mt-2">
-                {error}
-              </div>
-            )}
+                  <tr>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    If Nokia active antenna, length of fiber to base band? (meter)
+                    </td>
+                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                      <td key={antennaIndex} className="border px-2 py-2">
+                        <input
+                          type="number"
+                          value={antenna.nokiaFiberLength}
+                          onChange={(e) => handleChange(antennaIndex, 'nokiaFiberLength', e.target.value)}
+                          className="w-full p-2 border rounded text-sm"
+                          placeholder="0000"
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                  </>
+                )}
 
-            <div className="mt-6 flex justify-center">
-              <button
-                type="submit"
-                className="px-6 py-3 text-white bg-blue-500 rounded hover:bg-blue-700 font-semibold"
-              >
-                Save and Continue
-              </button>
+              
+
+
+                {/* Other Vendor Model - Only show if other vendor */}
+                {hasOtherVendor() && (
+                  <>
+                  <tr>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                      If other vendor, antenna model Number
+                    </td>
+                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                      <td key={antennaIndex} className="border px-2 py-2">
+                        <input
+                          type="text"
+                          value={antenna.otherModelNumber}
+                          onChange={(e) => handleChange(antennaIndex, 'otherModelNumber', e.target.value)}
+                          className={`w-full p-2 border rounded text-sm ${antenna.vendor === 'Nokia' || !antenna.vendor 
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                            : ''}`}
+                          placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? 'Xxxx' : 'N/A'}
+                          disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+
+                  <tr>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    If other vendor, antenna dimensions, length (cm)
+                    </td>
+                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                      <td key={antennaIndex} className="border px-2 py-2">
+                        <input
+                          type="number"
+                          value={antenna.otherLength}
+                          onChange={(e) => handleChange(antennaIndex, 'otherLength', e.target.value)}
+                              className={`w-full p-2 border rounded text-sm ${antenna.vendor === 'Nokia' || !antenna.vendor 
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                            : ''}`}
+                          placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? '0000' : 'N/A'}
+                          disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+
+                  <tr>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                      If other vendor, antenna dimensions, width (cm)
+                    </td>
+                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                      <td key={antennaIndex} className="border px-2 py-2">
+                        <input
+                          type="number"
+                          value={antenna.otherWidth}
+                          onChange={(e) => handleChange(antennaIndex, 'otherWidth', e.target.value)}
+                          className={`w-full p-2 border rounded text-sm ${antenna.vendor === 'Nokia' || !antenna.vendor 
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                            : ''}`}
+                          placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? '0000' : 'N/A'}
+                          disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
+                        />
+                      </td>
+                    ))}
+                  </tr>   
+
+                  <tr>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                      If other vendor, antenna dimensions, depth (cm)
+                    </td>
+                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                      <td key={antennaIndex} className="border px-2 py-2">
+                        <input
+                          type="number"
+                          value={antenna.otherDepth}
+                          onChange={(e) => handleChange(antennaIndex, 'otherDepth', e.target.value)}
+                          className={`w-full p-2 border rounded text-sm ${antenna.vendor === 'Nokia' || !antenna.vendor 
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                            : ''}`}
+                          placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? '0000' : 'N/A'}
+                          disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
+                        />
+                      </td>
+                    ))}
+                  </tr>     
+
+                  <tr>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    If other vendor, Antenna port type 
+                    </td>
+                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <div className="grid grid-cols-2 gap-1">
+                        {['7/16', '4.3-10', 'MQ4', 'MQ5'].map(port => (
+                          <label key={port} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={antenna.otherPortType.includes(port)}
+                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherPortType', port, e.target.checked)}
+                              className="w-4 h-4"
+                            />
+                            {port}
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                  ))}
+                  </tr>
+
+                  <tr>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    If other vendor, antenna bands
+                    </td>
+                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <div className="grid grid-cols-2 gap-1">
+                        {['700', '800', '900', '1800', '2100', '2600'].map(band => (
+                          <label key={band} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={antenna.otherBands.includes(band)}
+                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherBands', band, e.target.checked)}
+                              className="w-4 h-4"
+                            />
+                            {band}
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                  ))}
+                  </tr>
+
+                  <tr>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    If other vendor, total number of antenna ports
+                    </td>
+                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                      <td key={antennaIndex} className="border px-2 py-2">
+                        <input
+                          type="number"
+                          value={antenna.otherPortCount}
+                          onChange={(e) => handleChange(antennaIndex, 'otherPortCount', e.target.value)}
+                          className="w-full p-2 border rounded text-sm"
+                          placeholder="0000"
+                        />
+                      </td>
+                    ))}
+                  </tr>
+
+                  <tr>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    If other vendor, antenna free ports
+                    </td>
+                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                      <td key={antennaIndex} className="border px-2 py-2">
+                        <input
+                          type="number"
+                          value={antenna.otherFreePorts}
+                          onChange={(e) => handleChange(antennaIndex, 'otherFreePorts', e.target.value)}
+                          className="w-full p-2 border rounded text-sm"
+                          placeholder="0000"
+                        />
+                      </td>
+                    ))}
+                  </tr>
+
+                  <tr>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    If other vendor, bands supported by free ports
+                    </td>
+                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <div className="grid grid-cols-2 gap-1">
+                          {['700', '800', '900', '1800', '2100', '2600'].map(freeBand => (
+                            <label key={freeBand} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={antenna.otherFreeBands.includes(freeBand)}
+                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherFreeBands', freeBand, e.target.checked)}
+                              className="w-4 h-4"
+                            />
+                            {freeBand}
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                  ))}
+                  </tr>
+
+                  <tr>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    If other vendor, how many radio units connected with this antenna?
+                    </td>
+                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                      <td key={antennaIndex} className="border px-2 py-2">
+                        <div className="flex gap-4">
+                          {['1', '2', '3', '4', '5', '6'].map(option => (
+                            <label key={option} className="flex items-center gap-1 text-sm">
+                              <input
+                                type="radio"
+                                name={`otherRadioUnits-${antennaIndex}`}
+                                value={option}
+                                checked={antenna.otherRadioUnits === option}
+                                onChange={(e) => handleChange(antennaIndex, 'otherRadioUnits', e.target.value)}
+                                className="w-4 h-4"
+                               
+                              />
+                             
+                                {option}
+                           
+                            </label>
+                          ))}
+                        </div>
+                      </td>
+                    ))}
+
+                  </tr>
+
+                  </> 
+                )}
+
+                {/* Continue with other conditional fields... */}
+                {/* Side Arm Length */}
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    Antenna side arm length (cm)
+                  </td>
+                  {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <input
+                        type="number"
+                        value={antenna.sideArmLength}
+                        onChange={(e) => handleChange(antennaIndex, 'sideArmLength', e.target.value)}
+                        className="w-full p-2 border rounded text-sm"
+                        placeholder="000"
+                      />
+                    </td>
+                  ))}
+                </tr>
+
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                  Antenna side arm diameter (cm)
+                  </td>
+                  {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <input
+                        type="number"
+                        value={antenna.sideArmDiameter}
+                        onChange={(e) => handleChange(antennaIndex, 'sideArmDiameter', e.target.value)}
+                        className="w-full p-2 border rounded text-sm"
+                        placeholder="000"
+                      />
+                    </td>
+                  ))}
+                </tr>
+
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                  Antenna side arm offset from tower leg (cm)
+                  </td>
+                  {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <input
+                        type="number"
+                        value={antenna.sideArmOffset}
+                        onChange={(e) => handleChange(antennaIndex, 'sideArmOffset', e.target.value)}
+                        className="w-full p-2 border rounded text-sm"
+                        placeholder="000"
+                      />
+                    </td>
+                  ))}
+                </tr>
+
+                
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                  Length of earth cable connected to the earth bus bar (m)
+                  </td>
+                  {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <input
+                        type="number"
+                        value={antenna.earthCableLength}
+                        onChange={(e) => handleChange(antennaIndex, 'earthCableLength', e.target.value)}
+                        className="w-full p-2 border rounded text-sm"
+                        placeholder="000"
+                      />
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Include in Plan */}
+                <tr>
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    This antenna included in the swap or upgrade plan
+                  </td>
+                  {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <div className="flex gap-4">
+                        {['Yes', 'No'].map(option => (
+                          <label key={option} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="radio"
+                              name={`includeInPlan-${antennaIndex}`}
+                              value={option}
+                              checked={antenna.includeInPlan === option}
+                              onChange={(e) => handleChange(antennaIndex, 'includeInPlan', e.target.value)}
+                              className="w-4 h-4"
+                            />
+                            {option}
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {error && (
+            <div className="text-red-600 text-sm mt-2">
+              {error}
             </div>
-          </form>
+          )}
+
+          <div className="mt-6 flex justify-center">
+            <button
+              type="submit"
+              className="px-6 py-3 text-white bg-blue-500 rounded hover:bg-blue-700 font-semibold"
+            >
+              Save and Continue
+            </button>
+          </div>
+        </form>
         )}
       </div>
       <ImageUploader images={images} />
