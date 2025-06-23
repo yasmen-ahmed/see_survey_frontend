@@ -10,7 +10,16 @@ const SurveyCardList = () => {
 
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/surveys`)
-      .then((res) => setSurveys(res.data))
+      .then((res) => {
+      // Defensive: ensure surveys is always an array
+      if (Array.isArray(res.data)) {
+        setSurveys(res.data);
+      } else if (res.data && Array.isArray(res.data.surveys)) {
+        setSurveys(res.data.surveys);
+      } else {
+        setSurveys([]);
+      }
+    })
       .catch((err) => {
         console.error('Error fetching surveys:', err);
         setError('Failed to fetch surveys.');
