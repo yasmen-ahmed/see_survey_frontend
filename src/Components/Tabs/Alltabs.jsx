@@ -58,11 +58,8 @@ export const tabsConfig ={
      {label:"New FPFHs",key:"new-fphs",component:new_FPFH},
      {label:"New radio units",key:"new-radio-units",component:newradio},
      {label:"GPS",key:"gps",component:gps},
-    
-
-
-
   ],
+  
   "existing-radio":[
     {label:"Antenna Structure Form",key:"antennas-strut",component:AntennaStructure},
     {label:"MW Antenna",key:"mw-antennas",component:MwAntennas},

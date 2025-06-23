@@ -41,38 +41,37 @@ export const useRadioUnitsForm = (sessionId) => {
         
         console.log("Fetched new radio units data:", responseData);
         
-        if (responseData) {
-          // Get count from new_radio_units_planned
-          const count = responseData.new_radio_units_planned || 1;
+        if (responseData && responseData.radio_units) {
+          // Get count from new_radio_units_planned or total_radio_units
+          const count = responseData.new_radio_units_planned || responseData.total_radio_units || 1;
           setRadioUnitsCount(count);
           
-          // Map API data to form structure - now handling single data object
+          // Map API data to form structure - handling multiple radio units
           const newRadioUnitsForms = Array(6).fill().map((_, index) => {
-            if (index === 0 && responseData.data) {
-              // Map the single data object to the first form
-              const radioUnit = responseData.data;
+            if (index < responseData.radio_units.length) {
+              const radioUnit = responseData.radio_units[index];
               return {
                 sector: radioUnit.new_radio_unit_sector || '',
                 antennaConnection: radioUnit.connected_to_antenna || '',
                 technologies: radioUnit.connected_antenna_technology || [],
                 model: radioUnit.new_radio_unit_model || '',
                 location: radioUnit.radio_unit_location || '',
-                feederLength: radioUnit.feeder_length_to_antenna || '',
+                feederLength: radioUnit.feeder_length_to_antenna ? radioUnit.feeder_length_to_antenna.toString() : '',
                 towerLegSection: radioUnit.tower_leg_section || '',
                 angularDimensions: radioUnit.angular_l1_dimension && radioUnit.angular_l2_dimension 
                   ? `${radioUnit.angular_l1_dimension} x ${radioUnit.angular_l2_dimension}` 
                   : '',
-                tubularSection: radioUnit.tubular_cross_section || '',
+                tubularSection: radioUnit.tubular_cross_section ? radioUnit.tubular_cross_section.toString() : '',
                 sideArmOption: radioUnit.side_arm_type || '',
-                sideArmLength: radioUnit.side_arm_length || '',
-                sideArmCrossSection: radioUnit.side_arm_cross_section || '',
-                sideArmOffset: radioUnit.side_arm_offset || '',
+                sideArmLength: radioUnit.side_arm_length ? radioUnit.side_arm_length.toString() : '',
+                sideArmCrossSection: radioUnit.side_arm_cross_section ? radioUnit.side_arm_cross_section.toString() : '',
+                sideArmOffset: radioUnit.side_arm_offset ? radioUnit.side_arm_offset.toString() : '',
                 dcPowerSource: radioUnit.dc_power_source || '',
-                dcCableLength: radioUnit.dc_power_cable_length || '',
-                fiberLength: radioUnit.fiber_cable_length || '',
-                jumperLength: radioUnit.jumper_length || '',
+                dcCableLength: radioUnit.dc_power_cable_length ? radioUnit.dc_power_cable_length.toString() : '',
+                fiberLength: radioUnit.fiber_cable_length ? radioUnit.fiber_cable_length.toString() : '',
+                jumperLength: radioUnit.jumper_length ? radioUnit.jumper_length.toString() : '',
                 earthBusExists: radioUnit.earth_bus_bar_exists || '',
-                earthCableLength: radioUnit.earth_cable_length || '',
+                earthCableLength: radioUnit.earth_cable_length ? radioUnit.earth_cable_length.toString() : '',
               };
             }
             return { ...initialRadioForm };
@@ -114,6 +113,8 @@ export const useRadioUnitsForm = (sessionId) => {
   };
 
   const handleChange = (radioUnitIndex, field, value) => {
+    console.log(`HandleChange called: radioUnitIndex=${radioUnitIndex}, field=${field}, value=${value}`);
+    
     setRadioUnitsForms(prev => {
       const updated = [...prev];
       const radioUnit = { ...updated[radioUnitIndex] }; // Clone the specific radio unit object
@@ -146,6 +147,7 @@ export const useRadioUnitsForm = (sessionId) => {
         if (value !== 'Tubular') {
           radioUnit.tubularSection = '';
         }
+        console.log(`Tower leg section changed to: ${value}, angularDimensions cleared: ${radioUnit.angularDimensions}`);
       }
 
       if (field === 'earthBusExists' && value !== 'Yes') {
@@ -153,7 +155,8 @@ export const useRadioUnitsForm = (sessionId) => {
       }
 
       updated[radioUnitIndex] = radioUnit; // Replace with updated radio unit object
-
+      
+      console.log(`Updated radioUnit[${radioUnitIndex}]:`, radioUnit);
       return updated;
     });
 
@@ -219,44 +222,54 @@ export const useRadioUnitsForm = (sessionId) => {
     setIsSubmitting(true);
 
     try {
-      // Based on the API structure, it seems to store only one record
-      // but uses new_radio_units_planned to indicate the count
-      const firstRadioUnit = radioUnitsForms[0];
-      
-      // Parse angular dimensions back to separate L1 and L2 values
-      let angularL1 = null;
-      let angularL2 = null;
-      if (firstRadioUnit.angularDimensions && firstRadioUnit.angularDimensions.includes(' x ')) {
-        const dimensions = firstRadioUnit.angularDimensions.split(' x ');
-        angularL1 = dimensions[0] ? parseFloat(dimensions[0]).toFixed(2) : null;
-        angularL2 = dimensions[1] ? parseFloat(dimensions[1]).toFixed(2) : null;
-      }
-      
+      // Build radio_units array for API
+      const radioUnits = radioUnitsForms.slice(0, radioUnitsCount).map((radioUnit, index) => {
+        // Parse angular dimensions back to separate L1 and L2 values
+        let angularL1 = '';
+        let angularL2 = '';
+        
+        if (radioUnit.angularDimensions && radioUnit.angularDimensions.trim()) {
+          if (radioUnit.angularDimensions.includes(' x ')) {
+            const dimensions = radioUnit.angularDimensions.split(' x ');
+            angularL1 = dimensions[0] ? dimensions[0].trim() : '';
+            angularL2 = dimensions[1] ? dimensions[1].trim() : '';
+          } else {
+            // If it doesn't contain ' x ', maybe it's a single value or different format
+            console.warn('Angular dimensions format unexpected:', radioUnit.angularDimensions);
+          }
+        }
+        
+        const radioUnitData = {
+          radio_unit_index: index + 1,
+          radio_unit_number: (200 + index + 1).toString(), // Convert to string like "201", "202"
+          new_radio_unit_sector: radioUnit.sector || '',
+          connected_to_antenna: radioUnit.antennaConnection || '',
+          connected_antenna_technology: radioUnit.technologies || [],
+          new_radio_unit_model: radioUnit.model || '',
+          radio_unit_location: radioUnit.location || '',
+          feeder_length_to_antenna: radioUnit.feederLength || '',
+          tower_leg_section: radioUnit.towerLegSection || '',
+          angular_l1_dimension: angularL1 || '',
+          angular_l2_dimension: angularL2 || '',
+          tubular_cross_section: radioUnit.tubularSection || '',
+          side_arm_type: radioUnit.sideArmOption || '',
+          side_arm_length: radioUnit.sideArmLength || '',
+          side_arm_cross_section: radioUnit.sideArmCrossSection || '',
+          side_arm_offset: radioUnit.sideArmOffset || '',
+          dc_power_source: radioUnit.dcPowerSource || '',
+          dc_power_cable_length: radioUnit.dcCableLength || '',
+          fiber_cable_length: radioUnit.fiberLength || '',
+          jumper_length: radioUnit.jumperLength || '',
+          earth_bus_bar_exists: radioUnit.earthBusExists || '',
+          earth_cable_length: radioUnit.earthCableLength || '',
+        };
+        
+        console.log(`Radio Unit ${index + 1} data:`, radioUnitData);
+        return radioUnitData;
+      });
+
       const submitData = {
-        new_radio_units_planned: radioUnitsCount,
-        existing_radio_units_swapped: 0, // You may need to adjust this based on your requirements
-        radio_unit_index: 1,
-        radio_unit_number: 1,
-        new_radio_unit_sector: firstRadioUnit.sector || '',
-        connected_to_antenna: firstRadioUnit.antennaConnection || '',
-        connected_antenna_technology: firstRadioUnit.technologies || [],
-        new_radio_unit_model: firstRadioUnit.model || '',
-        radio_unit_location: firstRadioUnit.location || '',
-        feeder_length_to_antenna: firstRadioUnit.feederLength ? parseFloat(firstRadioUnit.feederLength).toFixed(2) : null,
-        tower_leg_section: firstRadioUnit.towerLegSection || '',
-        angular_l1_dimension: angularL1,
-        angular_l2_dimension: angularL2,
-        tubular_cross_section: firstRadioUnit.tubularSection ? parseFloat(firstRadioUnit.tubularSection).toFixed(2) : null,
-        side_arm_type: firstRadioUnit.sideArmOption || '',
-        side_arm_length: firstRadioUnit.sideArmLength ? parseFloat(firstRadioUnit.sideArmLength).toFixed(2) : null,
-        side_arm_cross_section: firstRadioUnit.sideArmCrossSection ? parseFloat(firstRadioUnit.sideArmCrossSection).toFixed(2) : null,
-        side_arm_offset: firstRadioUnit.sideArmOffset ? parseFloat(firstRadioUnit.sideArmOffset).toFixed(2) : null,
-        dc_power_source: firstRadioUnit.dcPowerSource || '',
-        dc_power_cable_length: firstRadioUnit.dcCableLength ? parseFloat(firstRadioUnit.dcCableLength).toFixed(2) : null,
-        fiber_cable_length: firstRadioUnit.fiberLength ? parseFloat(firstRadioUnit.fiberLength).toFixed(2) : null,
-        jumper_length: firstRadioUnit.jumperLength ? parseFloat(firstRadioUnit.jumperLength).toFixed(2) : null,
-        earth_bus_bar_exists: firstRadioUnit.earthBusExists || '',
-        earth_cable_length: firstRadioUnit.earthCableLength ? parseFloat(firstRadioUnit.earthCableLength).toFixed(2) : null,
+        radio_units: radioUnits
       };
 
       console.log("Submitting new radio units data:", submitData);
@@ -266,7 +279,7 @@ export const useRadioUnitsForm = (sessionId) => {
         submitData
       );
 
-      showSuccess('New radio units data submitted successfully!');
+      showSuccess(`Processed ${radioUnitsCount} radio units successfully!`);
       console.log("Response:", response.data);
       setErrors({});
     } catch (err) {
@@ -287,4 +300,4 @@ export const useRadioUnitsForm = (sessionId) => {
     handleChange,
     handleSubmit,
   };
-}; 
+};
