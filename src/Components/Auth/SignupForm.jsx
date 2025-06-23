@@ -20,7 +20,7 @@ const LoginForm = () => {
     setSuccess("");
     setLoading(true);
     try {
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, formData);
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}:3000/api/auth/login`, formData);
       if (response.data.token) {
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("name", response.data.user.firstName + " " + response.data.user.lastName);
