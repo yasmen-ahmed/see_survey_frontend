@@ -10,7 +10,50 @@ const MwAntennasForm = () => {
     antennaCount: "",
     antennas: [],
   });
+  const [uploadedImages, setUploadedImages] = useState({});
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Generate image fields for a single antenna
+  const getAntennaImages = (antennaNumber) => [
+    { label: `Antenna #${antennaNumber} photo`, name: `antenna_${antennaNumber}_photo` },
+    { label: `Antenna #${antennaNumber} Mechanical tilt photo`, name: `antenna_${antennaNumber}_mechanical_tilt` },
+    { label: `Antenna #${antennaNumber} RET Photo`, name: `antenna_${antennaNumber}_ret` },
+    { label: `Antenna #${antennaNumber} Label`, name: `antenna_${antennaNumber}_label` },
+    { label: `Antenna #${antennaNumber} Ports Photo`, name: `antenna_${antennaNumber}_ports` },
+    { label: `Antenna #${antennaNumber} free ports Photo`, name: `antenna_${antennaNumber}_free_ports` },
+  ];
+
+  // Generate all image fields based on antenna count
+  const getAllImages = () => {
+    if (!formData.antennaCount) return [];
+    const count = parseInt(formData.antennaCount);
+    let allImages = [];
+    for (let i = 1; i <= count; i++) {
+      allImages = [...allImages, ...getAntennaImages(i)];
+    }
+    return allImages;
+  };
+
+  // Process images from API response
+  const processImagesFromResponse = (antennas) => {
+    const imagesByCategory = {};
+    
+    antennas.forEach(antenna => {
+      if (antenna.images && Array.isArray(antenna.images)) {
+        antenna.images.forEach(img => {
+          // Each image should be an object with the required properties
+          imagesByCategory[img.image_category] = [{
+            id: img.id,
+            file_url: img.file_url,  // The full URL path will be handled by ImageUploader
+            name: img.original_filename
+          }];
+        });
+      }
+    });
+    
+    return imagesByCategory;
+  };
 
   // Fetch existing data when component loads
   useEffect(() => {
@@ -27,19 +70,24 @@ const MwAntennasForm = () => {
           const antennas = mwData.mw_antennas || [];
           
           // Ensure each antenna has the proper structure with id
-          const processedAntennas = antennas.map((antenna, index) => ({
-            id: antenna.antenna_number || index + 1,
+          const processedAntennas = antennas.map((antenna) => ({
+            id: antenna.antenna_number,
             height: antenna.height || "",
             diameter: antenna.diameter || "",
             azimuth: antenna.azimuth || ""
           }));
 
-          console.log("Processed antennas:", processedAntennas);
-
           setFormData({
             antennaCount: antennaCount.toString(),
             antennas: processedAntennas
           });
+
+          // Process and set images from the response
+          if (antennas.some(ant => ant.images?.length > 0)) {
+            const processedImages = processImagesFromResponse(antennas);
+            console.log("Processed images:", processedImages);
+            setUploadedImages(processedImages);
+          }
         }
       })
       .catch(err => {
@@ -54,6 +102,7 @@ const MwAntennasForm = () => {
     const count = parseInt(e.target.value);
     if (!count || count < 1) {
       setFormData({ antennaCount: "", antennas: [] });
+      setUploadedImages({});
       return;
     }
 
@@ -82,8 +131,18 @@ const MwAntennasForm = () => {
     setFormData({ ...formData, antennas: updated });
   };
 
+  // Handle image uploads from ImageUploader component
+  const handleImageUpload = (imageCategory, files) => {
+    console.log(`Images uploaded for ${imageCategory}:`, files);
+    setUploadedImages(prev => ({
+      ...prev,
+      [imageCategory]: files
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     try {
       // Validate that all fields are filled
@@ -93,35 +152,83 @@ const MwAntennasForm = () => {
 
       if (!isValid) {
         setError("Please fill all fields for each MW antenna.");
+        setIsSubmitting(false);
         return;
       }
 
-      // Prepare data in the format expected by the API
-      const submitData = {
+      // Create FormData for multipart submission
+      const submitFormData = new FormData();
+
+      // Add antenna data
+      const antennaData = {
         how_many_mw_antennas_on_tower: parseInt(formData.antennaCount),
         mw_antennas: formData.antennas.map((antenna) => ({
+          antenna_number: antenna.id,
           height: parseFloat(antenna.height) || 0,
           diameter: parseFloat(antenna.diameter) || 0,
           azimuth: parseFloat(antenna.azimuth) || 0
         }))
       };
 
-      console.log("Submitting MW antennas data:", submitData);
+      submitFormData.append('data', JSON.stringify(antennaData));
 
-      const response = await axios.put(`${import.meta.env.VITE_API_URL}/api/mw-antennas/${sessionId}`, submitData);
-      showSuccess('MW antennas data submitted successfully!');
-      console.log("Response:", response.data);
+      // Append any newly selected File objects under their category keys
+      Object.entries(uploadedImages).forEach(([category, files]) => {
+        if (Array.isArray(files)) {
+          files.forEach(item => {
+            if (item instanceof File) {
+              submitFormData.append(category, item);
+            }
+          });
+        }
+      });
+
+      console.log("Submitting MW antennas data:", antennaData);
+      console.log("Uploaded images:", uploadedImages);
+
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/mw-antennas/${sessionId}`,
+        submitFormData,
+        { 
+          headers: { 'Content-Type': 'multipart/form-data' }
+        }
+      );
+      
+      // After successful submission, fetch the latest data
+      const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/mw-antennas/${sessionId}`);
+      const latestData = getResponse.data.data;
+
+      if (latestData?.mwAntennasData) {
+        const mwData = latestData.mwAntennasData;
+        
+        // Update form data with latest values
+        const processedAntennas = mwData.mw_antennas.map(antenna => ({
+          id: antenna.antenna_number,
+          height: antenna.height || "",
+          diameter: antenna.diameter || "",
+          azimuth: antenna.azimuth || ""
+        }));
+
+        setFormData({
+          antennaCount: mwData.how_many_mw_antennas_on_tower.toString(),
+          antennas: processedAntennas
+        });
+
+        // Process and update images
+        if (mwData.mw_antennas.some(ant => ant.images?.length > 0)) {
+          const processedImages = processImagesFromResponse(mwData.mw_antennas);
+          setUploadedImages(processedImages);
+        }
+      }
+      
+      showSuccess('MW antennas data and images submitted successfully!');
     } catch (err) {
       console.error("Error submitting MW antennas data:", err);
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
-  const images = [
-    { label: 'MW Antenna Overview Photo', name: 'mw_antenna_overview_photo' },
-    { label: 'MW Antenna Detail Photo', name: 'mw_antenna_detail_photo' },
-    { label: 'MW Antenna Installation Photo', name: 'mw_antenna_installation_photo' },
-  ];
 
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
@@ -251,14 +358,32 @@ const MwAntennasForm = () => {
           <div className="mt-6 flex justify-center gap-4">
             <button
               type="submit"
-              className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700 font-semibold"
+              disabled={isSubmitting}
+              className={`px-6 py-3 text-white rounded font-medium ${
+                isSubmitting 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
-              Save and Continue
+              {isSubmitting ? (
+                <div className="flex items-center">
+                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                  Saving Images & Data...
+                </div>
+              ) : (
+                'Save and Continue'
+              )}
             </button>
           </div>
         </form>
       </div>
-      <ImageUploader images={images} />
+      
+      {/* Image Uploader */}
+      <ImageUploader 
+        images={getAllImages()} 
+        onImageUpload={handleImageUpload}
+        uploadedImages={uploadedImages}
+      />
     </div>
   );
 };
