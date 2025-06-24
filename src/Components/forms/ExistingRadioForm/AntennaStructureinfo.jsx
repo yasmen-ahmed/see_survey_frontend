@@ -2,6 +2,7 @@ import React, { useState , useEffect } from "react";
 import axios from "axios";
 import { useParams } from 'react-router-dom';
 import { showSuccess, showError } from '../../../utils/notifications';
+import AntennaStructureImageUploader from "../../AntennaStructureImageUploader/AntennaStructureImageUploader";
 
 
 const AntennaStructureForm = () => {
@@ -18,6 +19,7 @@ const AntennaStructureForm = () => {
     earthingBusBar: "No",
     freeHoles: "",
   });
+
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/antenna-structure/${sessionId}`)
       .then(res => {
@@ -107,7 +109,7 @@ const handleSubmit = async (e) => {
 };
 
   return (
-    <div className="max-h-screen flex  items-start space-x-2 justify-start bg-gray-100 p-2">
+    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
@@ -263,6 +265,15 @@ const handleSubmit = async (e) => {
 
         </form>
       </div>
+      
+      {/* Enhanced Antenna Structure Image Uploader */}
+      <AntennaStructureImageUploader 
+        className="w-[20%]"
+        allowMultiple={true}
+        maxFiles={5}
+        showPreview={true}
+        showUploadProgress={true}
+      />
     </div>
   );
 };

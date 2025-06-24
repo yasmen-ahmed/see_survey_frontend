@@ -1,5 +1,6 @@
 import { useState ,useEffect} from "react";
 import { ChevronDown  } from "lucide-react";
+import { IoHomeOutline } from "react-icons/io5";
 
 // components/Header.js
 const Header=()=> {
@@ -61,6 +62,8 @@ const Header=()=> {
          
         
         </div>
+
+        <IoHomeOutline/>
       </div>
     );
   }
