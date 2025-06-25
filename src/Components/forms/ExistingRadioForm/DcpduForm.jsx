@@ -12,6 +12,7 @@ const DcDistributionForm = () => {
   const [pdus, setPdus] = useState([]);
   const [error, setError] = useState("");
   const [numberOfCabinets, setNumberOfCabinets] = useState(0);
+  const [uploadedImages, setUploadedImages] = useState({});
   // Add state for CB options for each PDU
   const [cbOptions, setCbOptions] = useState({});
   const [loadingCbOptions, setLoadingCbOptions] = useState({});
@@ -89,13 +90,14 @@ const DcDistributionForm = () => {
   }, [loadingCbOptions]);
 
   const handlePduCountChange = (count) => {
-    setPduCount(count);
+    const countValue = count.toString();
+    setPduCount(countValue);
     
     // Create new PDUs array preserving existing data
     const newPdus = Array.from({ length: count }, (_, index) => {
       // If PDU already exists at this index, keep its data
       if (pdus[index]) {
-        return pdus[index];
+        return { ...pdus[index] };  // Create a new object to avoid reference issues
       }
       // Otherwise create new empty PDU
       return {
@@ -114,6 +116,20 @@ const DcDistributionForm = () => {
     });
     
     setPdus(newPdus);
+    
+    // Update uploadedImages state to match new PDU count
+    const newUploadedImages = { ...uploadedImages };
+    // Remove image entries for PDUs that no longer exist
+    Object.keys(newUploadedImages).forEach(key => {
+      const pduNumberMatch = key.match(/pdu_(\d+)_/);
+      if (pduNumberMatch) {
+        const pduNumber = parseInt(pduNumberMatch[1]);
+        if (pduNumber > count) {
+          delete newUploadedImages[key];
+        }
+      }
+    });
+    setUploadedImages(newUploadedImages);
     
     // Clear CB options for PDUs that are being removed (beyond the new count)
     if (count < pdus.length) {
@@ -159,6 +175,53 @@ const DcDistributionForm = () => {
     setPdus(updated);
   };
 
+  // Generate image fields for a single PDU
+  const getPduImages = (pduNumber) => [
+    { label: `PDU #${pduNumber} photo`, name: `pdu_${pduNumber}_photo` },
+    { label: `PDU #${pduNumber} fuses photo`, name: `pdu_${pduNumber}_fuses` },
+    { label: `PDU #${pduNumber} Power cables photos`, name: `pdu_${pduNumber}_power_cables` },
+  ];
+
+  // Generate all image fields based on PDU count
+  const getAllImages = () => {
+    if (!pduCount) return [];
+    const count = parseInt(pduCount);
+    let allImages = [];
+    for (let i = 1; i <= count; i++) {
+      allImages = [...allImages, ...getPduImages(i)];
+    }
+    return allImages;
+  };
+
+  // Process images from API response
+  const processImagesFromResponse = (pdus) => {
+    const imagesByCategory = {};
+    
+    pdus.forEach(pdu => {
+      if (pdu.images && Array.isArray(pdu.images)) {
+        pdu.images.forEach(img => {
+          // Each image should be an object with the required properties
+          imagesByCategory[img.image_category] = [{
+            id: img.id,
+            file_url: img.file_url,  // The full URL path will be handled by ImageUploader
+            name: img.original_filename
+          }];
+        });
+      }
+    });
+    
+    return imagesByCategory;
+  };
+
+  // Handle image uploads from ImageUploader component
+  const handleImageUpload = (imageCategory, files) => {
+    console.log(`Images uploaded for ${imageCategory}:`, files);
+    setUploadedImages(prev => ({
+      ...prev,
+      [imageCategory]: files
+    }));
+  };
+
   // Fetch existing data when component loads
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/external-dc-distribution/${sessionId}`)
@@ -177,6 +240,7 @@ const DcDistributionForm = () => {
           setNumberOfCabinets(data.number_of_cabinets || 0);
           
           if (hasSeparateDcPdu === "Yes" && apiPduCount > 0) {
+            // Set PDU count first
             setPduCount(apiPduCount.toString());
             
             // Process PDUs data to match component structure
@@ -195,21 +259,29 @@ const DcDistributionForm = () => {
                 hasFreeCbs: pdu.has_free_cbs_fuses || "",
                 cbDetails: pdu.cb_fuse_ratings ? pdu.cb_fuse_ratings.map(rating => ({
                   rating: rating.rating || "",
-                  connected_module: rating.connected_load || ""
+                  connected_module: rating.connected_module || ""
                 })) : Array.from({ length: 3 }, () => ({ rating: "", connected_module: "" }))
               };
             });
             
             console.log("Processed PDUs:", processedPdus);
             setPdus(processedPdus);
+
+            // Process and set images from the response
+            if (dcPdus.some(pdu => pdu.images?.length > 0)) {
+              const processedImages = processImagesFromResponse(dcPdus);
+              console.log("Processed images:", processedImages);
+              setUploadedImages(processedImages);
+            }
+            
+
             
             // Fetch CB options for each PDU that has cabinet and distribution selected
             processedPdus.forEach((pdu, index) => {
               if (pdu.feedCabinet && pdu.feedDistribution) {
-                // Small delay to ensure state is updated
                 setTimeout(() => {
                   fetchCbOptions(index, pdu.feedCabinet, pdu.feedDistribution);
-                }, 200 * (index + 1)); // Stagger the requests
+                }, 200 * (index + 1));
               }
             });
           }
@@ -402,7 +474,8 @@ const DcDistributionForm = () => {
               <select
                 value={pduCount}
                 onChange={(e) => {
-                  handlePduCountChange(parseInt(e.target.value));
+                  const value = e.target.value;
+                  handlePduCountChange(value ? parseInt(value) : 0);
                   setError(""); // Clear error when user makes selection
                 }}
                 className="border p-3 rounded-md"
@@ -741,7 +814,11 @@ const DcDistributionForm = () => {
    
         </form>
       </div>
-      <ImageUploader images={images} />
+      <ImageUploader 
+        images={getAllImages()} 
+        onImageUpload={handleImageUpload}
+        uploadedImages={uploadedImages}
+      />
     </div>
   );
 };

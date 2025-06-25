@@ -1,13 +1,24 @@
 import { useState, useEffect } from "react";
-import { useParams, useLocation } from "react-router-dom";
-import axios from "axios"; // Make sure to import axios
+import { useParams } from "react-router-dom";
+import axios from "axios";
 import ImageUploader from "../../GalleryComponent";
 import { showSuccess, showError } from "../../../utils/notifications";
+import useImageManager from "../../../hooks/useImageManager";
 
 const SiteLocationForm = () => {
-  const { sessionId, siteId } = useParams(); // sessionId and siteId from URL
+  const { sessionId, siteId } = useParams();
+  const { uploadedImages, handleImageUpload, saveImages, loading } = useImageManager(sessionId);
 
-  const [imagePreview, setImagePreview] = useState(null);
+  const [formData, setFormData] = useState({
+    siteId: siteId || "",
+    latitude: "",
+    longitude: "",
+    sitename: "",
+    region: "",
+    city: "",
+    address: "",
+    siteelevation: ""
+  });
 
   // Fetch survey details for pre-filling when session ID changes
   useEffect(() => {
@@ -23,9 +34,6 @@ const SiteLocationForm = () => {
             region: data.region || "",
             city: data.city || "",
             address: data.address || "",
-            frontImage: data.frontImage || null,
-            sideImage: data.sideImage || null,
-            topImage: data.topImage || null,
             siteelevation: data.site_elevation || ""
           });
         } else {
@@ -35,46 +43,33 @@ const SiteLocationForm = () => {
       .catch(err => console.error("Error loading survey details:", err));
   }, [sessionId, siteId]);
 
-  const [formData, setFormData] = useState({
-    siteId: siteId || "",
-    latitude: "",
-    longitude: "",
-    sitename: "",
-    region: "",
-    city: "",
-    address: "",
-    frontImage: null,
-    sideImage: null,
-    topImage: null,
-    siteelevation: ""
-  });
-
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Prepare the payload excluding images for now
-    const { frontImage, sideImage, topImage, ...dataWithoutImages } = formData;
-
-    const payload = {
-      sitename: dataWithoutImages.sitename,
-      region: dataWithoutImages.region,
-      city: dataWithoutImages.city,
-      longitude: dataWithoutImages.longitude,
-      latitude: dataWithoutImages.latitude,
-      site_elevation: dataWithoutImages.siteelevation,
-      address: dataWithoutImages.address,
-    };
-
     try {
-      const response = await axios.put(`${import.meta.env.VITE_API_URL}/api/sites/${siteId}`, payload);
+      // Submit form data
+      const payload = {
+        sitename: formData.sitename,
+        region: formData.region,
+        city: formData.city,
+        longitude: formData.longitude,
+        latitude: formData.latitude,
+        site_elevation: formData.siteelevation,
+        address: formData.address,
+      };
+
+      await axios.put(`${import.meta.env.VITE_API_URL}/api/sites/${siteId}`, payload);
       
-      showSuccess('Data submitted successfully!');
+      // Save images
+      const imagesSaved = await saveImages();
+      if (!imagesSaved) {
+        throw new Error('Failed to save images');
+      }
       
-      console.log(response);
+      showSuccess('Data and images submitted successfully!');
     } catch (err) {
       console.error("Error:", err);
-      
       showError('Error submitting data. Please try again.');
     }
   };
@@ -92,23 +87,11 @@ const SiteLocationForm = () => {
 
   // Handle input change for form fields
   const handleInputChange = (e) => {
-    const { name, value, type, files } = e.target;
-
-    if (type === 'file' && files && files.length > 0) {
-      const file = files[0];
-      if (file && file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImagePreview(reader.result);
-        };
-        reader.readAsDataURL(file);
-      }
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   // Generate Google Map URL for embedding
@@ -118,11 +101,14 @@ const SiteLocationForm = () => {
     return `https://maps.google.com/maps?q=${latitude},${longitude}&z=15&output=embed`;
   };
 
-  const defaultMap =
-    "https://maps.google.com/maps?q=33.6844,73.0479&z=15&output=embed";
+  const defaultMap = "https://maps.google.com/maps?q=33.6844,73.0479&z=15&output=embed";
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <div className="max-h-screen flex  items-start space-x-2 justify-start bg-gray-100 p-2">
+    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
         <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" onSubmit={handleSubmit}>
           {/* Text Fields */}
@@ -224,8 +210,6 @@ const SiteLocationForm = () => {
             />
           </div>
 
-
-
           <div className="md:col-span-2 flex justify-center">
             <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
               Save and Continue
@@ -247,8 +231,11 @@ const SiteLocationForm = () => {
         </div>
       </div>
 
-      <ImageUploader images={images} />
-
+      <ImageUploader 
+        images={images}
+        onImageUpload={handleImageUpload}
+        uploadedImages={uploadedImages}
+      />
     </div>
   );
 };

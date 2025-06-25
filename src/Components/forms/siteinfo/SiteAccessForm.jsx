@@ -2,9 +2,13 @@ import { useState, useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import axios from "axios";
 import ImageUploader from "../../GalleryComponent";
-import { showSuccess, showError } from "../../../utils/notifications";  
+import { showSuccess, showError } from "../../../utils/notifications"; 
+import useImageManager from "../../../hooks/useImageManager";
+
 function SiteAccessForm() {
   const { sessionId, siteId } = useParams(); 
+  const { uploadedImages, handleImageUpload, saveImages, loading } = useImageManager(sessionId);
+
   const [formData, setFormData] = useState({
     site_access_permission_required: "",
     preferred_time_slot_crane_access: [],
@@ -112,6 +116,11 @@ function SiteAccessForm() {
 
     try {
       const response=await axios.put(`${import.meta.env.VITE_API_URL}/api/site-access/${sessionId}`,payload);
+       // Save images
+       const imagesSaved = await saveImages();
+       if (!imagesSaved) {
+         throw new Error('Failed to save images');
+       }
       showSuccess('Data submitted successfully!');
       console.log(response.data)
     } catch (err) {
@@ -462,7 +471,11 @@ function SiteAccessForm() {
           </button>
         </div>
       </div>
-      <ImageUploader images={images} />
+      <ImageUploader 
+        images={images}
+        onImageUpload={handleImageUpload}
+        uploadedImages={uploadedImages}
+      />
     </div>
   );
 }

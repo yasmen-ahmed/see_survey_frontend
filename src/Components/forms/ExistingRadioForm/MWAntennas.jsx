@@ -22,6 +22,7 @@ const MwAntennasForm = () => {
     { label: `Antenna #${antennaNumber} Label`, name: `antenna_${antennaNumber}_label` },
     { label: `Antenna #${antennaNumber} Ports Photo`, name: `antenna_${antennaNumber}_ports` },
     { label: `Antenna #${antennaNumber} free ports Photo`, name: `antenna_${antennaNumber}_free_ports` },
+    { label: `MW antenna #${antennaNumber} photo`, name: `mw_antenna${antennaNumber}_photo` },
   ];
 
   // Generate all image fields based on antenna count

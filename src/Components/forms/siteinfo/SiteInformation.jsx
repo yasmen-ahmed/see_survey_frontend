@@ -3,9 +3,12 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import ImageUploader from "../../GalleryComponent";
 import { showSuccess, showError } from "../../../utils/notifications";
+import useImageManager from "../../../hooks/useImageManager";
 function SiteInformationForm() {
   
 const { sessionId, siteId } = useParams();   
+const { uploadedImages, handleImageUpload, saveImages, loading } = useImageManager(sessionId);
+
 const [formData, setFormData] = useState({
     site_located_at: "",
     site_ownership: "",
@@ -106,6 +109,11 @@ const [formData, setFormData] = useState({
 
     try {
       const response=await axios.put(`${import.meta.env.VITE_API_URL}/api/site-area-info/${sessionId}`,payload);
+     // Save images
+     const imagesSaved = await saveImages();
+     if (!imagesSaved) {
+       throw new Error('Failed to save images');
+     }
       showSuccess('Data submitted successfully!');
       console.log(response.data)
     } catch (err) {
@@ -555,7 +563,11 @@ const [formData, setFormData] = useState({
         </button>
       </div>
     </div>
-    <ImageUploader images={images} />
+    <ImageUploader 
+        images={images}
+        onImageUpload={handleImageUpload}
+        uploadedImages={uploadedImages}
+      />
   </div>
   
   );
