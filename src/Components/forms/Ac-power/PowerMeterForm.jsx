@@ -87,11 +87,7 @@ const PowerMeterForm = () => {
   };
 
   const images = [
-    { label: 'Generator photo', name: 'generator_photo' },
-    { label: 'Power meter photo overview ', name: 'power_meter_photo_overview' },
-    { label: 'Power meter photo zoomed', name: 'power_meter_photo_zoomed' },
-    { label: 'Power meter CB photo', name: 'power_meter_cb_photo' },
-    { label: 'Power meter cable route photo', name: 'power_meter_cable_route_photo' },    
+       
     { label: 'AC Panel photo overview', name: 'ac_panel_photo_overview' },
     { label: 'AC Panel photo closed', name: 'ac_panel_photo_closed' },
     { label: 'AC Panel photo opened', name: 'ac_panel_photo_opened' },

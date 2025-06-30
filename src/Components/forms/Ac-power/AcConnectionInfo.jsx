@@ -127,19 +127,6 @@ const AcInformationForm = () => {
 
   const images = [
     { label: 'Generator photo', name: 'generator_photo' },
-    { label: 'Power meter photo overview ', name: 'power_meter_photo_overview' },
-    { label: 'Power meter photo zoomed', name: 'power_meter_photo_zoomed' },
-    { label: 'Power meter CB photo', name: 'power_meter_cb_photo' },
-    { label: 'Power meter cable route photo', name: 'power_meter_cable_route_photo' },    
-    { label: 'AC Panel photo overview', name: 'ac_panel_photo_overview' },
-    { label: 'AC Panel photo closed', name: 'ac_panel_photo_closed' },
-    { label: 'AC Panel photo opened', name: 'ac_panel_photo_opened' },
-    { label: 'AC Panel CBs photo', name: 'ac_panel_cbs_photo' },
-    { label: 'AC panel free CB', name: 'ac_panel_free_cb' },
-    { label: 'Proposed AC CB photo', name: 'proposed_ac_cb_photo' },
-    { label: 'AC cable Route Photo to cable tray 1/3', name: 'ac_cable_route_photo_1' },
-    { label: 'AC cable Route Photo to cable tray 2/3', name: 'ac_cable_route_photo_2' },
-    { label: 'AC cable Route Photo to cable tray 3/3', name: 'ac_cable_route_photo_3' },
   ];
   
 
