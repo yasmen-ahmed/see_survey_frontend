@@ -16,17 +16,25 @@ const PowerMeterForm = () => {
     crossSection: "",
     mainCBRating: "",
     cbType: "",
+    images: {
+      power_meter_photo_overview: null,
+      power_meter_photo_zoomed: null,
+      power_meter_cb_photo: null,
+      power_meter_cable_route_photo: null
+    }
   });
 
   // Fetch existing data when component loads
   useEffect(() => {
+    if (!sessionId) return;
+
     axios.get(`${import.meta.env.VITE_API_URL}/api/power-meter/${sessionId}`)
       .then(res => {
         const data = res.data.data || res.data;
         console.log("Fetched data:", data);
         
         if (data) {
-          setFormData({
+          const updatedFormData = {
             serialNumber: data.serial_number || "",
             meterReading: data.meter_reading || "",
             powerSourceType: normalizeRadioValue(data.ac_power_source_type) || "",
@@ -34,12 +42,35 @@ const PowerMeterForm = () => {
             crossSection: data.power_cable_config?.cross_section || "",
             mainCBRating: data.main_cb_config?.rating || "",
             cbType: normalizeRadioValue(data.main_cb_config?.type) || "",
-          });
+            images: {
+              power_meter_photo_overview: null,
+              power_meter_photo_zoomed: null,
+              power_meter_cb_photo: null,
+              power_meter_cable_route_photo: null
+            }
+          };
+
+          // Process existing images
+          if (data.images && data.images.length > 0) {
+            data.images.forEach(image => {
+              const imageUrl = image.file_url.startsWith('http') 
+                ? image.file_url 
+                : `${import.meta.env.VITE_API_URL}${image.file_url}`;
+              
+              if (updatedFormData.images.hasOwnProperty(image.image_category)) {
+                updatedFormData.images[image.image_category] = {
+                  preview: imageUrl,
+                  existingUrl: imageUrl
+                };
+              }
+            });
+          }
+
+          setFormData(updatedFormData);
         }
       })
       .catch(err => {
         console.error("Error loading power meter data:", err);
-        // Don't show error for 404 - might be new data
         if (err.response?.status !== 404) {
           showError('Error loading existing data');
         }
@@ -67,71 +98,134 @@ const PowerMeterForm = () => {
   };
 
   const handleChange = (e) => {
-    const { name, value, type, files } = e.target;
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
-    if (type === 'file' && files && files.length > 0) {
-      const file = files[0];
-      if (file && file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImagePreview(reader.result);
-        };
-        reader.readAsDataURL(file);
+  const handleImageChange = (name, file) => {
+    setFormData(prev => ({
+      ...prev,
+      images: {
+        ...prev.images,
+        [name]: {
+          file: file,
+          preview: file ? URL.createObjectURL(file) : prev.images[name]?.preview,
+          existingUrl: prev.images[name]?.existingUrl
+        }
       }
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
+    }));
   };
 
   const images = [
-       
-    { label: 'AC Panel photo overview', name: 'ac_panel_photo_overview' },
-    { label: 'AC Panel photo closed', name: 'ac_panel_photo_closed' },
-    { label: 'AC Panel photo opened', name: 'ac_panel_photo_opened' },
-    { label: 'AC Panel CBs photo', name: 'ac_panel_cbs_photo' },
-    { label: 'AC panel free CB', name: 'ac_panel_free_cb' },
-    { label: 'Proposed AC CB photo', name: 'proposed_ac_cb_photo' },
-    { label: 'AC cable Route Photo to cable tray 1/3', name: 'ac_cable_route_photo_1' },
-    { label: 'AC cable Route Photo to cable tray 2/3', name: 'ac_cable_route_photo_2' },
-    { label: 'AC cable Route Photo to cable tray 3/3', name: 'ac_cable_route_photo_3' },
+    { 
+      label: 'Power meter photo overview', 
+      name: 'power_meter_photo_overview',
+      value: formData.images.power_meter_photo_overview?.preview || formData.images.power_meter_photo_overview?.existingUrl
+    },
+    { 
+      label: 'Power meter photo zoomed', 
+      name: 'power_meter_photo_zoomed',
+      value: formData.images.power_meter_photo_zoomed?.preview || formData.images.power_meter_photo_zoomed?.existingUrl
+    },
+    { 
+      label: 'Power meter CB photo', 
+      name: 'power_meter_cb_photo',
+      value: formData.images.power_meter_cb_photo?.preview || formData.images.power_meter_cb_photo?.existingUrl
+    },
+    { 
+      label: 'Power meter cable route photo', 
+      name: 'power_meter_cable_route_photo',
+      value: formData.images.power_meter_cable_route_photo?.preview || formData.images.power_meter_cable_route_photo?.existingUrl
+    }
   ];
   
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    const formDataToSend = new FormData();
+
     // Build the payload to match the expected API structure
     const payload = {
-      serial_number: formData.serialNumber,
-      meter_reading: parseFloat(formData.meterReading) || 0,
-      ac_power_source_type: normalizeApiValue(formData.powerSourceType),
-      power_cable_config: {
-        length: parseFloat(formData.cableLength) || 0,
-        cross_section: parseFloat(formData.crossSection) || 0
-      },
-      main_cb_config: {
-        rating: parseFloat(formData.mainCBRating) || 0,
-        type: normalizeApiValue(formData.cbType)
-      }
+      serial_number: formData.serialNumber || '',
+      meter_reading: formData.meterReading ? parseFloat(formData.meterReading) : null,
+      ac_power_source_type: formData.powerSourceType ? normalizeApiValue(formData.powerSourceType) : null
     };
 
-    console.log("Payload being sent:", payload);
+    // Only add power_cable_config if either length or cross_section has a value
+    if (formData.cableLength || formData.crossSection) {
+      payload.power_cable_config = {
+        length: formData.cableLength ? parseFloat(formData.cableLength) : null,
+        cross_section: formData.crossSection ? parseFloat(formData.crossSection) : null
+      };
+    }
+
+    // Only add main_cb_config if either rating or type has a value
+    if (formData.mainCBRating || formData.cbType) {
+      payload.main_cb_config = {
+        rating: formData.mainCBRating ? parseFloat(formData.mainCBRating) : null,
+        type: formData.cbType ? normalizeApiValue(formData.cbType) : null
+      };
+    }
+
+    // Add data fields to FormData
+    formDataToSend.append('data', JSON.stringify(payload));
+
+    // Add images if they exist
+    Object.entries(formData.images).forEach(([category, imageData]) => {
+      if (imageData?.file) {
+        formDataToSend.append(category, imageData.file);
+      }
+    });
 
     try {
-      const response = await axios.put(`${import.meta.env.VITE_API_URL}/api/power-meter/${sessionId}`, payload);
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/power-meter/${sessionId}`,
+        formDataToSend,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      
       showSuccess('Power meter data submitted successfully!');
       console.log("Response:", response.data);
-    } catch (err) {
-      console.error("Error:", err);
-      console.error("Error response:", err.response?.data);
-      showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+
+      // Update the form with the new data including new image URLs
+      if (response.data.data) {
+        const newData = response.data.data;
+        if (newData.images) {
+          const updatedImages = { ...formData.images };
+          newData.images.forEach(img => {
+            const imageUrl = img.file_url.startsWith('http') 
+              ? img.file_url 
+              : `${import.meta.env.VITE_API_URL}${img.file_url}`;
+            
+            if (updatedImages.hasOwnProperty(img.image_category)) {
+              updatedImages[img.image_category] = {
+                preview: imageUrl,
+                existingUrl: imageUrl
+              };
+            }
+          });
+          
+          setFormData(prev => ({
+            ...prev,
+            images: updatedImages
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Error submitting power meter data:", error);
+      showError(error.response?.data?.error?.message || 'Error submitting data');
     }
   };
 
   return (
-    <div className="max-h-screen flex  items-start space-x-2 justify-start bg-gray-100 p-2">  
+    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">  
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
         <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" onSubmit={handleSubmit}>
           <div className="flex flex-col">
@@ -248,7 +342,10 @@ const PowerMeterForm = () => {
           </div>
         </form>
       </div>
-      <ImageUploader images={images} />
+      <ImageUploader 
+        images={images}
+        onImageChange={handleImageChange}
+      />
     </div>
   );
 };

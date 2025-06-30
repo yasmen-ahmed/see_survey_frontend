@@ -2,63 +2,38 @@ import React, { useState, useEffect } from 'react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
+const ImageUploader = ({ images, onImageChange }) => {
   const [imagePreviews, setImagePreviews] = useState({});
-  const [selectedFiles, setSelectedFiles] = useState({});
 
-  // Update previews when uploadedImages prop changes (for loading existing images)
+  // Update previews when images prop changes
   useEffect(() => {
-    if (!uploadedImages) return;
-    
-    // Iterate each category and set preview for first item
-    Object.entries(uploadedImages).forEach(([category, files]) => {
-      if (!files || files.length === 0) return;
-      
-      const first = files[0];
-      if (first instanceof File) {
-        // File object: read data URL
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImagePreviews(prev => ({ ...prev, [category]: reader.result }));
-        };
-        reader.readAsDataURL(first);
-      } else if (first.file_url) {
-        // Server object with file_url
-        const previewUrl = first.file_url.startsWith('http') 
-          ? first.file_url 
-          : `${API_BASE_URL}${first.file_url}`;
-        setImagePreviews(prev => ({ ...prev, [category]: previewUrl }));
+    const newPreviews = {};
+    images.forEach(image => {
+      if (image.value) {
+        newPreviews[image.name] = image.value;
       }
     });
-  }, [uploadedImages]);
+    setImagePreviews(newPreviews);
+  }, [images]);
 
   const handleInputChange = (e) => {
-    const files = Array.from(e.target.files);
+    const file = e.target.files[0];
     const name = e.target.name;
 
-    if (files.length > 0) {
-      // Store the actual files
-      setSelectedFiles(prev => ({
-        ...prev,
-        [name]: files
-      }));
+    if (file) {
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreviews(prev => ({
+          ...prev,
+          [name]: reader.result
+        }));
+      };
+      reader.readAsDataURL(file);
 
-      // Create preview for the first image
-      const firstFile = files[0];
-      if (firstFile && firstFile.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImagePreviews(prev => ({
-            ...prev,
-            [name]: reader.result
-          }));
-        };
-        reader.readAsDataURL(firstFile);
-      }
-
-      // Notify parent component about the uploaded files
-      if (onImageUpload) {
-        onImageUpload(name, files);
+      // Notify parent component
+      if (onImageChange) {
+        onImageChange(name, file);
       }
     }
   };
@@ -70,15 +45,9 @@ const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
       return updated;
     });
 
-    setSelectedFiles(prev => {
-      const updated = { ...prev };
-      delete updated[fieldName];
-      return updated;
-    });
-
     // Notify parent component about removal
-    if (onImageUpload) {
-      onImageUpload(fieldName, []);
+    if (onImageChange) {
+      onImageChange(fieldName, null);
     }
   };
 
