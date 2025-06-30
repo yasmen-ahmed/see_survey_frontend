@@ -227,16 +227,18 @@ const RadioAntenasForm = () => {
       
       if (antenna.images && Array.isArray(antenna.images)) {
         antenna.images.forEach(img => {
-          // Each image should be an object with the required properties
-          imagesByCategory[img.image_category] = [{
+          const category = img.image_category || `antenna_${antennaNumber}_photo`;
+          imagesByCategory[category] = [{
             id: img.id,
-            file_url: img.file_url,  // The full URL path will be handled by ImageUploader
-            name: img.original_filename
+            file_url: img.file_url,
+            name: img.original_filename,
+            preview: img.file_url // Add preview URL for existing images
           }];
         });
       }
     });
     
+    console.log('Processed images:', imagesByCategory);
     return imagesByCategory;
   };
 
@@ -266,7 +268,7 @@ const RadioAntenasForm = () => {
           // Process and set images from the response
           if (apiData.antennas?.some(ant => ant.images?.length > 0)) {
             const processedImages = processImagesFromResponse(apiData.antennas);
-            console.log("Processed images:", processedImages);
+            console.log("Setting processed images:", processedImages);
             setUploadedImages(processedImages);
           }
         }
@@ -286,30 +288,57 @@ const RadioAntenasForm = () => {
   }, [sessionId]);
 
   const handleChange = (antennaIndex, fieldName, value) => {
-    setFormData(prev => ({
-      ...prev,
-      antennas: prev.antennas.map((antenna, index) =>
-        index === antennaIndex
-          ? { ...antenna, [fieldName]: value }
-          : antenna
-      )
-    }));
+    setFormData(prev => {
+      const newFormData = { ...prev };
+      
+      // If this is the first column (index 0), auto-fill other columns
+      if (antennaIndex === 0) {
+        const numAntennas = parseInt(prev.numberOfAntennas) || 1;
+        for (let i = 1; i < numAntennas; i++) {
+          newFormData.antennas[i] = {
+            ...newFormData.antennas[i],
+            [fieldName]: value
+          };
+        }
+      }
+      
+      // Always update the current antenna
+      newFormData.antennas[antennaIndex] = {
+        ...newFormData.antennas[antennaIndex],
+        [fieldName]: value
+      };
+      
+      return newFormData;
+    });
   };
 
   const handleCheckboxChange = (antennaIndex, fieldName, value, checked) => {
-    setFormData(prev => ({
-      ...prev,
-      antennas: prev.antennas.map((antenna, index) =>
-        index === antennaIndex
-          ? {
-            ...antenna,
+    setFormData(prev => {
+      const newFormData = { ...prev };
+      
+      // If this is the first column (index 0), auto-fill other columns
+      if (antennaIndex === 0) {
+        const numAntennas = parseInt(prev.numberOfAntennas) || 1;
+        for (let i = 1; i < numAntennas; i++) {
+          newFormData.antennas[i] = {
+            ...newFormData.antennas[i],
             [fieldName]: checked
-              ? [...antenna[fieldName], value]
-              : antenna[fieldName].filter(item => item !== value)
-          }
-          : antenna
-      )
-    }));
+              ? [...(newFormData.antennas[i][fieldName] || []), value]
+              : (newFormData.antennas[i][fieldName] || []).filter(item => item !== value)
+          };
+        }
+      }
+      
+      // Always update the current antenna
+      newFormData.antennas[antennaIndex] = {
+        ...newFormData.antennas[antennaIndex],
+        [fieldName]: checked
+          ? [...(newFormData.antennas[antennaIndex][fieldName] || []), value]
+          : (newFormData.antennas[antennaIndex][fieldName] || []).filter(item => item !== value)
+      };
+      
+      return newFormData;
+    });
   };
 
   const handleSubmit = async (e) => {

@@ -124,7 +124,24 @@ const MwAntennasForm = () => {
 
   const handleAntennaChange = (index, field, value) => {
     const updated = [...formData.antennas];
-    updated[index][field] = value;
+    
+    // If this is the first antenna (index 0), auto-fill other antennas
+    if (index === 0) {
+      const numAntennas = parseInt(formData.antennaCount) || 1;
+      for (let i = 1; i < numAntennas; i++) {
+        updated[i] = {
+          ...updated[i],
+          [field]: value
+        };
+      }
+    }
+    
+    // Always update the current antenna
+    updated[index] = {
+      ...updated[index],
+      [field]: value
+    };
+    
     setFormData({ ...formData, antennas: updated });
   };
 

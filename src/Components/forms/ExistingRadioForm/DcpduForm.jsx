@@ -148,7 +148,28 @@ const DcDistributionForm = () => {
 
   const updatePdu = (index, field, value) => {
     const updated = [...pdus];
-    updated[index][field] = value;
+    
+    // If this is the first PDU (index 0), auto-fill other PDUs
+    if (index === 0) {
+      const numPdus = parseInt(pduCount) || 1;
+      for (let i = 1; i < numPdus; i++) {
+        updated[i] = {
+          ...updated[i],
+          [field]: value
+        };
+        
+        // If changing cabinet or distribution, also clear CB selection for all PDUs
+        if (field === 'feedCabinet' || field === 'feedDistribution') {
+          updated[i].cbFuse = "";
+        }
+      }
+    }
+    
+    // Always update the current PDU
+    updated[index] = {
+      ...updated[index],
+      [field]: value
+    };
     
     // Clear CB selection and fetch new options when cabinet or distribution changes
     if (field === 'feedCabinet' || field === 'feedDistribution') {
@@ -313,12 +334,12 @@ const DcDistributionForm = () => {
     return [];
   }, [pdus]);
 
-  const handleTableDataChange = useCallback((pduIndex, newTableData) => {
-    if (!newTableData || newTableData.length === 0) {
+  const handleTableDataChange = useCallback((pduIndex, newData) => {
+    if (!newData || newData.length === 0) {
       return;
     }
 
-    const processedData = newTableData
+    const processedData = newData
       .filter(item => {
         const rating = item.rating?.toString().trim() || '';
         const module = item.connected_module?.toString().trim() || '';
@@ -330,9 +351,22 @@ const DcDistributionForm = () => {
       }));
 
     const updated = [...pdus];
+    
+    // If this is the first PDU, auto-fill the table data to other PDUs
+    if (pduIndex === 0) {
+      const numPdus = parseInt(pduCount) || 1;
+      for (let i = 1; i < numPdus; i++) {
+        updated[i] = {
+          ...updated[i],
+          cbDetails: [...processedData]
+        };
+      }
+    }
+    
+    // Always update the current PDU
     updated[pduIndex].cbDetails = processedData;
     setPdus(updated);
-  }, [pdus]);
+  }, [pdus, pduCount]);
 
   const images = [
     { label: 'DC Distribution Overview Photo', name: 'dc_distribution_overview_photo' },
