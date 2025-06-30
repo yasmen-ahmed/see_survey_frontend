@@ -141,7 +141,7 @@ const NewSectorPlanningTab = () => {
 
             <div className='grid grid-cols-2 gap-4'>
               {questions.map((question, index) => (
-                <div key={question.key} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                <div key={question.key} className="bg-white  ">
                   <div className='mb-2 font-semibold text-gray-700'>{question.label}</div>
                   <select 
                     className={`border rounded-md p-2 w-full ${
@@ -157,9 +157,11 @@ const NewSectorPlanningTab = () => {
                       </option>
                     ))}
                   </select>
+
                   {errors[question.key] && (
                     <div className="text-red-500 text-sm mt-1">{errors[question.key]}</div>
                   )}
+                  <hr className="my-2" />
                 </div>
               ))}
             </div>

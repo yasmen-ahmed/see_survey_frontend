@@ -120,7 +120,9 @@ const GPSAntennaTab = () => {
                 </label>
               ))}
             </div>
+            <hr className="my-2 w-1/2" />
           </div>
+         
           <div className='grid grid-cols-2 gap-4'>
           {/* 2. Antenna Height Input */}
           <div>
@@ -152,8 +154,9 @@ const GPSAntennaTab = () => {
               placeholder="Enter cable length in meters"
               required
             />
+            </div>
           </div>
-          </div>
+          <hr className="my-2" />
           {/* Submit Button */}
           <div className="mt-6 flex justify-center">
             <button

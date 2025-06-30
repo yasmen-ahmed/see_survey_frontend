@@ -27,12 +27,12 @@ const SidebarTabs = () => {
       path: `/sites/${sessionId}/${siteId}/ac-power/ac-info`,
       section: "ac-power"
     },
-    { 
-      label: "Room", 
-      icon: <Calendar size={20} />, 
-      path: `/sites/${sessionId}/${siteId}/room/room-info`,
-      section: "room"
-    },
+    // { 
+    //   label: "Room", 
+    //   icon: <Calendar size={20} />, 
+    //   path: `/sites/${sessionId}/${siteId}/room/room-info`,
+    //   section: "room"
+    // },
     { 
       label: "Outdoor", 
       icon: <TentTree size={20} />, 

@@ -15,14 +15,10 @@ const MwAntennasForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Generate image fields for a single antenna
-  const getAntennaImages = (antennaNumber) => [
-    { label: `Antenna #${antennaNumber} photo`, name: `antenna_${antennaNumber}_photo` },
-    { label: `Antenna #${antennaNumber} Mechanical tilt photo`, name: `antenna_${antennaNumber}_mechanical_tilt` },
-    { label: `Antenna #${antennaNumber} RET Photo`, name: `antenna_${antennaNumber}_ret` },
-    { label: `Antenna #${antennaNumber} Label`, name: `antenna_${antennaNumber}_label` },
-    { label: `Antenna #${antennaNumber} Ports Photo`, name: `antenna_${antennaNumber}_ports` },
-    { label: `Antenna #${antennaNumber} free ports Photo`, name: `antenna_${antennaNumber}_free_ports` },
-    { label: `MW antenna #${antennaNumber} photo`, name: `mw_antenna${antennaNumber}_photo` },
+  const getAntennaImages = (antennaNumber) => [ 
+    { label: `MW  #${antennaNumber} photo`, name: `mw_${antennaNumber}_photo` },     
+    { label: `MW  #${antennaNumber} Azimuth view photo`, name: `mw_${antennaNumber}_Azimuth_view_photo` },
+    { label: `MW #${antennaNumber} Label Photo`, name: `mw_${antennaNumber}_label_photo` }
   ];
 
   // Generate all image fields based on antenna count
@@ -144,6 +140,7 @@ const MwAntennasForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    const prevFormData = { ...formData }; // Keep a copy of current form data
 
     try {
       // Validate that all fields are filled
@@ -160,32 +157,52 @@ const MwAntennasForm = () => {
       // Create FormData for multipart submission
       const submitFormData = new FormData();
 
-      // Add antenna data
-      const antennaData = {
-        how_many_mw_antennas_on_tower: parseInt(formData.antennaCount),
-        mw_antennas: formData.antennas.map((antenna) => ({
-          antenna_number: antenna.id,
-          height: parseFloat(antenna.height) || 0,
-          diameter: parseFloat(antenna.diameter) || 0,
-          azimuth: parseFloat(antenna.azimuth) || 0
-        }))
-      };
+      // Add antenna count
+      submitFormData.append('how_many_mw_antennas_on_tower', parseInt(formData.antennaCount));
 
-      submitFormData.append('data', JSON.stringify(antennaData));
+      // Add antenna data as individual form fields with antenna_number
+      formData.antennas.forEach((antenna, index) => {
+        submitFormData.append(`mwAntennasData[mw_antennas][${index}][antenna_number]`, antenna.id || (index + 1));
+        submitFormData.append(`mwAntennasData[mw_antennas][${index}][height]`, parseFloat(antenna.height) || 0);
+        submitFormData.append(`mwAntennasData[mw_antennas][${index}][diameter]`, parseFloat(antenna.diameter) || 0);
+        submitFormData.append(`mwAntennasData[mw_antennas][${index}][azimuth]`, parseFloat(antenna.azimuth) || 0);
+      });
 
-      // Append any newly selected File objects under their category keys
-      Object.entries(uploadedImages).forEach(([category, files]) => {
-        if (Array.isArray(files)) {
-          files.forEach(item => {
-            if (item instanceof File) {
-              submitFormData.append(category, item);
-            }
-          });
+      // Get all possible image fields
+      const allImageFields = getAllImages();
+      
+      console.log("All image fields:", allImageFields);
+      console.log("Uploaded images state:", uploadedImages);
+      
+      // Handle all image fields - including removed ones
+      allImageFields.forEach(imageField => {
+        const imageFiles = uploadedImages[imageField.name];
+        console.log(`Processing image field: ${imageField.name}`, imageFiles);
+        
+        if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+          const file = imageFiles[0];
+          if (file instanceof File) {
+            console.log(`Adding file for ${imageField.name}:`, file.name);
+            submitFormData.append(imageField.name, file);
+          } else {
+            console.log(`Skipping non-File object for ${imageField.name}:`, file);
+          }
+        } else {
+          // If image was removed or doesn't exist, send empty string
+          console.log(`Adding empty string for ${imageField.name}`);
+          submitFormData.append(imageField.name, '');
         }
       });
 
-      console.log("Submitting MW antennas data:", antennaData);
-      console.log("Uploaded images:", uploadedImages);
+      console.log("Submitting MW antennas data:");
+      // Log FormData contents for debugging
+      for (let pair of submitFormData.entries()) {
+        if (pair[1] instanceof File) {
+          console.log(pair[0] + ': [FILE] ' + pair[1].name);
+        } else {
+          console.log(pair[0] + ': ' + pair[1]);
+        }
+      }
 
       const response = await axios.put(
         `${import.meta.env.VITE_API_URL}/api/mw-antennas/${sessionId}`,
@@ -195,6 +212,8 @@ const MwAntennasForm = () => {
         }
       );
       
+      console.log("Server response:", response.data);
+      
       // After successful submission, fetch the latest data
       const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/mw-antennas/${sessionId}`);
       const latestData = getResponse.data.data;
@@ -203,7 +222,7 @@ const MwAntennasForm = () => {
         const mwData = latestData.mwAntennasData;
         
         // Update form data with latest values
-        const processedAntennas = mwData.mw_antennas.map(antenna => ({
+        const processedAntennas = mwData.mw_antennas.map((antenna) => ({
           id: antenna.antenna_number,
           height: antenna.height || "",
           diameter: antenna.diameter || "",
@@ -218,14 +237,28 @@ const MwAntennasForm = () => {
         // Process and update images
         if (mwData.mw_antennas.some(ant => ant.images?.length > 0)) {
           const processedImages = processImagesFromResponse(mwData.mw_antennas);
+          console.log("Processed images from response:", processedImages);
           setUploadedImages(processedImages);
+        } else {
+          console.log("No images found in response, clearing uploaded images");
+          // Don't clear uploaded images completely, keep File objects for newly uploaded images
+          const newUploadedImages = {};
+          Object.entries(uploadedImages).forEach(([key, files]) => {
+            if (Array.isArray(files) && files.length > 0 && files[0] instanceof File) {
+              newUploadedImages[key] = files;
+            }
+          });
+          setUploadedImages(newUploadedImages);
         }
       }
       
       showSuccess('MW antennas data and images submitted successfully!');
     } catch (err) {
       console.error("Error submitting MW antennas data:", err);
+      console.error("Error response:", err.response?.data);
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+      // Restore previous form data if submission fails
+      setFormData(prevFormData);
     } finally {
       setIsSubmitting(false);
     }

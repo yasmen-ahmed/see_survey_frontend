@@ -42,9 +42,10 @@ const RadioAntenasForm = () => {
       includeInPlan: '',
     }))
   });
-
+  const [uploadedImages, setUploadedImages] = useState({});
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Helper function to map API data to form data
   const mapApiToFormData = (apiData) => {
@@ -134,86 +135,118 @@ const RadioAntenasForm = () => {
     
     return {
       antenna_count: parseInt(formData.numberOfAntennas) || 0,
-      antennas: activeAntennas.map(antenna => {
-        const apiAntenna = {
-          is_shared_site: antenna.operator ? true : false,
-          base_height: antenna.baseHeight,
-          tower_leg: antenna.towerLeg,
-          sector: parseInt(antenna.sector) || null,
-          technology: antenna.technology,
-          azimuth_angle: antenna.azimuth,
-          mechanical_tilt_exist: antenna.mechanicalTiltExist === 'Yes',
-          electrical_tilt: antenna.electricalTilt,
-          ret_connectivity: antenna.retConnectivity,
-          vendor: antenna.vendor,
-          side_arm_length: antenna.sideArmLength,
-          side_arm_diameter: antenna.sideArmDiameter,
-          side_arm_offset: antenna.sideArmOffset,
-          earth_cable_length: antenna.earthCableLength,
-          included_in_upgrade: antenna.includeInPlan === 'Yes'
+      antennas: activeAntennas.map((antenna, index) => {
+        const antennaData = {
+          antenna_number: index + 1,
+          is_shared_site: !!antenna.operator,
+          base_height: antenna.baseHeight || "",
+          tower_leg: antenna.towerLeg || "",
+          sector: antenna.sector ? parseInt(antenna.sector) : null,
+          technology: antenna.technology || [],
+          azimuth_angle: antenna.azimuth || "",
+          mechanical_tilt_exist: antenna.mechanicalTiltExist === "Yes",
+          electrical_tilt: antenna.electricalTilt || "",
+          ret_connectivity: antenna.retConnectivity || "",
+          vendor: antenna.vendor || "",
+          side_arm_length: antenna.sideArmLength || "",
+          side_arm_diameter: antenna.sideArmDiameter || "",
+          side_arm_offset: antenna.sideArmOffset || "",
+          earth_cable_length: antenna.earthCableLength || "",
+          included_in_upgrade: antenna.includeInPlan === "Yes"
         };
 
         // Add operator only if shared site
         if (antenna.operator) {
-          apiAntenna.operator = antenna.operator;
+          antennaData.operator = antenna.operator;
         }
 
         // Add mechanical tilt only if it exists
-        if (antenna.mechanicalTiltExist === 'Yes' && antenna.mechanicalTilt) {
-          apiAntenna.mechanical_tilt = antenna.mechanicalTilt;
+        if (antenna.mechanicalTiltExist === "Yes" && antenna.mechanicalTilt) {
+          antennaData.mechanical_tilt = antenna.mechanicalTilt;
         }
 
-        // Add Nokia-specific fields
-        if (antenna.vendor === 'Nokia') {
-          apiAntenna.is_active_antenna = antenna.isNokiaActive === 'Yes';
+        // Add Nokia-specific fields if Nokia vendor
+        if (antenna.vendor === "Nokia") {
+          antennaData.is_active_antenna = antenna.isNokiaActive === "Yes";
           if (antenna.nokiaModuleName) {
-            apiAntenna.nokia_module_name = antenna.nokiaModuleName;
+            antennaData.nokia_module_name = antenna.nokiaModuleName;
           }
           if (antenna.nokiaFiberCount) {
-            apiAntenna.nokia_fiber_count = parseInt(antenna.nokiaFiberCount);
+            antennaData.nokia_fiber_count = parseInt(antenna.nokiaFiberCount);
           }
           if (antenna.nokiaFiberLength) {
-            apiAntenna.nokia_fiber_length = antenna.nokiaFiberLength;
+            antennaData.nokia_fiber_length = antenna.nokiaFiberLength;
           }
         }
 
-        // Add other vendor fields
-        if (antenna.vendor && antenna.vendor !== 'Nokia') {
+        // Add other vendor fields if not Nokia
+        if (antenna.vendor && antenna.vendor !== "Nokia") {
           if (antenna.otherModelNumber) {
-            apiAntenna.other_model_number = antenna.otherModelNumber;
+            antennaData.other_model_number = antenna.otherModelNumber;
           }
           if (antenna.otherLength) {
-            apiAntenna.other_length = antenna.otherLength;
+            antennaData.other_length = antenna.otherLength;
           }
           if (antenna.otherWidth) {
-            apiAntenna.other_width = antenna.otherWidth;
+            antennaData.other_width = antenna.otherWidth;
           }
           if (antenna.otherDepth) {
-            apiAntenna.other_depth = antenna.otherDepth;
+            antennaData.other_depth = antenna.otherDepth;
           }
-          if (antenna.otherPortType.length > 0) {
-            apiAntenna.other_port_types = antenna.otherPortType;
+          if (antenna.otherPortType && antenna.otherPortType.length > 0) {
+            antennaData.other_port_types = antenna.otherPortType;
           }
-          if (antenna.otherBands.length > 0) {
-            apiAntenna.other_bands = antenna.otherBands;
+          if (antenna.otherBands && antenna.otherBands.length > 0) {
+            antennaData.other_bands = antenna.otherBands;
           }
           if (antenna.otherPortCount) {
-            apiAntenna.other_total_ports = parseInt(antenna.otherPortCount);
+            antennaData.other_total_ports = parseInt(antenna.otherPortCount);
           }
           if (antenna.otherFreePorts) {
-            apiAntenna.other_free_ports = parseInt(antenna.otherFreePorts);
+            antennaData.other_free_ports = parseInt(antenna.otherFreePorts);
           }
-          if (antenna.otherFreeBands.length > 0) {
-            apiAntenna.other_free_port_bands = antenna.otherFreeBands;
+          if (antenna.otherFreeBands && antenna.otherFreeBands.length > 0) {
+            antennaData.other_free_port_bands = antenna.otherFreeBands;
           }
           if (antenna.otherRadioUnits) {
-            apiAntenna.other_connected_radio_units = parseInt(antenna.otherRadioUnits);
+            antennaData.other_connected_radio_units = parseInt(antenna.otherRadioUnits);
           }
         }
 
-        return apiAntenna;
+        return antennaData;
       })
     };
+  };
+
+  // Process images from API response
+  const processImagesFromResponse = (antennas) => {
+    const imagesByCategory = {};
+    
+    antennas.forEach((antenna, antennaIndex) => {
+      const antennaNumber = antenna.antenna_number || (antennaIndex + 1);
+      
+      if (antenna.images && Array.isArray(antenna.images)) {
+        antenna.images.forEach(img => {
+          // Each image should be an object with the required properties
+          imagesByCategory[img.image_category] = [{
+            id: img.id,
+            file_url: img.file_url,  // The full URL path will be handled by ImageUploader
+            name: img.original_filename
+          }];
+        });
+      }
+    });
+    
+    return imagesByCategory;
+  };
+
+  // Handle image uploads from ImageUploader component
+  const handleImageUpload = (imageCategory, files) => {
+    console.log(`Images uploaded for ${imageCategory}:`, files);
+    setUploadedImages(prev => ({
+      ...prev,
+      [imageCategory]: files
+    }));
   };
 
   // Fetch existing data when component loads
@@ -229,6 +262,13 @@ const RadioAntenasForm = () => {
         if (apiData) {
           const mappedData = mapApiToFormData(apiData);
           setFormData(mappedData);
+
+          // Process and set images from the response
+          if (apiData.antennas?.some(ant => ant.images?.length > 0)) {
+            const processedImages = processImagesFromResponse(apiData.antennas);
+            console.log("Processed images:", processedImages);
+            setUploadedImages(processedImages);
+          }
         }
       } catch (err) {
         console.error("Error loading antenna configuration data:", err);
@@ -274,6 +314,8 @@ const RadioAntenasForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    const prevFormData = { ...formData }; // Keep a copy of current form data
     
     try {
       if (!formData.numberOfAntennas) {
@@ -281,20 +323,98 @@ const RadioAntenasForm = () => {
         return;
       }
 
+      // Create the data payload in the exact format required
       const apiData = mapFormToApiData(formData);
-      console.log("Submitting antenna configuration data:", apiData);
+      
+      console.log("Submitting antenna configuration data:", JSON.stringify(apiData, null, 2));
+
+      // Create FormData for multipart submission (for images)
+      const submitFormData = new FormData();
+      
+      // Add the JSON data
+      submitFormData.append('antenna_data', JSON.stringify(apiData));
+
+      // Get all possible image fields
+      const allImageFields = getAllImages();
+      
+      // Handle all image fields - including removed ones
+      allImageFields.forEach(imageField => {
+        const imageFiles = uploadedImages[imageField.name];
+        console.log(`Processing image field: ${imageField.name}`, imageFiles);
+        
+        if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+          const file = imageFiles[0];
+          if (file instanceof File) {
+            console.log(`Adding file for ${imageField.name}:`, file.name);
+            submitFormData.append(imageField.name, file);
+          } else {
+            console.log(`Skipping non-File object for ${imageField.name}:`, file);
+            submitFormData.append(imageField.name, '');
+          }
+        } else {
+          // If image was removed or doesn't exist, send empty string
+          console.log(`Adding empty string for ${imageField.name}`);
+          submitFormData.append(imageField.name, '');
+        }
+      });
+
+      // Log FormData entries for debugging
+      console.log('FormData entries for submission:');
+      for (let pair of submitFormData.entries()) {
+        if (pair[1] instanceof File) {
+          console.log(pair[0] + ': [FILE] ' + pair[1].name);
+        } else {
+          console.log(pair[0] + ': ' + pair[1]);
+        }
+      }
 
       const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/antenna-configuration/${sessionId}`, 
-        apiData
+        `${import.meta.env.VITE_API_URL}/api/antenna-configuration/${sessionId}`,
+        submitFormData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
       );
       
-      showSuccess('Antenna configuration data submitted successfully!');
+      // After successful submission, fetch the latest data
+      const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/antenna-configuration/${sessionId}`);
+      const latestData = getResponse.data.data;
+
+      if (latestData) {
+        const mappedData = mapApiToFormData(latestData);
+        setFormData(mappedData);
+
+        // Process and update images
+        if (latestData.antennas?.some(ant => ant.images?.length > 0)) {
+          const processedImages = processImagesFromResponse(latestData.antennas);
+          console.log("Processed images from response:", processedImages);
+          setUploadedImages(processedImages);
+        } else {
+          console.log("No images found in response, keeping existing uploaded images");
+          // Keep existing uploaded images that are File objects
+          const newUploadedImages = {};
+          Object.entries(uploadedImages).forEach(([key, files]) => {
+            if (Array.isArray(files) && files.length > 0 && files[0] instanceof File) {
+              newUploadedImages[key] = files;
+            }
+          });
+          setUploadedImages(newUploadedImages);
+        }
+      }
+      
+      showSuccess('Antenna configuration data and images submitted successfully!');
       console.log("Response:", response.data);
       setError("");
     } catch (err) {
-      console.error("Error:", err);
+      console.error("Error submitting antenna configuration data:", err);
+      console.error("Full error response:", err.response?.data);
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+      // Restore previous form data if submission fails
+      setFormData(prevFormData);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -319,11 +439,27 @@ const RadioAntenasForm = () => {
     return activeAntennas.some(antenna => antenna.mechanicalTiltExist === 'Yes');
   };
 
-  const images = [
-    { label: 'Radio Antenna Overview Photo', name: 'radio_antenna_overview_photo' },
-    { label: 'Antenna Detail Photo', name: 'antenna_detail_photo' },
-    { label: 'Tower Leg Installation Photo', name: 'tower_leg_installation_photo' },
+  // Generate image fields for a single antenna
+  const getAntennaImages = (antennaNumber) => [
+    { label: `Antenna #${antennaNumber} photo`, name: `antenna_${antennaNumber}_photo` },
+    { label: `Antenna #${antennaNumber} Azimuth view photo`, name: `antenna_${antennaNumber}_azimuth_view_photo` },
+    { label: `Antenna #${antennaNumber} Mechanical tilt photo`, name: `antenna_${antennaNumber}_mechanical_tilt_photo` },
+    { label: `Antenna #${antennaNumber} RET Photo`, name: `antenna_${antennaNumber}_ret_photo` },
+    { label: `Antenna #${antennaNumber} Label Photo`, name: `antenna_${antennaNumber}_label_photo` },
+    { label: `Antenna #${antennaNumber} Ports Photo`, name: `antenna_${antennaNumber}_ports_photo` },
+    { label: `Antenna #${antennaNumber} Free ports Photo`, name: `antenna_${antennaNumber}_free_ports_photo` }
   ];
+
+  // Generate all image fields based on antenna count
+  const getAllImages = () => {
+    if (!formData.numberOfAntennas) return [];
+    const count = parseInt(formData.numberOfAntennas);
+    let allImages = [];
+    for (let i = 1; i <= count; i++) {
+      allImages = [...allImages, ...getAntennaImages(i)];
+    }
+    return allImages;
+  };
 
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
@@ -1054,15 +1190,31 @@ const RadioAntenasForm = () => {
           <div className="mt-6 flex justify-center">
             <button
               type="submit"
-              className="px-6 py-3 text-white bg-blue-500 rounded hover:bg-blue-700 font-semibold"
+              disabled={isSubmitting}
+              className={`px-6 py-3 text-white rounded font-medium ${
+                isSubmitting 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
-              Save and Continue
+              {isSubmitting ? (
+                <div className="flex items-center">
+                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                  Saving Images & Data...
+                </div>
+              ) : (
+                'Save and Continue'
+              )}
             </button>
           </div>
         </form>
         )}
       </div>
-      <ImageUploader images={images} />
+      <ImageUploader 
+        images={getAllImages()} 
+        onImageUpload={handleImageUpload}
+        uploadedImages={uploadedImages}
+      />
     </div>
   );
 };

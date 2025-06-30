@@ -200,7 +200,7 @@ const TransmissionInformationForm = () => {
                     </label>
                   ))}
                 </div>
-                <hr className='mt-2' />
+                <hr className='mt-6' />
               </div>
 
               <div className='mb-4'>

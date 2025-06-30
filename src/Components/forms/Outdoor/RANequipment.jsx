@@ -149,7 +149,7 @@ const RANBaseBandForm = () => {
                 </div>
               ))}
             </div>
-            <hr className='my-5'/>
+            <hr className='mt-11'/>
           </div>
 
           <div className=''>

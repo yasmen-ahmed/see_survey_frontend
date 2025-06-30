@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { FaRegTrashAlt } from 'react-icons/fa';
 import { showSuccess, showError } from '../../../utils/notifications';
+import ImageUploader from "../../GalleryComponent";
 
 const nokiaModels = [
   'AAHF', 'AAHC', 'AAHD', 'AAIA', 'AAHB', 'AAHG', 'AAHE', 'AAOA'
@@ -158,6 +159,8 @@ const RadioUnitsForm = () => {
     numberOfRadioUnits: 1,
     radioUnits: [
       {
+        sector: '',
+        antennaConnection: '',
         operator: '',
         baseHeight: '',
         towerLeg: '',
@@ -188,7 +191,10 @@ const RadioUnitsForm = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Add uploadedImages state
+  const [uploadedImages, setUploadedImages] = useState({});
 
   // Generate cabinet options based on number of cabinets
   const generateCabinetOptions = () => {
@@ -223,6 +229,8 @@ const RadioUnitsForm = () => {
   // Helper function to map API data to form data
   const mapApiToFormData = useCallback((apiData) => {
     const defaultRadioUnit = {
+      sector: '',
+      antennaConnection: '',
       operator: '',
       baseHeight: '',
       towerLeg: '',
@@ -253,22 +261,22 @@ const RadioUnitsForm = () => {
     // Helper function to map DC power source from API to form format
     const mapDcPowerSource = (apiValue) => {
       if (!apiValue) return '';
+      if (apiValue === 'New FPFH') return 'External DC PDU #1';
+      if (apiValue === 'Existing FPFH') return 'External DC PDU #2';
+      if (apiValue === 'Direct from rectifier distribution') return 'Directly from rectifier distribution';
       if (apiValue.startsWith('cabinet_')) {
         const cabinetNum = apiValue.split('_')[1];
         return `Cabinet ${cabinetNum}`;
       }
-      if (apiValue === 'external_pdu_1_main_feed') return 'External DC PDU #1';
-      if (apiValue === 'external_pdu_2_main_feed') return 'External DC PDU #2';
-      if (apiValue === 'directly_from_rectifier_distribution') return 'Directly from rectifier distribution';
       return apiValue; // Return as-is if no mapping found
     };
 
     // Helper function to map side arm from API to form format
     const mapSideArmType = (apiValue) => {
       if (!apiValue) return '';
-      if (apiValue === 'same_antenna_side_arm') return 'Same antenna side arm';
-      if (apiValue === 'separate_side_arm') return 'Separate side arm only for the radio unit';
-      if (apiValue === 'shared_side_arm') return 'Shared side arm with other radio units';
+      if (apiValue === 'Use existing empty side arm') return 'Shared side arm with other radio units';
+      if (apiValue === 'Use existing antenna side arm') return 'Same antenna side arm';
+      if (apiValue === 'New side arm need to be supplied') return 'Separate side arm only for the radio unit';
       return apiValue; // Return as-is if no mapping found
     };
 
@@ -279,11 +287,13 @@ const RadioUnitsForm = () => {
       }
 
       return {
+        sector: apiUnit.new_radio_unit_sector || '',
+        antennaConnection: apiUnit.connected_to_antenna || '',
         operator: apiUnit.operator || '',
         baseHeight: apiUnit.base_height?.toString() || '',
-        towerLeg: apiUnit.tower_leg || '',
+        towerLeg: apiUnit.radio_unit_location?.includes('leg ') ? apiUnit.radio_unit_location.split('leg ')[1] : '',
         vendor: apiUnit.vendor || '',
-        nokiaModel: apiUnit.nokia_model || '',
+        nokiaModel: apiUnit.new_radio_unit_model?.includes('Nokia') ? apiUnit.new_radio_unit_model : '',
         nokiaPortCount: apiUnit.nokia_ports?.toString() || '',
         nokiaPortConnectivity: Array.isArray(apiUnit.nokia_port_connectivity) && apiUnit.nokia_port_connectivity.length > 0
           ? apiUnit.nokia_port_connectivity.map(conn => ({
@@ -292,29 +302,29 @@ const RadioUnitsForm = () => {
               jumperLength: conn.jumper_length?.toString() || ''
             }))
           : [{ sector: '', antenna: '', jumperLength: '' }],
-        otherModel: apiUnit.other_vendor_model || '',
+        otherModel: !apiUnit.new_radio_unit_model?.includes('Nokia') ? apiUnit.new_radio_unit_model : '',
         otherLength: apiUnit.other_length?.toString() || '',
         otherWidth: apiUnit.other_width?.toString() || '',
         otherDepth: apiUnit.other_depth?.toString() || '',
-        sideArmType: mapSideArmType(apiUnit.radio_unit_side_arm),
-        sideArmLength: apiUnit.radio_unit_side_arm_length?.toString() || '',
-        sideArmDiameter: apiUnit.radio_unit_side_arm_diameter?.toString() || '',
-        sideArmOffset: apiUnit.radio_unit_side_arm_offset?.toString() || '',
+        sideArmType: mapSideArmType(apiUnit.side_arm_type),
+        sideArmLength: apiUnit.side_arm_length?.toString() || '',
+        sideArmDiameter: apiUnit.side_arm_cross_section?.toString() || '',
+        sideArmOffset: apiUnit.side_arm_offset?.toString() || '',
         dcPowerSource: mapDcPowerSource(apiUnit.dc_power_source),
         dcCbFuse: apiUnit.dc_cb_fuse || '',
         dcCableLength: apiUnit.dc_power_cable_length?.toString() || '',
         dcCableCrossSection: apiUnit.dc_power_cable_cross_section?.toString() || '',
         fiberCableLength: apiUnit.fiber_cable_length?.toString() || '',
-        jumperLength: apiUnit.jumper_length_antenna_radio || '',
+        jumperLength: apiUnit.jumper_length?.toString() || '',
         feederType: apiUnit.feeder_type || '',
-        feederLength: apiUnit.feeder_length?.toString() || '',
+        feederLength: apiUnit.feeder_length_to_antenna?.toString() || '',
         includeInPlan: apiUnit.swap_upgrade_plan || '',
         earthCableLength: apiUnit.earth_cable_length?.toString() || ''
       };
     });
 
     return {
-      numberOfRadioUnits: apiData.radio_unit_count || 1,
+      numberOfRadioUnits: apiData.total_radio_units || apiData.new_radio_units_planned || 1,
       radioUnits
     };
   }, []);
@@ -346,60 +356,53 @@ const RadioUnitsForm = () => {
     };
 
     return {
-      radio_unit_count: formData.numberOfRadioUnits,
-      radio_units: activeUnits.map(unit => {
-        const apiUnit = {
-          operator: unit.operator || null,
-          base_height: unit.baseHeight ? parseFloat(unit.baseHeight) : null,
-          tower_leg: unit.towerLeg || null,
-          vendor: unit.vendor || null,
-          dc_power_source: mapDcPowerSourceToApi(unit.dcPowerSource),
-          dc_cb_fuse: unit.dcCbFuse || null,
-          dc_power_cable_length: unit.dcCableLength ? parseFloat(unit.dcCableLength) : null,
-          dc_power_cable_cross_section: unit.dcCableCrossSection ? parseFloat(unit.dcCableCrossSection) : null,
-          fiber_cable_length: unit.fiberCableLength ? parseFloat(unit.fiberCableLength) : null,
-          jumper_length_antenna_radio: unit.jumperLength || null,
-          feeder_type: unit.feederType || null,
-          feeder_length: unit.feederLength ? parseFloat(unit.feederLength) : null,
-          swap_upgrade_plan: unit.includeInPlan || null,
-          earth_cable_length: unit.earthCableLength ? parseFloat(unit.earthCableLength) : null
-        };
-
-        // Add Nokia-specific fields
-        if (unit.vendor === 'Nokia') {
-          apiUnit.nokia_model = unit.nokiaModel || null;
-          apiUnit.nokia_ports = unit.nokiaPortCount || null;
-          apiUnit.nokia_port_connectivity = unit.nokiaPortConnectivity
-            .filter(conn => conn.sector || conn.antenna || conn.jumperLength)
-            .map(conn => ({
-              sector: conn.sector ? parseInt(conn.sector) : null,
-              antenna: conn.antenna ? parseInt(conn.antenna) : null,
-              jumper_length: conn.jumperLength ? parseFloat(conn.jumperLength) : null
-            }));
-        }
-
-        // Add other vendor fields
-        if (unit.vendor && unit.vendor !== 'Nokia') {
-          apiUnit.other_vendor_model = unit.otherModel || null;
-          apiUnit.other_length = unit.otherLength ? parseFloat(unit.otherLength) : null;
-          apiUnit.other_width = unit.otherWidth ? parseFloat(unit.otherWidth) : null;
-          apiUnit.other_depth = unit.otherDepth ? parseFloat(unit.otherDepth) : null;
-        }
-
-        // Add side arm fields - always include if sideArmType is selected
-        if (unit.sideArmType) {
-          apiUnit.radio_unit_side_arm = mapSideArmTypeToApi(unit.sideArmType);
-          if (unit.sideArmType !== 'Same antenna side arm') {
-            apiUnit.radio_unit_side_arm_length = unit.sideArmLength ? parseFloat(unit.sideArmLength) : null;
-            apiUnit.radio_unit_side_arm_diameter = unit.sideArmDiameter ? parseFloat(unit.sideArmDiameter) : null;
-            apiUnit.radio_unit_side_arm_offset = unit.sideArmOffset ? parseFloat(unit.sideArmOffset) : null;
-          }
-        }
-
-        return apiUnit;
-      })
+      radio_units: activeUnits.map((unit, index) => ({
+        radio_unit_index: index + 1,
+        new_radio_unit_sector: unit.sector || "",
+        connected_to_antenna: unit.antennaConnection || "",
+        operator: unit.operator || null,
+        base_height: unit.baseHeight ? parseFloat(unit.baseHeight) : null,
+        tower_leg: unit.towerLeg || null,
+        vendor: unit.vendor || null,
+        nokia_model: unit.vendor === 'Nokia' ? unit.nokiaModel : null,
+        nokia_ports: unit.vendor === 'Nokia' && unit.nokiaPortCount ? parseInt(unit.nokiaPortCount) : null,
+        nokia_port_connectivity: unit.vendor === 'Nokia' && unit.nokiaPortConnectivity ? unit.nokiaPortConnectivity
+          .filter(conn => conn.sector || conn.antenna || conn.jumperLength)
+          .map(conn => ({
+            sector: conn.sector ? parseInt(conn.sector) : null,
+            antenna: conn.antenna ? parseInt(conn.antenna) : null,
+            jumper_length: conn.jumperLength ? parseFloat(conn.jumperLength) : null
+          })) : [],
+        other_vendor_model: unit.vendor && unit.vendor !== 'Nokia' ? unit.otherModel : null,
+        other_length: unit.vendor && unit.vendor !== 'Nokia' && unit.otherLength ? parseFloat(unit.otherLength) : null,
+        other_width: unit.vendor && unit.vendor !== 'Nokia' && unit.otherWidth ? parseFloat(unit.otherWidth) : null,
+        other_depth: unit.vendor && unit.vendor !== 'Nokia' && unit.otherDepth ? parseFloat(unit.otherDepth) : null,
+        radio_unit_side_arm: mapSideArmTypeToApi(unit.sideArmType),
+        radio_unit_side_arm_length: unit.sideArmType !== 'Same antenna side arm' && unit.sideArmLength ? parseFloat(unit.sideArmLength) : null,
+        radio_unit_side_arm_diameter: unit.sideArmType !== 'Same antenna side arm' && unit.sideArmDiameter ? parseFloat(unit.sideArmDiameter) : null,
+        radio_unit_side_arm_offset: unit.sideArmType !== 'Same antenna side arm' && unit.sideArmOffset ? parseFloat(unit.sideArmOffset) : null,
+        dc_power_source: mapDcPowerSourceToApi(unit.dcPowerSource),
+        dc_cb_fuse: unit.dcCbFuse || null,
+        dc_power_cable_length: unit.dcCableLength ? parseFloat(unit.dcCableLength) : null,
+        dc_power_cable_cross_section: unit.dcCableCrossSection ? parseFloat(unit.dcCableCrossSection) : null,
+        fiber_cable_length: unit.fiberCableLength ? parseFloat(unit.fiberCableLength) : null,
+        jumper_length_antenna_radio: unit.jumperLength || null,
+        feeder_type: unit.feederType || null,
+        feeder_length: unit.feederLength ? parseFloat(unit.feederLength) : null,
+        swap_upgrade_plan: unit.includeInPlan || null,
+        earth_cable_length: unit.earthCableLength ? parseFloat(unit.earthCableLength) : null
+      }))
     };
   }, []);
+
+  // Add handleImageUpload function
+  const handleImageUpload = (imageCategory, files) => {
+    console.log(`Images uploaded for ${imageCategory}:`, files);
+    setUploadedImages(prev => ({
+      ...prev,
+      [imageCategory]: files
+    }));
+  };
 
   // Fetch relations and existing data when component loads
   useEffect(() => {
@@ -422,7 +425,7 @@ const RadioUnitsForm = () => {
 
         // Fetch existing radio units data
         try {
-          const radioUnitsResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/radio-units/${sessionId}`);
+          const radioUnitsResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/new-radio-units/${sessionId}`);
           const radioUnitsData = radioUnitsResponse.data.data || radioUnitsResponse.data;
           
           console.log("Fetched radio units data:", radioUnitsData);
@@ -431,6 +434,13 @@ const RadioUnitsForm = () => {
             const mappedData = mapApiToFormData(radioUnitsData);
             setFormData(mappedData);
             
+            // Process and set images from the response
+            if (radioUnitsData.radio_units?.some(unit => unit.images?.length > 0)) {
+              const processedImages = processImagesFromResponse(radioUnitsData.radio_units);
+              console.log("Processed images:", processedImages);
+              setUploadedImages(processedImages);
+            }
+
             // Fetch DC options for units that have cabinet selections
             mappedData.radioUnits.forEach((unit, index) => {
               if (unit.dcPowerSource && unit.dcPowerSource.startsWith('Cabinet ')) {
@@ -467,6 +477,8 @@ const RadioUnitsForm = () => {
       if (index < count) {
         // Keep existing data for units within the new count
         return formData.radioUnits[index] || {
+          sector: '',
+          antennaConnection: '',
           operator: '',
           baseHeight: '',
           towerLeg: '',
@@ -496,6 +508,8 @@ const RadioUnitsForm = () => {
       } else {
         // Clear data for units beyond the new count
         return {
+          sector: '',
+          antennaConnection: '',
           operator: '',
           baseHeight: '',
           towerLeg: '',
@@ -578,26 +592,119 @@ const RadioUnitsForm = () => {
     handleChange(unitIndex, 'nokiaPortConnectivity', newData);
   };
 
+  // Add processImagesFromResponse function
+  const processImagesFromResponse = (radioUnits) => {
+    const imagesByCategory = {};
+    
+    radioUnits.forEach(unit => {
+      if (unit.images && Array.isArray(unit.images)) {
+        unit.images.forEach(img => {
+          imagesByCategory[img.image_category] = [{
+            id: img.id,
+            file_url: img.file_url,
+            name: img.original_filename
+          }];
+        });
+      }
+    });
+    
+    return imagesByCategory;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setIsSubmitting(true);
+    const prevFormData = { ...formData }; // Keep a copy of current form data
 
     try {
       const apiData = mapFormToApiData(formData);
-      console.log("Submitting radio units data:", apiData);
+      console.log("Submitting radio units data:", JSON.stringify(apiData, null, 2));
+
+      // Create FormData for multipart submission
+      const submitFormData = new FormData();
+
+      // Add the radio units data as radio_units_data field
+      submitFormData.append('radio_units_data', JSON.stringify(apiData));
+
+      // Handle images - add files or empty strings for removed images
+      const allImageFields = getAllImages();
+      allImageFields.forEach(imageField => {
+        const imageFiles = uploadedImages[imageField.name];
+        console.log(`Processing image field: ${imageField.name}`, imageFiles);
+        
+        if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+          const file = imageFiles[0];
+          if (file instanceof File) {
+            console.log(`Adding file for ${imageField.name}:`, file.name);
+            submitFormData.append(imageField.name, file);
+          } else {
+            console.log(`Skipping non-File object for ${imageField.name}:`, file);
+            submitFormData.append(imageField.name, '');
+          }
+        } else {
+          // If image was removed or doesn't exist, send empty string
+          console.log(`Adding empty string for ${imageField.name}`);
+          submitFormData.append(imageField.name, '');
+        }
+      });
+
+      // Log FormData entries for debugging
+      console.log('FormData entries for submission:');
+      for (let pair of submitFormData.entries()) {
+        if (pair[1] instanceof File) {
+          console.log(pair[0] + ': [FILE] ' + pair[1].name);
+        } else {
+          console.log(pair[0] + ': ' + pair[1]);
+        }
+      }
 
       const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/radio-units/${sessionId}`, 
-        apiData
+        `${import.meta.env.VITE_API_URL}/api/new-radio-units/${sessionId}`, 
+        submitFormData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
       );
       
-      showSuccess('Radio units data submitted successfully!');
+      // After successful submission, fetch the latest data
+      const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/radio-units/${sessionId}`);
+      const latestData = getResponse.data.data || getResponse.data;
+      
+      if (latestData) {
+        const mappedData = mapApiToFormData(latestData);
+        setFormData(mappedData);
+
+        // Process and update images if they exist
+        if (latestData.radio_units?.some(unit => unit.images?.length > 0)) {
+          const processedImages = processImagesFromResponse(latestData.radio_units);
+          console.log("Processed images:", processedImages);
+          setUploadedImages(processedImages);
+        } else {
+          console.log("No images found in response, keeping existing uploaded images");
+          // Keep existing uploaded images that are File objects
+          const newUploadedImages = {};
+          Object.entries(uploadedImages).forEach(([key, files]) => {
+            if (Array.isArray(files) && files.length > 0 && files[0] instanceof File) {
+              newUploadedImages[key] = files;
+            }
+          });
+          setUploadedImages(newUploadedImages);
+        }
+      }
+      
+      showSuccess('Radio units data and images submitted successfully!');
       console.log("Response:", response.data);
-      setErrors({}); // Clear any previous errors
+      setErrors({});
     } catch (err) {
       console.error("Error submitting radio units data:", err);
+      console.error("Full error response:", err.response?.data);
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+      // Restore previous form data if submission failed
+      setFormData(prevFormData);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -607,6 +714,25 @@ const RadioUnitsForm = () => {
 
   const hasOtherVendor = () => {
     return formData.radioUnits.some(unit => unit.vendor && unit.vendor !== 'Nokia');
+  };
+
+  // Add these functions before the return statement
+  const getRadioUnitImages = (unitNumber) => [
+    { label: `Radio Unit #${unitNumber} Front Photo`, name: `radio_unit_${unitNumber}_front` },
+    { label: `Radio Unit #${unitNumber} Back Photo`, name: `radio_unit_${unitNumber}_back` },
+    { label: `Radio Unit #${unitNumber} Label Photo`, name: `radio_unit_${unitNumber}_label` },
+    { label: `Radio Unit #${unitNumber} Side Photo`, name: `radio_unit_${unitNumber}_side` }
+  ];
+
+  // Generate all image fields based on radio unit count
+  const getAllImages = () => {
+    if (!formData.numberOfRadioUnits) return [];
+    const count = parseInt(formData.numberOfRadioUnits);
+    let allImages = [];
+    for (let i = 1; i <= count; i++) {
+      allImages = [...allImages, ...getRadioUnitImages(i)];
+    }
+    return allImages;
   };
 
   return (
@@ -684,6 +810,53 @@ const RadioUnitsForm = () => {
                         {errors[`${unitIndex}.operator`] && (
                           <div className="text-red-500 text-xs mt-1">{errors[`${unitIndex}.operator`]}</div>
                         )}
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Radio Unit Sector */}
+                <tr>
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    New radio unit sector
+                  </td>
+                  {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
+                    <td key={unitIndex} className="border px-2 py-2">
+                      <select
+                        value={unit.sector}
+                        onChange={(e) => handleChange(unitIndex, 'sector', e.target.value)}
+                        className="w-full p-2 border rounded text-sm"
+                      >
+                        <option value="">-- Select --</option>
+                        {[1, 2, 3, 4, 5, 6].map(sector => (
+                          <option key={sector} value={sector}>{sector}</option>
+                        ))}
+                      </select>
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Antenna Connection */}
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    Connected to new or existing antenna?
+                  </td>
+                  {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
+                    <td key={unitIndex} className="border px-2 py-2">
+                      <div className="flex gap-4">
+                        {['New', 'Existing'].map(option => (
+                          <label key={option} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="radio"
+                              name={`antennaConnection-${unitIndex}`}
+                              value={option}
+                              checked={unit.antennaConnection === option}
+                              onChange={(e) => handleChange(unitIndex, 'antennaConnection', e.target.value)}
+                              className="w-4 h-4"
+                            />
+                            {option}
+                          </label>
+                        ))}
+                      </div>
                     </td>
                   ))}
                 </tr>
@@ -1246,14 +1419,31 @@ const RadioUnitsForm = () => {
     <div className="mt-6 flex justify-center">
             <button
               type="submit"
-              className="px-6 py-3 text-white bg-blue-500 rounded hover:bg-blue-700 font-semibold"
+              disabled={isSubmitting}
+              className={`px-6 py-3 text-white rounded font-medium ${
+                isSubmitting 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
-              Save and Continue
+              {isSubmitting ? (
+                <div className="flex items-center">
+                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                  Saving Images & Data...
+                </div>
+              ) : (
+                'Save and Continue'
+              )}
             </button>
           </div>
       </form>
         )}
     </div>
+    <ImageUploader 
+      images={getAllImages()} 
+      onImageUpload={handleImageUpload}
+      uploadedImages={uploadedImages}
+    />
     </div>
   );
 };

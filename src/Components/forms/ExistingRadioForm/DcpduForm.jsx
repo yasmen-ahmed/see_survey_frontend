@@ -179,7 +179,9 @@ const DcDistributionForm = () => {
   const getPduImages = (pduNumber) => [
     { label: `PDU #${pduNumber} photo`, name: `pdu_${pduNumber}_photo` },
     { label: `PDU #${pduNumber} fuses photo`, name: `pdu_${pduNumber}_fuses` },
-    { label: `PDU #${pduNumber} Power cables photos`, name: `pdu_${pduNumber}_power_cables` },
+    { label: `PDU #${pduNumber} existing PDU Power cables photo`, name: `pdu_${pduNumber}_existing_pdu_power_cables_photo` },
+    { label: `PDU #${pduNumber} Cables route photo from tower top 1/2`, name: `pdu_${pduNumber}_cables_route_photo_from_tower_top_1` },
+    { label: `PDU #${pduNumber} Cables route photo from tower top 2/2`, name: `pdu_${pduNumber}_cables_route_photo_from_tower_top_2` },
   ];
 
   // Generate all image fields based on PDU count
@@ -226,44 +228,44 @@ const DcDistributionForm = () => {
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/external-dc-distribution/${sessionId}`)
       .then(res => {
-        const data = res.data.data || res.data;
-        console.log("Fetched External DC Distribution data:", data);
+        const apiResponse = res.data.data || res.data;
+        console.log("Fetched External DC Distribution data:", apiResponse);
 
-        if (data) {
-          // Map API data to component state
-          const hasSeparateDcPdu = data.has_separate_dc_pdu || "";
-          const apiPduCount = data.pdu_count || 0;
-          const dcPdus = data.dc_pdus || [];
-          
-          // Set the main form fields
-          setDcPduExist(hasSeparateDcPdu);
-          setNumberOfCabinets(data.number_of_cabinets || 0);
-          
-          if (hasSeparateDcPdu === "Yes" && apiPduCount > 0) {
+        if (apiResponse && apiResponse.externalDCData) {
+          const ext = apiResponse.externalDCData;
+          const apiPduCount = ext.how_many_dc_pdus || 0;
+          const dcPdus = ext.dc_pdus || [];
+          // Determine if PDUs exist (treat any saved PDUs as Yes)
+          const hasPdus = apiPduCount > 0 && dcPdus.length > 0;
+
+          // Set main form fields
+          setNumberOfCabinets(apiResponse.numberOfCabinets || 0);
+          setDcPduExist(hasPdus ? "Yes" : (ext.has_separate_dc_pdu || "No"));
+
+          if (hasPdus) {
             // Set PDU count first
             setPduCount(apiPduCount.toString());
-            
-            // Process PDUs data to match component structure
-            const processedPdus = Array.from({ length: apiPduCount }, (_, index) => {
-              const pdu = dcPdus[index] || {};
-              return {
-                shared: pdu.is_shared_panel || "",
-                model: pdu.dc_distribution_model || "",
-                location: pdu.dc_distribution_location || "",
-                towerBaseHeight: pdu.pdu_height_from_base || "",
-                feedCabinet: pdu.dc_feed_cabinet || "",
-                feedDistribution: pdu.dc_feed_distribution_type ? mapDistributionTypeFromApi(pdu.dc_feed_distribution_type) : "",
-                cbFuse: pdu.feeding_dc_cbs || "",
-                cableLength: pdu.dc_cable_length || "",
-                cableCrossSection: pdu.dc_cable_cross_section || "",
-                hasFreeCbs: pdu.has_free_cbs_fuses || "",
-                cbDetails: pdu.cb_fuse_ratings ? pdu.cb_fuse_ratings.map(rating => ({
-                  rating: rating.rating || "",
-                  connected_module: rating.connected_module || ""
-                })) : Array.from({ length: 3 }, () => ({ rating: "", connected_module: "" }))
-              };
-            });
-            
+            // Map API PDUs to component state
+            const processedPdus = dcPdus.map((pdu) => ({
+              shared: pdu.is_shared_panel || "",
+              model: pdu.dc_distribution_model || "",
+              location: pdu.dc_distribution_location || "",
+              towerBaseHeight: pdu.pdu_height_from_base?.toString() || "",
+              feedCabinet: pdu.dc_feed_cabinet || "",
+              feedDistribution: pdu.dc_feed_distribution_type 
+                ? mapDistributionTypeFromApi(pdu.dc_feed_distribution_type) 
+                : "",
+              cbFuse: pdu.feeding_dc_cbs || "",
+              cableLength: pdu.cable_length?.toString() || "",
+              cableCrossSection: pdu.dc_cable_cross_section || "",
+              hasFreeCbs: pdu.has_free_cbs_fuses || "",
+              cbDetails: Array.isArray(pdu.cb_fuse_ratings)
+                ? pdu.cb_fuse_ratings.map(rating => ({
+                    rating: rating.rating?.toString() || "",
+                    connected_module: rating.connected_load || ""
+                  }))
+                : []
+            }));
             console.log("Processed PDUs:", processedPdus);
             setPdus(processedPdus);
 
@@ -273,17 +275,6 @@ const DcDistributionForm = () => {
               console.log("Processed images:", processedImages);
               setUploadedImages(processedImages);
             }
-            
-
-            
-            // Fetch CB options for each PDU that has cabinet and distribution selected
-            processedPdus.forEach((pdu, index) => {
-              if (pdu.feedCabinet && pdu.feedDistribution) {
-                setTimeout(() => {
-                  fetchCbOptions(index, pdu.feedCabinet, pdu.feedDistribution);
-                }, 200 * (index + 1));
-              }
-            });
           }
         }
       })
@@ -397,32 +388,88 @@ const DcDistributionForm = () => {
         return;
       }
 
-      // Prepare data in the format expected by the API
+      // Prepare data wrapped in externalDCData for API
       const submitData = {
-        has_separate_dc_pdu: dcPduExist,
-        pdu_count: dcPduExist === "Yes" ? parseInt(pduCount) : 0,
-        dc_pdus: dcPduExist === "Yes" ? pdus.map((pdu) => ({
-          is_shared_panel: pdu.shared || null,
-          dc_distribution_model: pdu.model || null,
-          dc_distribution_location: pdu.location || null,
-          pdu_height_from_base: pdu.location === "On ground level" ? null : (parseFloat(pdu.towerBaseHeight) || null),
-          dc_feed_cabinet: pdu.feedCabinet || null,
-          dc_feed_distribution_type: pdu.feedDistribution ? pdu.feedDistribution.toLowerCase() : null, // Send lowercase
-          feeding_dc_cbs: pdu.cbFuse || null,
-          dc_cable_length: parseFloat(pdu.cableLength) || null,
-          dc_cable_cross_section: parseFloat(pdu.cableCrossSection) || null,
-          has_free_cbs_fuses: pdu.hasFreeCbs || null,
-          cb_fuse_ratings: pdu.cbDetails ? pdu.cbDetails.filter(rating => rating.rating && rating.connected_module).map(rating => ({
-            rating: parseFloat(rating.rating) || 0,
-            connected_load: rating.connected_module
+        externalDCData: {
+          has_separate_dc_pdu: dcPduExist,
+          how_many_dc_pdus: dcPduExist === "Yes" ? parseInt(pduCount) : 0,
+          dc_pdus: dcPduExist === "Yes" ? pdus.map((pdu, index) => ({
+            pdu_number: index + 1,
+            is_shared_panel: pdu.shared || null,
+            dc_distribution_model: pdu.model || null,
+            dc_distribution_location: pdu.location || null,
+            pdu_height_from_base: pdu.location === "On ground level" ? null : (parseFloat(pdu.towerBaseHeight) || null),
+            dc_feed_cabinet: pdu.feedCabinet || null,
+            dc_feed_distribution_type: pdu.feedDistribution ? pdu.feedDistribution.toLowerCase() : null,
+            feeding_dc_cbs: pdu.cbFuse || null,
+            dc_cable_length: parseFloat(pdu.cableLength) || null,
+            dc_cable_cross_section: parseFloat(pdu.cableCrossSection) || null,
+            has_free_cbs_fuses: pdu.hasFreeCbs || null,
+            cb_fuse_ratings: pdu.cbDetails ? pdu.cbDetails.filter(r => r.rating && r.connected_module).map(r => ({
+              rating: parseFloat(r.rating) || 0,
+              connected_load: r.connected_module
+            })) : []
           })) : []
-        })) : []
+        }
       };
+
+      // Create FormData for multipart submission
+      const submitFormData = new FormData();
+      // Also append individual fields to satisfy validation if JSON parsing fails
+      submitFormData.append('has_separate_dc_pdu', dcPduExist);
+      submitFormData.append('how_many_dc_pdus', dcPduExist === "Yes" ? pduCount : '0');
+      // Append JSON payload as a plain text field
+      submitFormData.append('externalDCData', JSON.stringify(submitData.externalDCData));
 
       console.log("Submitting External DC Distribution data:", submitData);
       console.log("Original form distribution values:", pdus.map(pdu => pdu.feedDistribution));
-
-      const response = await axios.put(`${import.meta.env.VITE_API_URL}/api/external-dc-distribution/${sessionId}`, submitData);
+      // Get all possible image fields
+      const allImageFields = getAllImages();
+         // Handle all image fields - including removed ones
+      allImageFields.forEach(imageField => {
+        const imageFiles = uploadedImages[imageField.name];
+        console.log(`Processing image field: ${imageField.name}`, imageFiles);
+        
+        if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+          const file = imageFiles[0];
+          if (file instanceof File) {
+            console.log(`Adding file for ${imageField.name}:`, file.name);
+            submitFormData.append(imageField.name, file);
+          } else {
+            console.log(`Skipping non-File object for ${imageField.name}:`, file);
+          }
+        } else {
+          // If image was removed or doesn't exist, send empty string
+          console.log(`Adding empty string for ${imageField.name}`);
+          submitFormData.append(imageField.name, '');
+        }
+      });
+      // Submit as multipart/form-data
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/external-dc-distribution/${sessionId}`,
+        submitFormData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      
+      // Process and update images from the server response
+      const updatedExternalDC = response.data.data.externalDCData;
+      const updatedPdus = Array.isArray(updatedExternalDC.dc_pdus) ? updatedExternalDC.dc_pdus : [];
+      if (updatedPdus.some(pdu => pdu.images?.length > 0)) {
+        const processedImages = processImagesFromResponse(updatedPdus);
+        console.log("Processed images from response:", processedImages);
+        setUploadedImages(processedImages);
+      } else {
+        console.log("No images found in response, keeping existing uploaded images");
+        // Preserve any newly uploaded File objects
+        const newUploadedImages = {};
+        Object.entries(uploadedImages).forEach(([key, files]) => {
+          if (Array.isArray(files) && files.length > 0 && files[0] instanceof File) {
+            newUploadedImages[key] = files;
+          }
+        });
+        setUploadedImages(newUploadedImages);
+      }
+     
       showSuccess('External DC Distribution data submitted successfully!');
       console.log("Response:", response.data);
       setError(""); // Clear any previous errors

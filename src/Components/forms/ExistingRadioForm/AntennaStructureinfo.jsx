@@ -32,8 +32,8 @@ const AntennaStructureForm = () => {
     { label: 'Structure Legs Photo 4', name: 'structure_legs_photo_4' },
     { label: 'Building Photo', name: 'building_photo' },
     { label: 'North Direction View', name: 'north_direction_view' },
-    { label: 'Cables route from tower top 1/2', name: 'cables_route_photo_from_tower_top_1' },
-    { label: 'Cables route from tower top 2/2', name: 'cables_route_photo_from_tower_top_2' }
+    // { label: 'Cables route from tower top 1/2', name: 'cables_route_photo_from_tower_top_1' },
+    // { label: 'Cables route from tower top 2/2', name: 'cables_route_photo_from_tower_top_2' }
   ];
 
   useEffect(() => {
@@ -171,7 +171,7 @@ const AntennaStructureForm = () => {
               <label><input type="radio" name="hasSketch" value="Yes" onChange={handleChange} checked={formData.hasSketch === "Yes"} /> Yes</label>
               <label><input type="radio" name="hasSketch" value="No" onChange={handleChange} checked={formData.hasSketch === "No"} /> No</label>
             </div>
-            <hr className='mt-2' />     
+            <hr className='mt-10' />     
           </div>
 
           {/* Tower Type */}
@@ -273,7 +273,7 @@ const AntennaStructureForm = () => {
               <label><input type="radio" name="lightningSystem" value="Yes" onChange={handleChange} checked={formData.lightningSystem === "Yes"} /> Yes</label>
               <label><input type="radio" name="lightningSystem" value="No" onChange={handleChange} checked={formData.lightningSystem === "No"} /> No</label>
             </div>
-            <hr className='mt-2' /> 
+            <hr className='mt-9' /> 
           </div>
 
           {/* Earthing Bus Bars */}
@@ -283,7 +283,7 @@ const AntennaStructureForm = () => {
               <label><input type="radio" name="earthingBusBar" value="Yes" onChange={handleChange} checked={formData.earthingBusBar === "Yes"} /> Yes</label>
               <label><input type="radio" name="earthingBusBar" value="No" onChange={handleChange} checked={formData.earthingBusBar === "No"} /> No</label>
             </div>
-            <hr className='mt-2' /> 
+            <hr className='mt-8' /> 
           </div>
 
           {/* Free Holes */}
