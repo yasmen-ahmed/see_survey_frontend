@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { showSuccess, showError } from '../../../utils/notifications';
+import ImageUploader from '../../GalleryComponent';
 
 const DCPowerInformationForm = () => {
   const { sessionId } = useParams();
@@ -26,6 +27,81 @@ const DCPowerInformationForm = () => {
       new_battery_string_installation_location: []
     }
   });
+
+  const [uploadedImages, setUploadedImages] = useState({});
+
+  // Define image fields based on the provided image and dynamic counts
+  const getImageFields = () => {
+    const fields = [
+      { label: 'Overall Rectifier cabinet Photo (open) ', name: 'overall_rectifier_cabinet_photo' }
+    ];
+
+    // Add rectifier module photos based on count
+    const rectifierCount = parseInt(formData.dc_rectifiers.how_many_existing_dc_rectifier_modules) || 0;
+    for (let i = 1; i <= rectifierCount; i++) {
+      fields.push({
+        label: `Rectifier module photo #${i}`,
+        name: `rectifier_module_photo_${i}`
+      });
+    }
+
+    fields.push(
+      { label: 'Free slots for new Rectifier modules', name: 'free_slots_rectifier_modules' },
+      { label: 'Rectifier CB photos', name: 'rectifier_cb_photos' },
+      { label: 'Rectifier Free CB Photo', name: 'rectifier_free_cb_photo' }
+    );
+
+    // Add battery string photos based on count
+    const batteryCount = parseInt(formData.batteries.how_many_existing_battery_string) || 0;
+    for (let i = 1; i <= batteryCount; i++) {
+      fields.push({
+        label: `Battery string photo #${i}`,
+        name: `battery_string_photo_${i}`
+      });
+    }
+
+    fields.push(
+      { label: 'Battery model photo', name: 'battery_model_photo' },
+      { label: 'Battery CB photo', name: 'battery_cb_photo' },
+      { label: 'Rectifier Main AC CB photo', name: 'rectifier_main_ac_cb_photo' },
+      { label: 'PDU photos', name: 'pdu_photos' },
+      { label: 'PDU free CB', name: 'pdu_free_cb' }
+    );
+
+    return fields;
+  };
+
+  // Replace the static imageFields with the dynamic function
+  const imageFields = getImageFields();
+
+  // Update the imageFields whenever the counts change
+  useEffect(() => {
+    // This will trigger a re-render of the ImageUploader with updated fields
+    const newFields = getImageFields();
+    console.log("Updated image fields:", newFields);
+  }, [formData.dc_rectifiers.how_many_existing_dc_rectifier_modules, formData.batteries.how_many_existing_battery_string]);
+
+  // Process images from API response
+  const processImagesFromResponse = (data) => {
+    const imagesByCategory = {};
+    
+    if (data.images && Array.isArray(data.images)) {
+      data.images.forEach(img => {
+        // Handle both regular and indexed categories
+        const category = img.image_category;
+        if (!imagesByCategory[category]) {
+          imagesByCategory[category] = [];
+        }
+        imagesByCategory[category].push({
+          id: img.id,
+          file_url: img.file_url,
+          name: img.original_filename
+        });
+      });
+    }
+    
+    return imagesByCategory;
+  };
 
   // Fetch existing data when component loads
   useEffect(() => {
@@ -63,6 +139,13 @@ const DCPowerInformationForm = () => {
               new_battery_string_installation_location: dcPowerData.batteries?.new_battery_string_installation_location || []
             }
           });
+
+          // Process and set images from the response
+          if (data.images && Array.isArray(data.images)) {
+            const processedImages = processImagesFromResponse(data);
+            console.log("Processed images:", processedImages);
+            setUploadedImages(processedImages);
+          }
         }
       })
       .catch(err => {
@@ -72,6 +155,15 @@ const DCPowerInformationForm = () => {
         }
       });
   }, [sessionId]);
+
+  // Handle image uploads from ImageUploader component
+  const handleImageUpload = (imageCategory, files) => {
+    console.log(`Images uploaded for ${imageCategory}:`, files);
+    setUploadedImages(prev => ({
+      ...prev,
+      [imageCategory]: files
+    }));
+  };
 
   // Generate cabinet options based on numberOfCabinets
   const generateCabinetOptions = () => {
@@ -114,34 +206,88 @@ const DCPowerInformationForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-
-    // Prepare the data in the format expected by the API
-    const submitData = {
-
-      existing_dc_rectifiers_location: formData.dc_rectifiers.existing_dc_rectifiers_location,
-      existing_dc_rectifiers_vendor: formData.dc_rectifiers.existing_dc_rectifiers_vendor,
-      existing_dc_rectifiers_model: formData.dc_rectifiers.existing_dc_rectifiers_model,
-      how_many_existing_dc_rectifier_modules: parseInt(formData.dc_rectifiers.how_many_existing_dc_rectifier_modules) || 0,
-      rectifier_module_capacity: parseFloat(formData.dc_rectifiers.rectifier_module_capacity) || 0,
-      total_capacity_existing_dc_power_system: parseFloat(formData.dc_rectifiers.total_capacity_existing_dc_power_system) || 0,
-      how_many_free_slot_available_rectifier: parseInt(formData.dc_rectifiers.how_many_free_slot_available_rectifier) || 0,
-      existing_batteries_strings_location: formData.batteries.existing_batteries_strings_location,
-      existing_batteries_vendor: formData.batteries.existing_batteries_vendor,
-      existing_batteries_type: formData.batteries.existing_batteries_type,
-      how_many_existing_battery_string: parseInt(formData.batteries.how_many_existing_battery_string) || 0,
-      total_battery_capacity: parseFloat(formData.batteries.total_battery_capacity) || 0,
-      how_many_free_slot_available_battery: parseInt(formData.batteries.how_many_free_slot_available_battery) || 0,
-      new_battery_string_installation_location: formData.batteries.new_battery_string_installation_location || []
-
-    };
-
-    console.log("Submitting DC Power data:", submitData);
     try {
-      const response = await axios.put(`${import.meta.env.VITE_API_URL}/api/dc-power-system/${sessionId}`, submitData);
-      showSuccess('DC Power System data submitted successfully!');
-      console.log("Response:", response.data);
+      // Create FormData for multipart submission
+      const submitFormData = new FormData();
+
+      // Add form data
+      submitFormData.append('dc_rectifiers', JSON.stringify(formData.dc_rectifiers));
+      submitFormData.append('batteries', JSON.stringify(formData.batteries));
+
+      // Add images
+      Object.entries(uploadedImages).forEach(([category, files]) => {
+        if (files && files.length > 0) {
+          // Handle both regular and indexed categories
+          files.forEach((file, index) => {
+            if (file instanceof File) {
+              submitFormData.append(category, file);
+            }
+          });
+        }
+      });
+
+      console.log("Submitting DC Power System data:");
+      // Log FormData contents for debugging
+      for (let pair of submitFormData.entries()) {
+        if (pair[1] instanceof File) {
+          console.log(pair[0] + ': [FILE] ' + pair[1].name);
+        } else {
+          console.log(pair[0] + ': ' + pair[1]);
+        }
+      }
+
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/dc-power-system/${sessionId}`,
+        submitFormData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      console.log("Server response:", response.data);
+      
+      // After successful submission, update the form with the latest data
+      const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/dc-power-system/${sessionId}`);
+      const latestData = getResponse.data.data || getResponse.data;
+
+      if (latestData) {
+        // Update form data
+        const dcPowerData = latestData.dcPowerData || latestData;
+        setFormData({
+          dc_rectifiers: {
+            existing_dc_rectifiers_location: dcPowerData.dc_rectifiers?.existing_dc_rectifiers_location || '',
+            existing_dc_rectifiers_vendor: dcPowerData.dc_rectifiers?.existing_dc_rectifiers_vendor || '',
+            existing_dc_rectifiers_model: dcPowerData.dc_rectifiers?.existing_dc_rectifiers_model || '',
+            how_many_existing_dc_rectifier_modules: dcPowerData.dc_rectifiers?.how_many_existing_dc_rectifier_modules || '',
+            rectifier_module_capacity: dcPowerData.dc_rectifiers?.rectifier_module_capacity || '',
+            total_capacity_existing_dc_power_system: dcPowerData.dc_rectifiers?.total_capacity_existing_dc_power_system || '',
+            how_many_free_slot_available_rectifier: dcPowerData.dc_rectifiers?.how_many_free_slot_available_rectifier || ''
+          },
+          batteries: {
+            existing_batteries_strings_location: dcPowerData.batteries?.existing_batteries_strings_location || '',
+            existing_batteries_vendor: dcPowerData.batteries?.existing_batteries_vendor || '',
+            existing_batteries_type: dcPowerData.batteries?.existing_batteries_type || '',
+            how_many_existing_battery_string: dcPowerData.batteries?.how_many_existing_battery_string || '',
+            total_battery_capacity: dcPowerData.batteries?.total_battery_capacity || '',
+            how_many_free_slot_available_battery: dcPowerData.batteries?.how_many_free_slot_available_battery || '',
+            new_battery_string_installation_location: dcPowerData.batteries?.new_battery_string_installation_location || []
+          }
+        });
+
+        // Process and update images
+        if (latestData.images && Array.isArray(latestData.images)) {
+          const processedImages = processImagesFromResponse(latestData);
+          console.log("Processed images from response:", processedImages);
+          setUploadedImages(processedImages);
+        }
+      }
+      
+      showSuccess('DC Power System data and images submitted successfully!');
     } catch (err) {
-      console.error("Error:", err);
+      console.error("Error submitting DC Power System data:", err);
+      console.error("Error response:", err.response?.data);
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
     }
   };
@@ -368,6 +514,13 @@ const DCPowerInformationForm = () => {
           </div>
         </form>
       </div>
+      
+      {/* Image Uploader */}
+      <ImageUploader 
+        images={imageFields} 
+        onImageUpload={handleImageUpload}
+        uploadedImages={uploadedImages}
+      />
     </div>
   );
 };
