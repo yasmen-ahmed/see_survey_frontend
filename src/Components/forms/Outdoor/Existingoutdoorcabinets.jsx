@@ -39,7 +39,48 @@ const OutdoorCabinetsForm = () => {
   });
 
   const [connectedModules, setConnectedModules] = useState([]);
-  const [pendingUploads, setPendingUploads] = useState(new Map());
+  const [uploadedImages, setUploadedImages] = useState({});
+
+  // Generate image fields for a single cabinet
+  const getCabinetImages = (cabinetNumber) => [
+    { label: `Cabinet ${cabinetNumber} general photo`, name: `cabinet_${cabinetNumber}_photo_general_photo` },
+    { label: `Cabinet #${cabinetNumber} Photo 1/4`, name: `cabinet_${cabinetNumber}_photo_1_4` },
+    { label: `Cabinet #${cabinetNumber} Photo 2/4`, name: `cabinet_${cabinetNumber}_photo_2_4` },
+    { label: `Cabinet #${cabinetNumber} Photo 3/4`, name: `cabinet_${cabinetNumber}_photo_3_4` },
+    { label: `Cabinet #${cabinetNumber} Photo 4/4`, name: `cabinet_${cabinetNumber}_photo_4_4` },
+    { label: `Cabinet #${cabinetNumber} RAN equipment photo`, name: `cabinet_${cabinetNumber}_ran_equipment_photo` },
+  ];
+
+  // Generate all image fields based on cabinet count
+  const getAllImages = () => {
+    if (!formData.numberOfCabinets) return [];
+    const count = parseInt(formData.numberOfCabinets);
+    let allImages = [];
+    for (let i = 1; i <= count; i++) {
+      allImages = [...allImages, ...getCabinetImages(i)];
+    }
+    return allImages;
+  };
+
+  // Process images from API response
+  const processImagesFromResponse = (cabinets) => {
+    const imagesByCategory = {};
+    
+    cabinets.forEach(cabinet => {
+      if (cabinet.images && Array.isArray(cabinet.images)) {
+        cabinet.images.forEach(img => {
+          // Handle the actual API response structure
+          imagesByCategory[img.category] = [{
+            id: img.id,
+            file_url: img.url,  // API returns 'url' not 'file_url'
+            name: img.url.split('/').pop() || `image_${img.id}`  // Extract filename from URL
+          }];
+        });
+      }
+    });
+    
+    return imagesByCategory;
+  };
 
   // Configuration for CB ratings tables
   const cbRatingsTableRows = [
@@ -61,7 +102,8 @@ const OutdoorCabinetsForm = () => {
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/outdoor-cabinets/${sessionId}`)
       .then(res => {
-        const data = res.data.data || res.data;
+        // Handle nested response structure
+        const data = res.data.data?.data || res.data.data || res.data;
         console.log("Fetched data:", data);
 
         if (data) {
@@ -115,6 +157,13 @@ const OutdoorCabinetsForm = () => {
             numberOfCabinets: data.numberOfCabinets || '',
             cabinets: mergedCabinets
           });
+
+          // Process and set images from the response
+          if (mergedCabinets.some(cabinet => cabinet.images?.length > 0)) {
+            const processedImages = processImagesFromResponse(mergedCabinets);
+            console.log("Processed images:", processedImages);
+            setUploadedImages(processedImages);
+          }
         }
       })
       .catch(err => {
@@ -139,6 +188,15 @@ const OutdoorCabinetsForm = () => {
 
     fetchModules();
   }, [sessionId]);
+
+  // Handle image uploads from ImageUploader component
+  const handleImageUpload = (imageCategory, files) => {
+    console.log(`Images uploaded for ${imageCategory}:`, files);
+    setUploadedImages(prev => ({
+      ...prev,
+      [imageCategory]: files
+    }));
+  };
 
   const handleChange = (cabinetIndex, fieldName, value) => {
     setFormData(prev => ({
@@ -225,20 +283,59 @@ const OutdoorCabinetsForm = () => {
     e.preventDefault();
 
     try {
+      // Create FormData for multipart submission
       const submitFormData = new FormData();
-      
-      // Add the form data
-      submitFormData.append('data', JSON.stringify(formData));
 
-      // Add any pending image uploads
-      for (const [key, uploadData] of pendingUploads) {
-        const imageInfo = {
-          cabinet_number: uploadData.cabinet_number,
-          image_category: uploadData.image_category
-        };
-        // Use the image info as the file name so we can parse it on the backend
-        const file = new File([uploadData.file], JSON.stringify(imageInfo), { type: uploadData.file.type });
-        submitFormData.append('files', file);
+      // Add cabinet count
+      submitFormData.append('numberOfCabinets', parseInt(formData.numberOfCabinets));
+
+      // Add cabinet data as individual form fields
+      formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).forEach((cabinet, index) => {
+        Object.entries(cabinet).forEach(([key, value]) => {
+          if (key !== 'images') {
+            if (Array.isArray(value)) {
+              submitFormData.append(`cabinets[${index}][${key}]`, JSON.stringify(value));
+            } else {
+              submitFormData.append(`cabinets[${index}][${key}]`, value || '');
+            }
+          }
+        });
+      });
+
+      // Get all possible image fields
+      const allImageFields = getAllImages();
+      
+      console.log("All image fields:", allImageFields);
+      console.log("Uploaded images state:", uploadedImages);
+      
+      // Handle all image fields - including removed ones
+      allImageFields.forEach(imageField => {
+        const imageFiles = uploadedImages[imageField.name];
+        console.log(`Processing image field: ${imageField.name}`, imageFiles);
+        
+        if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+          const file = imageFiles[0];
+          if (file instanceof File) {
+            console.log(`Adding file for ${imageField.name}:`, file.name);
+            submitFormData.append(imageField.name, file);
+          } else {
+            console.log(`Skipping non-File object for ${imageField.name}:`, file);
+          }
+        } else {
+          // If image was removed or doesn't exist, send empty string
+          console.log(`Adding empty string for ${imageField.name}`);
+          submitFormData.append(imageField.name, '');
+        }
+      });
+
+      console.log("Submitting outdoor cabinets data:");
+      // Log FormData contents for debugging
+      for (let pair of submitFormData.entries()) {
+        if (pair[1] instanceof File) {
+          console.log(pair[0] + ': [FILE] ' + pair[1].name);
+        } else {
+          console.log(pair[0] + ': ' + pair[1]);
+        }
       }
 
       const response = await axios.put(
@@ -251,59 +348,73 @@ const OutdoorCabinetsForm = () => {
         }
       );
 
-      if (response.data.success) {
-        showSuccess('Data and images saved successfully!');
-        // Clear pending uploads
-        setPendingUploads(new Map());
-        // Update form data with new data including images
-        setFormData(prev => ({
-          ...prev,
-          cabinets: response.data.data.cabinets
-        }));
+      console.log("Server response:", response.data);
+      
+      // After successful submission, fetch the latest data
+      const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/outdoor-cabinets/${sessionId}`);
+      const latestData = getResponse.data.data?.data || getResponse.data.data || getResponse.data;
+
+      if (latestData) {
+        // Merge API data with default structure
+        const mergedCabinets = Array(10).fill(null).map((_, index) => {
+          const apiCabinet = latestData.cabinets?.[index] || {};
+          return {
+            id: index + 1,
+            type: Array.isArray(apiCabinet.type) ? apiCabinet.type : [],
+            vendor: apiCabinet.vendor || '',
+            model: apiCabinet.model || '',
+            antiTheft: apiCabinet.antiTheft || '',
+            coolingType: apiCabinet.coolingType || '',
+            coolingCapacity: apiCabinet.coolingCapacity || '',
+            compartments: apiCabinet.compartments || '',
+            hardware: Array.isArray(apiCabinet.hardware) ? apiCabinet.hardware : [],
+            acPowerFeed: apiCabinet.acPowerFeed || '',
+            cbNumber: apiCabinet.cbNumber || '',
+            powerCableLength: apiCabinet.powerCableLength || '',
+            powerCableCrossSection: apiCabinet.powerCableCrossSection || '',
+            blvd: apiCabinet.blvd || '',
+            blvdFreeCBs: apiCabinet.blvdFreeCBs || '',
+            blvdCBsRatings: Array.isArray(apiCabinet.blvdCBsRatings) ? apiCabinet.blvdCBsRatings : [],
+            llvd: apiCabinet.llvd || '',
+            llvdFreeCBs: apiCabinet.llvdFreeCBs || '',
+            llvdCBsRatings: Array.isArray(apiCabinet.llvdCBsRatings) ? apiCabinet.llvdCBsRatings : [],
+            pdu: apiCabinet.pdu || '',
+            pduFreeCBs: apiCabinet.pduFreeCBs || '',
+            pduCBsRatings: Array.isArray(apiCabinet.pduCBsRatings) ? apiCabinet.pduCBsRatings : [],
+            internalLayout: apiCabinet.internalLayout || '',
+            freeU: apiCabinet.freeU || ''
+          };
+        });
+
+        setFormData({
+          numberOfCabinets: latestData.numberOfCabinets || formData.numberOfCabinets,
+          cabinets: mergedCabinets
+        });
+
+        // Process and update images
+        if (latestData.cabinets && latestData.cabinets.some(cabinet => cabinet.images?.length > 0)) {
+          const processedImages = processImagesFromResponse(latestData.cabinets);
+          console.log("Processed images from response:", processedImages);
+          setUploadedImages(processedImages);
+        } else {
+          console.log("No images found in response, clearing uploaded images");
+          // Don't clear uploaded images completely, keep File objects for newly uploaded images
+          const newUploadedImages = {};
+          Object.entries(uploadedImages).forEach(([key, files]) => {
+            if (Array.isArray(files) && files.length > 0 && files[0] instanceof File) {
+              newUploadedImages[key] = files;
+            }
+          });
+          setUploadedImages(newUploadedImages);
+        }
       }
+      
+      showSuccess('Outdoor cabinets data and images submitted successfully!');
     } catch (err) {
-      console.error("Error:", err);
+      console.error("Error submitting outdoor cabinets data:", err);
+      console.error("Error response:", err.response?.data);
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
     }
-  };
-
-  // Function to get image categories for a cabinet
-  const getImageCategories = (cabinet_number) => [
-    { label: `Cabinet ${cabinet_number} general photo`, name: `cabinet_${cabinet_number}_photo_general_photo` },
-    { label: `Cabinet #${cabinet_number} Photo 1/4`, name: `cabinet_${cabinet_number}_photo_1_4` },
-    { label: `Cabinet #${cabinet_number} Photo 2/4`, name: `cabinet_${cabinet_number}_photo_2_4` },
-    { label: `Cabinet #${cabinet_number} Photo 3/4`, name: `cabinet_${cabinet_number}_photo_3_4` },
-    { label: `Cabinet #${cabinet_number} Photo 4/4`, name: `cabinet_${cabinet_number}_photo_4_4` },
-    { label: `Cabinet #${cabinet_number} RAN equipment photo`, name: `cabinet_${cabinet_number}_ran_equipment_photo` },
-  ];
-
-  // Function to render image uploader for a cabinet
-  const renderCabinetImageUploader = (cabinetNumber) => {
-    const imageCategories = getImageCategories(cabinetNumber);
-    const cabinetImages = formData.cabinets[cabinetNumber - 1]?.images || [];
-
-    return (
-      <div className="mt-4">
-        <h3 className="text-lg font-semibold mb-2">Cabinet #{cabinetNumber} Images</h3>
-        <ImageUploader
-          images={imageCategories}
-          uploadedImages={cabinetImages}
-          onUpload={async (file, category) => {
-            // Store the file and category in pendingUploads
-            setPendingUploads(prev => {
-              const newMap = new Map(prev);
-              const key = `${cabinetNumber}-${category}`;
-              newMap.set(key, {
-                file,
-                cabinet_number: cabinetNumber,
-                image_category: category
-              });
-              return newMap;
-            });
-          }}
-        />
-      </div>
-    );
   };
 
   const cabinetTypes = ['RAN', 'MW', 'Power', 'All in one', 'Other'];
@@ -1016,13 +1127,13 @@ const OutdoorCabinetsForm = () => {
           </div>
         </form>
       </div>
-      <div className="">
-        {Array.from({ length: parseInt(formData.numberOfCabinets) || 1 }, (_, i) => (
-          <div key={i} className="bg-white p-3 rounded-xl shadow-md">
-            {renderCabinetImageUploader(i + 1)}
-          </div>
-        ))}
-      </div>
+      
+      {/* Image Uploader */}
+      <ImageUploader 
+        images={getAllImages()} 
+        onImageUpload={handleImageUpload}
+        uploadedImages={uploadedImages}
+      />
     </div>
   );
 };
