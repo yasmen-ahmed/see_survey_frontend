@@ -7,6 +7,7 @@ import ImageUploader from '../../GalleryComponent';
 const TransmissionInformationForm = () => {
   const { sessionId } = useParams();
   const [numberOfCabinets, setNumberOfCabinets] = useState(0);
+  const [uploadedImages, setUploadedImages] = useState({});
   const [formData, setFormData] = useState({
     type_of_transmission: '',
     existing_transmission_base_band_location: '',
@@ -19,6 +20,59 @@ const TransmissionInformationForm = () => {
     mw_links: []
   });
 
+  // Generate MW equipment-based image categories
+  const generateMWImages = () => {
+    const baseImages = [
+      { label: 'ODF photo', name: 'odf_photo' },
+      { label: 'ODF free port photo', name: 'odf_free_port' }
+    ];
+    
+    const mwCount = parseInt(formData.how_many_mw_link_exist) || 0;
+    
+    // Add MW-specific images for each link
+    for (let i = 1; i <= mwCount; i++) {
+      baseImages.push(
+        { label: `MW IDU photo ${i}`, name: `mw_idu_photo_${i}` },
+        { label: `MW IDU cards photo ${i}`, name: `mw_idu_cards_photo_${i}` }
+      );
+    }
+    
+    return baseImages;
+  };
+
+  // Process images from API response
+  const processImagesFromResponse = (data) => {
+    const imagesByCategory = {};
+    
+    if (data.images && Array.isArray(data.images)) {
+      data.images.forEach(img => {
+        const category = img.category || img.image_category;
+        
+        if (!category || category.trim() === "") {
+          console.warn("Skipping image with empty category:", img);
+          return;
+        }
+        
+        imagesByCategory[category] = [{
+          id: img.id,
+          file_url: img.url || img.file_url,
+          name: img.original_filename || (img.url || img.file_url)?.split('/').pop() || `image_${img.id}`
+        }];
+      });
+    }
+    
+    return imagesByCategory;
+  };
+
+  // Handle image uploads
+  const handleImageUpload = (imageCategory, files) => {
+    console.log(`Images uploaded for ${imageCategory}:`, files);
+    setUploadedImages(prev => ({
+      ...prev,
+      [imageCategory]: files
+    }));
+  };
+
   // Fetch existing data when component loads
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/transmission-mw/${sessionId}`)
@@ -27,14 +81,12 @@ const TransmissionInformationForm = () => {
         console.log("Fetched MW data:", data);
 
         if (data) {
-          // Set number of cabinets from API response (for dynamic cabinet options)
+          // Set number of cabinets from API response
           setNumberOfCabinets(data.numberOfCabinets || 0);
 
-          // Handle both nested (transmissionData) and direct response structures
+          // Get the transmission data from the nested structure
           const transmissionData = data.transmissionData || data;
-
           console.log("Transmission data:", transmissionData);
-          console.log("MW links data:", transmissionData.mw_links);
 
           setFormData({
             type_of_transmission: transmissionData.type_of_transmission || '',
@@ -47,6 +99,13 @@ const TransmissionInformationForm = () => {
             how_many_mw_link_exist: transmissionData.how_many_mw_link_exist || '',
             mw_links: transmissionData.mw_links || []
           });
+
+          // Process and set images from the response
+          if (data.images && Array.isArray(data.images) && data.images.length > 0) {
+            const processedImages = processImagesFromResponse(data);
+            console.log("Processed images:", processedImages);
+            setUploadedImages(processedImages);
+          }
         }
       })
       .catch(err => {
@@ -57,10 +116,7 @@ const TransmissionInformationForm = () => {
       });
   }, [sessionId]);
 
-  // Debug: Log form data changes
-  useEffect(() => {
-    console.log("Current form data:", formData);
-  }, [formData]);
+  
 
   // Generate cabinet options based on numberOfCabinets
   const generateCabinetOptions = () => {
@@ -127,7 +183,10 @@ const TransmissionInformationForm = () => {
     e.preventDefault();
 
     try {
-      // Prepare the data in the format expected by the API (direct structure, not nested)
+      // Create FormData for multipart submission
+      const formDataToSend = new FormData();
+
+      // Add form data
       const submitData = {
         type_of_transmission: formData.type_of_transmission,
         existing_transmission_base_band_location: formData.existing_transmission_base_band_location,
@@ -138,7 +197,7 @@ const TransmissionInformationForm = () => {
         how_many_free_ports_odf: parseInt(formData.how_many_free_ports_odf) || 0,
         how_many_mw_link_exist: parseInt(formData.how_many_mw_link_exist) || 0,
         mw_links: formData.mw_links.map((link, index) => ({
-          link_id: link.link_id || (index + 1), // Ensure link_id is present
+          link_id: link.link_id || (index + 1),
           located_in: link.located_in || '',
           mw_equipment_vendor: link.mw_equipment_vendor || '',
           idu_type: link.idu_type || '',
@@ -150,13 +209,65 @@ const TransmissionInformationForm = () => {
         }))
       };
 
-      console.log("Submitting data:", submitData);
+      // Add the JSON data
+      formDataToSend.append('data', JSON.stringify(submitData));
 
-      const response = await axios.put(`${import.meta.env.VITE_API_URL}/api/transmission-mw/${sessionId}`, submitData);
-      showSuccess('MW transmission data submitted successfully!');
-      console.log("Response:", response.data);
+      // Get all possible image fields
+      const allImageFields = generateMWImages();
+      
+      console.log("All image fields:", allImageFields);
+      console.log("Uploaded images state:", uploadedImages);
+      
+      // Handle all image fields
+      allImageFields.forEach(imageField => {
+        const imageFiles = uploadedImages[imageField.name];
+        console.log(`Processing image field: ${imageField.name}`, imageFiles);
+        
+        if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+          const file = imageFiles[0];
+          if (file instanceof File) {
+            console.log(`Adding file for ${imageField.name}:`, file.name);
+            formDataToSend.append(imageField.name, file);
+          } else {
+            console.log(`Skipping non-File object for ${imageField.name}:`, file);
+          }
+        } else {
+          console.log(`Adding empty string for ${imageField.name}`);
+          formDataToSend.append(imageField.name, '');
+        }
+      });
+
+      // Log FormData contents for debugging
+      for (let pair of formDataToSend.entries()) {
+        if (pair[1] instanceof File) {
+          console.log(pair[0] + ': [FILE] ' + pair[1].name);
+        } else {
+          console.log(pair[0] + ': ' + pair[1]);
+        }
+      }
+
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/transmission-mw/${sessionId}`,
+        formDataToSend,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      console.log("Server response:", response.data);
+      
+      // After successful submission, fetch the latest data
+      const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/transmission-mw/${sessionId}`);
+      const latestData = getResponse.data.data || getResponse.data;
+
+     
+      
+      showSuccess('MW transmission data and images submitted successfully!');
     } catch (err) {
-      console.error("Error:", err);
+      console.error("Error submitting data:", err);
+      console.error("Error response:", err.response?.data);
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
     }
   };
@@ -164,15 +275,6 @@ const TransmissionInformationForm = () => {
   const cabinetOptions = generateCabinetOptions();
   const mwVendors = ['Nokia', 'Ericsson', 'Huawei', 'ZTE', 'NEC', 'Other'];
   const backhaulingTypes = ['Ethernet', 'Fiber'];
-
-  const images = [
-    { label: 'MW Equipment Overview Photo', name: 'mw_equipment_overview_photo' },
-    { label: 'MW IDU Photo', name: 'mw_idu_photo' },
-    { label: 'MW ODU Photo', name: 'mw_odu_photo' },
-    { label: 'MW Antenna Photo', name: 'mw_antenna_photo' },
-    { label: 'ODF Photo', name: 'odf_photo' },
-    { label: 'Cable Management Photo', name: 'cable_management_photo' },
-  ];
 
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
@@ -543,7 +645,13 @@ const TransmissionInformationForm = () => {
           </div>
         </form>
       </div>
-      <ImageUploader images={images} />
+      
+      {/* Image Uploader */}
+      <ImageUploader 
+        images={generateMWImages()} 
+        onImageUpload={handleImageUpload}
+        uploadedImages={uploadedImages}
+      />
     </div>
   );
 };
