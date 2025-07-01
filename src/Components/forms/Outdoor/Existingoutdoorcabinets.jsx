@@ -34,10 +34,12 @@ const OutdoorCabinetsForm = () => {
       pduCBsRatings: [],
       internalLayout: '',
       freeU: '',
+      images: []
     }))
   });
 
   const [connectedModules, setConnectedModules] = useState([]);
+  const [pendingUploads, setPendingUploads] = useState(new Map());
 
   // Configuration for CB ratings tables
   const cbRatingsTableRows = [
@@ -223,25 +225,86 @@ const OutdoorCabinetsForm = () => {
     e.preventDefault();
 
     try {
-      const response = await axios.put(`${import.meta.env.VITE_API_URL}/api/outdoor-cabinets/${sessionId}`, formData);
-      showSuccess('Outdoor cabinets data submitted successfully!');
-      console.log("Response:", response.data);
+      const submitFormData = new FormData();
+      
+      // Add the form data
+      submitFormData.append('data', JSON.stringify(formData));
+
+      // Add any pending image uploads
+      for (const [key, uploadData] of pendingUploads) {
+        const imageInfo = {
+          cabinet_number: uploadData.cabinet_number,
+          image_category: uploadData.image_category
+        };
+        // Use the image info as the file name so we can parse it on the backend
+        const file = new File([uploadData.file], JSON.stringify(imageInfo), { type: uploadData.file.type });
+        submitFormData.append('files', file);
+      }
+
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/outdoor-cabinets/${sessionId}`,
+        submitFormData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      if (response.data.success) {
+        showSuccess('Data and images saved successfully!');
+        // Clear pending uploads
+        setPendingUploads(new Map());
+        // Update form data with new data including images
+        setFormData(prev => ({
+          ...prev,
+          cabinets: response.data.data.cabinets
+        }));
+      }
     } catch (err) {
       console.error("Error:", err);
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
     }
   };
 
-  const images = [
-    { label: 'Site outdoor location general photo', name: 'site_outdoor_location_general_photo' },
-    { label: 'Free Position #1 ', name: 'free_position_1' },
-    { label: 'Cabinet #1 photo general photo', name: 'cabinet_1_photo_general_photo' },
-    { label: 'Cabinet #1 Photo 1/4', name: 'cabinet_1_photo_1_4' },
-    { label: 'Cabinet #1 Photo 2/4', name: 'hardware_photo' },
-    { label: 'Cooling System Photo', name: 'cooling_system_photo' },
-    { label: 'Power Connection Photo', name: 'power_connection_photo' },
-    { label: 'Cable Management Photo', name: 'cable_management_photo' },
+  // Function to get image categories for a cabinet
+  const getImageCategories = (cabinet_number) => [
+    { label: `Cabinet ${cabinet_number} general photo`, name: `cabinet_${cabinet_number}_photo_general_photo` },
+    { label: `Cabinet #${cabinet_number} Photo 1/4`, name: `cabinet_${cabinet_number}_photo_1_4` },
+    { label: `Cabinet #${cabinet_number} Photo 2/4`, name: `cabinet_${cabinet_number}_photo_2_4` },
+    { label: `Cabinet #${cabinet_number} Photo 3/4`, name: `cabinet_${cabinet_number}_photo_3_4` },
+    { label: `Cabinet #${cabinet_number} Photo 4/4`, name: `cabinet_${cabinet_number}_photo_4_4` },
+    { label: `Cabinet #${cabinet_number} RAN equipment photo`, name: `cabinet_${cabinet_number}_ran_equipment_photo` },
   ];
+
+  // Function to render image uploader for a cabinet
+  const renderCabinetImageUploader = (cabinetNumber) => {
+    const imageCategories = getImageCategories(cabinetNumber);
+    const cabinetImages = formData.cabinets[cabinetNumber - 1]?.images || [];
+
+    return (
+      <div className="mt-4">
+        <h3 className="text-lg font-semibold mb-2">Cabinet #{cabinetNumber} Images</h3>
+        <ImageUploader
+          images={imageCategories}
+          uploadedImages={cabinetImages}
+          onUpload={async (file, category) => {
+            // Store the file and category in pendingUploads
+            setPendingUploads(prev => {
+              const newMap = new Map(prev);
+              const key = `${cabinetNumber}-${category}`;
+              newMap.set(key, {
+                file,
+                cabinet_number: cabinetNumber,
+                image_category: category
+              });
+              return newMap;
+            });
+          }}
+        />
+      </div>
+    );
+  };
 
   const cabinetTypes = ['RAN', 'MW', 'Power', 'All in one', 'Other'];
   const vendors = ['Nokia', 'Ericsson', 'Huawei', 'ZTE', 'Eltek', 'Vertiv'];
@@ -953,7 +1016,13 @@ const OutdoorCabinetsForm = () => {
           </div>
         </form>
       </div>
-      <ImageUploader images={images} />
+      <div className="">
+        {Array.from({ length: parseInt(formData.numberOfCabinets) || 1 }, (_, i) => (
+          <div key={i} className="bg-white p-3 rounded-xl shadow-md">
+            {renderCabinetImageUploader(i + 1)}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

@@ -2,87 +2,98 @@ import React, { useState, useEffect } from 'react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-const ImageUploader = ({ images, onImageChange }) => {
+const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
   const [imagePreviews, setImagePreviews] = useState({});
 
-  // Update previews when images prop changes
   useEffect(() => {
     const newPreviews = {};
-    images.forEach(image => {
-      if (image.value) {
-        newPreviews[image.name] = image.value;
+    Object.entries(uploadedImages).forEach(([category, files]) => {
+      if (Array.isArray(files) && files.length > 0) {
+        const file = files[0];
+        if (file instanceof File) {
+          // For newly uploaded files
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setImagePreviews(prev => ({
+              ...prev,
+              [category]: reader.result
+            }));
+          };
+          reader.readAsDataURL(file);
+        } else if (file.file_url) {
+          // For existing images from server
+          const imageUrl = file.file_url.startsWith('http') 
+            ? file.file_url 
+            : `${API_BASE_URL}${file.file_url}`;
+          newPreviews[category] = imageUrl;
+        }
       }
     });
-    setImagePreviews(newPreviews);
-  }, [images]);
+    setImagePreviews(prev => ({ ...prev, ...newPreviews }));
+  }, [uploadedImages]);
 
-  const handleInputChange = (e) => {
+  const handleImageChange = (e, imageName) => {
     const file = e.target.files[0];
-    const name = e.target.name;
-
     if (file) {
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreviews(prev => ({
-          ...prev,
-          [name]: reader.result
-        }));
-      };
-      reader.readAsDataURL(file);
-
-      // Notify parent component
-      if (onImageChange) {
-        onImageChange(name, file);
-      }
+      onImageUpload(imageName, [file]);
     }
   };
 
-  const handleRemoveImage = (fieldName) => {
+  const handleDelete = (imageName) => {
+    onImageUpload(imageName, []);
     setImagePreviews(prev => {
-      const updated = { ...prev };
-      delete updated[fieldName];
-      return updated;
+      const newPreviews = { ...prev };
+      delete newPreviews[imageName];
+      return newPreviews;
     });
-
-    // Notify parent component about removal
-    if (onImageChange) {
-      onImageChange(fieldName, null);
-    }
   };
 
   return (
-    <div className="grid grid-cols-1 w-[20%] h-[858px] bg-white rounded-xl shadow-md p-5 overflow-y-auto">
-      {images.map((field) => (
-        <div key={field.name} className="flex flex-col pb-5">
-          <label className="font-semibold mb-1">{field.label}</label>
-          <div className="relative">
-            {imagePreviews[field.name] ? (
+    <div className="bg-white p-4 rounded-xl shadow-md w-[20%] overflow-y-auto max-h-screen">
+      <h2 className="text-xl font-semibold mb-4">Images</h2>
+      <div className="space-y-4">
+        {images.map((image) => (
+          <div key={image.name} className="border rounded-lg p-3">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {image.label}
+            </label>
+            
+            {imagePreviews[image.name] ? (
               <div className="relative">
                 <img
-                  src={imagePreviews[field.name]}
-                  alt={`${field.label} Preview`}
-                  className="border p-2 rounded-md h-50 w-full object-cover"
+                  src={imagePreviews[image.name]}
+                  alt={image.label}
+                  className="w-full h-32 object-cover rounded-lg mb-2"
                 />
                 <button
-                  onClick={() => handleRemoveImage(field.name)}
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  onClick={() => handleDelete(image.name)}
+                  className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                  type="button"
                 >
                   ×
                 </button>
               </div>
             ) : (
-              <input
-                type="file"
-                name={field.name}
-                accept="image/*"
-                onChange={handleInputChange}
-                className="border p-2 rounded-md h-50 w-full"
-              />
+              <div className="flex items-center justify-center w-full">
+                <label className="w-full flex flex-col items-center justify-center h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <svg className="w-8 h-8 mb-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+                    </svg>
+                    <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span></p>
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => handleImageChange(e, image.name)}
+                  />
+                </label>
+              </div>
             )}
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 };

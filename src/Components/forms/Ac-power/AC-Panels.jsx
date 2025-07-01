@@ -14,19 +14,10 @@ const ACPanelForm = () => {
     cbType: "",
     hasFreeCBs: false,
     free_cb_spaces: "",
-    cb_fuse_data: [],
-    images: {
-      ac_panel_photo_overview: null,
-      ac_panel_photo_closed: null,
-      ac_panel_photo_opened: null,
-      ac_panel_cbs_photo: null,
-      ac_panel_free_cb: null,
-      proposed_ac_cb_photo: null,
-      ac_cable_route_photo_1: null,
-      ac_cable_route_photo_2: null,
-      ac_cable_route_photo_3: null
-    }
+    cb_fuse_data: []
   });
+
+  const [uploadedImages, setUploadedImages] = useState({});
 
   // Configuration for the dynamic table rows
   const tableRows = [
@@ -120,37 +111,24 @@ const ACPanelForm = () => {
             cbType: normalizeDisplayValue(data.main_cb_config?.type) || "",
             hasFreeCBs: Boolean(data.has_free_cbs),
             free_cb_spaces: data.free_cb_spaces?.toString() || "",
-            cb_fuse_data: data.cb_fuse_data || [],
-            images: {
-              ac_panel_photo_overview: null,
-              ac_panel_photo_closed: null,
-              ac_panel_photo_opened: null,
-              ac_panel_cbs_photo: null,
-              ac_panel_free_cb: null,
-              proposed_ac_cb_photo: null,
-              ac_cable_route_photo_1: null,
-              ac_cable_route_photo_2: null,
-              ac_cable_route_photo_3: null
-            }
+            cb_fuse_data: data.cb_fuse_data || []
           };
+
+          setFormData(updatedFormData);
 
           // Process existing images
           if (data.images && data.images.length > 0) {
+            const processedImages = {};
             data.images.forEach(image => {
-              const imageUrl = image.file_url.startsWith('http') 
-                ? image.file_url 
-                : `${import.meta.env.VITE_API_URL}${image.file_url}`;
-              
-              if (updatedFormData.images.hasOwnProperty(image.image_category)) {
-                updatedFormData.images[image.image_category] = {
-                  preview: imageUrl,
-                  existingUrl: imageUrl
-                };
-              }
+              processedImages[image.image_category] = [{
+                id: image.id,
+                file_url: image.file_url,
+                name: image.original_filename
+              }];
             });
+            console.log("Processed images:", processedImages);
+            setUploadedImages(processedImages);
           }
-
-          setFormData(updatedFormData);
         }
       })
       .catch(err => {
@@ -169,39 +147,30 @@ const ACPanelForm = () => {
     }));
   };
 
-  const handleImageChange = (name, file) => {
-    setFormData(prev => ({
+  const handleImageUpload = (imageCategory, files) => {
+    console.log(`Images uploaded for ${imageCategory}:`, files);
+    setUploadedImages(prev => ({
       ...prev,
-      images: {
-        ...prev.images,
-        [name]: {
-          file: file,
-          preview: file ? URL.createObjectURL(file) : prev.images[name]?.preview,
-          existingUrl: prev.images[name]?.existingUrl
-        }
-      }
+      [imageCategory]: files
     }));
   };
 
   const images = [
-    { label: 'AC Panel photo overview', name: 'ac_panel_photo_overview', value: formData.images.ac_panel_photo_overview?.preview || formData.images.ac_panel_photo_overview?.existingUrl },
-    { label: 'AC Panel photo closed', name: 'ac_panel_photo_closed', value: formData.images.ac_panel_photo_closed?.preview || formData.images.ac_panel_photo_closed?.existingUrl },
-    { label: 'AC Panel photo opened', name: 'ac_panel_photo_opened', value: formData.images.ac_panel_photo_opened?.preview || formData.images.ac_panel_photo_opened?.existingUrl },
-    { label: 'AC Panel CBs photo', name: 'ac_panel_cbs_photo', value: formData.images.ac_panel_cbs_photo?.preview || formData.images.ac_panel_cbs_photo?.existingUrl },
-    { label: 'AC panel free CB', name: 'ac_panel_free_cb', value: formData.images.ac_panel_free_cb?.preview || formData.images.ac_panel_free_cb?.existingUrl },
-    { label: 'Proposed AC CB photo', name: 'proposed_ac_cb_photo', value: formData.images.proposed_ac_cb_photo?.preview || formData.images.proposed_ac_cb_photo?.existingUrl },
-    { label: 'AC cable Route Photo to cable tray 1/3', name: 'ac_cable_route_photo_1', value: formData.images.ac_cable_route_photo_1?.preview || formData.images.ac_cable_route_photo_1?.existingUrl },
-    { label: 'AC cable Route Photo to cable tray 2/3', name: 'ac_cable_route_photo_2', value: formData.images.ac_cable_route_photo_2?.preview || formData.images.ac_cable_route_photo_2?.existingUrl },
-    { label: 'AC cable Route Photo to cable tray 3/3', name: 'ac_cable_route_photo_3', value: formData.images.ac_cable_route_photo_3?.preview || formData.images.ac_cable_route_photo_3?.existingUrl }
+    { label: 'AC Panel photo overview', name: 'ac_panel_photo_overview' },
+    { label: 'AC Panel photo closed', name: 'ac_panel_photo_closed' },
+    { label: 'AC Panel photo opened', name: 'ac_panel_photo_opened' },
+    { label: 'AC Panel CBs photo', name: 'ac_panel_cbs_photo' },
+    { label: 'AC panel free CB', name: 'ac_panel_free_cb' },
+    { label: 'Proposed AC CB photo', name: 'proposed_ac_cb_photo' },
+    { label: 'AC cable Route Photo to cable tray 1/3', name: 'ac_cable_route_photo_1' },
+    { label: 'AC cable Route Photo to cable tray 2/3', name: 'ac_cable_route_photo_2' },
+    { label: 'AC cable Route Photo to cable tray 3/3', name: 'ac_cable_route_photo_3' }
   ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const formDataToSend = new FormData();
-
-    // Ensure cb_fuse_data is an array
-    const cb_fuse_data = Array.isArray(formData.cb_fuse_data) ? formData.cb_fuse_data : [];
 
     // Build the payload to match the expected API structure
     const payload = {
@@ -213,20 +182,22 @@ const ACPanelForm = () => {
         rating: parseFloat(formData.mainCBRating) || 0,
         type: normalizeApiValue(formData.cbType)
       },
-      cb_fuse_data: cb_fuse_data,
+      cb_fuse_data: Array.isArray(formData.cb_fuse_data) ? formData.cb_fuse_data : [],
       has_free_cbs: formData.hasFreeCBs,
       free_cb_spaces: parseInt(formData.free_cb_spaces) || 0
     };
 
     // Add data fields to FormData
-    Object.entries(payload).forEach(([key, value]) => {
-      formDataToSend.append(key, JSON.stringify(value));
-    });
+    formDataToSend.append('data', JSON.stringify(payload));
 
     // Add images if they exist
-    Object.entries(formData.images).forEach(([category, imageData]) => {
-      if (imageData?.file) {
-        formDataToSend.append(category, imageData.file);
+    images.forEach(imageField => {
+      const imageFiles = uploadedImages[imageField.name];
+      if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+        const file = imageFiles[0];
+        if (file instanceof File) {
+          formDataToSend.append(imageField.name, file);
+        }
       }
     });
 
@@ -240,35 +211,47 @@ const ACPanelForm = () => {
           }
         }
       );
-      showSuccess('AC Panel data submitted successfully!');
-      console.log("Response:", response.data);
 
-      // Update the form with the new data including new image URLs
-      if (response.data.data) {
-        const newData = response.data.data;
-        if (newData.images) {
-          setFormData(prev => ({
-            ...prev,
-            images: {
-              ...prev.images,
-              ...Object.fromEntries(
-                newData.images.map(img => [
-                  img.image_category,
-                  {
-                    file: null,
-                    preview: img.file_url.startsWith('http') 
-                      ? img.file_url 
-                      : `${import.meta.env.VITE_API_URL}${img.file_url}`,
-                    existingUrl: img.file_url.startsWith('http') 
-                      ? img.file_url 
-                      : `${import.meta.env.VITE_API_URL}${img.file_url}`
-                  }
-                ])
-              )
+      // After successful submission, fetch the latest data
+      const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/ac-panel/${sessionId}`);
+      const latestData = getResponse.data.data;
+
+      if (latestData) {
+        // Update form data
+        setFormData({
+          cableLength: latestData.power_cable_config?.length?.toString() || "",
+          crossSection: latestData.power_cable_config?.cross_section?.toString() || "",
+          mainCBRating: latestData.main_cb_config?.rating?.toString() || "",
+          cbType: normalizeDisplayValue(latestData.main_cb_config?.type) || "",
+          hasFreeCBs: Boolean(latestData.has_free_cbs),
+          free_cb_spaces: latestData.free_cb_spaces?.toString() || "",
+          cb_fuse_data: latestData.cb_fuse_data || []
+        });
+
+        // Process and update images
+        if (latestData.images && latestData.images.length > 0) {
+          const processedImages = {};
+          latestData.images.forEach(image => {
+            processedImages[image.image_category] = [{
+              id: image.id,
+              file_url: image.file_url,
+              name: image.original_filename
+            }];
+          });
+          setUploadedImages(processedImages);
+        } else {
+          // Keep any newly uploaded images that are File objects
+          const newUploadedImages = {};
+          Object.entries(uploadedImages).forEach(([key, files]) => {
+            if (Array.isArray(files) && files.length > 0 && files[0] instanceof File) {
+              newUploadedImages[key] = files;
             }
-          }));
+          });
+          setUploadedImages(newUploadedImages);
         }
       }
+
+      showSuccess('AC Panel data submitted successfully!');
     } catch (err) {
       console.error("Error:", err);
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
@@ -411,7 +394,8 @@ const ACPanelForm = () => {
       </div>
       <ImageUploader 
         images={images}
-        onImageChange={handleImageChange}
+        onImageUpload={handleImageUpload}
+        uploadedImages={uploadedImages}
       />
     </div>
   );

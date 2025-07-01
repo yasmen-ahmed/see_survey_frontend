@@ -10,17 +10,7 @@ const AcInformationForm = () => {
   const [dieselCount, setDieselCount] = useState(0);
   const [dieselGenerators, setDieselGenerators] = useState([{ capacity: '', status: '' }, { capacity: '', status: '' }]);
   const [solarCapacity, setSolarCapacity] = useState('');
-  const [formData, setFormData] = useState({
-    power_sources: [],
-    diesel_count: 0,
-    diesel_generators: [],
-    solar_capacity: '',
-    generator_photo: {
-      file: null,
-      preview: "",
-      existingUrl: ""
-    }
-  });
+  const [uploadedImages, setUploadedImages] = useState({});
 
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/ac-connection-info/${sessionId}`)
@@ -57,22 +47,15 @@ const AcInformationForm = () => {
         // Handle images from the response
         if (data.images && data.images.length > 0) {
           console.log("Found images:", data.images);
-          const generatorPhotoImage = data.images.find(img => img.image_category === 'generator_photo');
-          console.log("Generator photo image:", generatorPhotoImage);
-          if (generatorPhotoImage) {
-            const imageUrl = generatorPhotoImage.file_url.startsWith('http') 
-              ? generatorPhotoImage.file_url 
-              : `${import.meta.env.VITE_API_URL}${generatorPhotoImage.file_url}`;
-            console.log("Setting image URL:", imageUrl);
-            setFormData(prev => ({
-              ...prev,
-              generator_photo: {
-                ...prev.generator_photo,
-                existingUrl: imageUrl,
-                preview: imageUrl
-              }
-            }));
-          }
+          const processedImages = {};
+          data.images.forEach(image => {
+            processedImages[image.image_category] = [{
+              id: image.id,
+              file_url: image.file_url,
+              name: image.original_filename
+            }];
+          });
+          setUploadedImages(processedImages);
         }
       })
       .catch(err => {
@@ -105,14 +88,11 @@ const AcInformationForm = () => {
     return statusMap[status] || status.toLowerCase().replace(' ', '_');
   };
 
-  const handleImageChange = (name, file) => {
-    setFormData(prev => ({
+  const handleImageUpload = (imageCategory, files) => {
+    console.log(`Images uploaded for ${imageCategory}:`, files);
+    setUploadedImages(prev => ({
       ...prev,
-      [name]: {
-        file: file,
-        preview: file ? URL.createObjectURL(file) : prev[name].preview,
-        existingUrl: prev[name].existingUrl
-      }
+      [imageCategory]: files
     }));
   };
 
@@ -143,9 +123,13 @@ const AcInformationForm = () => {
 
     formDataToSend.append('data', JSON.stringify(payload));
 
-    // Append image if it exists and has changed
-    if (formData.generator_photo.file) {
-      formDataToSend.append('generator_photo', formData.generator_photo.file);
+    // Add images if they exist
+    const imageFiles = uploadedImages['generator_photo'];
+    if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+      const file = imageFiles[0];
+      if (file instanceof File) {
+        formDataToSend.append('generator_photo', file);
+      }
     }
 
     try {
@@ -158,6 +142,23 @@ const AcInformationForm = () => {
           }
         }
       );
+
+      // After successful submission, fetch the latest data
+      const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/ac-connection-info/${sessionId}`);
+      const latestData = getResponse.data.data;
+
+      if (latestData && latestData.images) {
+        const processedImages = {};
+        latestData.images.forEach(image => {
+          processedImages[image.image_category] = [{
+            id: image.id,
+            file_url: image.file_url,
+            name: image.original_filename
+          }];
+        });
+        setUploadedImages(processedImages);
+      }
+
       showSuccess('Data submitted successfully!');
       console.log("Response:", response.data);
     } catch (err) {
@@ -195,11 +196,7 @@ const AcInformationForm = () => {
   };
 
   const images = [
-    {
-      label: 'Generator photo',
-      name: 'generator_photo',
-      value: formData.generator_photo.preview || formData.generator_photo.existingUrl || ''
-    }
+    { label: 'Generator photo', name: 'generator_photo' }
   ];
 
   console.log("Current image data:", images);
@@ -356,7 +353,8 @@ const AcInformationForm = () => {
       </div>
       <ImageUploader
         images={images}
-        onImageChange={handleImageChange}
+        onImageUpload={handleImageUpload}
+        uploadedImages={uploadedImages}
       />
     </div>
   );

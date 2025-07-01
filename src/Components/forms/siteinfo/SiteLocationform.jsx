@@ -78,11 +78,11 @@ const SiteLocationForm = () => {
     { label: 'Site entrance', name: 'site_entrance' },
     { label: 'Building Stairs / Lift', name: 'building_stairs_lift' },
     { label: 'Roof entrance', name: 'roof_entrance' },
-    { label: 'Base station Shelter / Room', name: 'base_station_shelter_room' },
-    { label: 'Site Name on shelter/room', name: 'site_name_on_shelter_room' },
-    { label: 'Crane Access to the Street', name: 'crane_access_to_the_street' },
+    { label: 'Base station Shelter / Room', name: 'base_station_shelter' },
+    { label: 'Site Name on shelter/room', name: 'site_name_shelter' },
+    { label: 'Crane Access to the Street', name: 'crane_access_street' },
     { label: 'Crane Location', name: 'crane_location' },
-    { label: 'Site Environment View', name: 'site_environment_view' },
+    { label: 'Site Environment View', name: 'site_environment' },
   ];
 
   // Handle input change for form fields
