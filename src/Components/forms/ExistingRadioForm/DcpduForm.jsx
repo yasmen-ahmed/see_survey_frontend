@@ -161,21 +161,18 @@ const DcDistributionForm = () => {
     if (index === 0) {
       const numPdus = parseInt(pduCount) || 1;
       for (let i = 1; i < numPdus; i++) {
-        updated[i] = {
-          ...updated[i],
-          [field]: value
-        };
-        
-        // Mark this field as auto-filled for this PDU
-        if (!newAutoFilledFields[i]) {
-          newAutoFilledFields[i] = {};
-        }
-        newAutoFilledFields[i][field] = true;
-        
-        // If changing cabinet or distribution, also clear CB selection for all PDUs
-        if (field === 'feedCabinet' || field === 'feedDistribution') {
-          updated[i].cbFuse = "";
-          newAutoFilledFields[i].cbFuse = true;
+        // Only auto-fill if the field is empty
+        if (!updated[i][field]) {
+          updated[i] = {
+            ...updated[i],
+            [field]: value
+          };
+          
+          // Mark this field as auto-filled for this PDU
+          if (!newAutoFilledFields[i]) {
+            newAutoFilledFields[i] = {};
+          }
+          newAutoFilledFields[i][field] = true;
         }
       }
     } else {
