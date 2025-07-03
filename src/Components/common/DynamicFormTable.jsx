@@ -1,21 +1,25 @@
 import React from 'react';
 
 const DynamicFormTable = ({
-  title,
-  entityName,
-  entityCount,
-  entities,
-  questions,
-  errors,
-  onChange,
-  onSubmit,
+  title = '',
+  entityName = 'Item',
+  entityCount = 0,
+  entities = [],
+  questions = [],
+  errors = {},
+  onChange = () => {},
+  onSubmit = (e) => e.preventDefault(),
+  onEntityCountChange,
   isSubmitting = false,
   maxHeight = '600px',
   showSubmitButton = true,
   submitButtonText = 'Save and Continue'
 }) => {
+  // Ensure entities is always an array
+  const safeEntities = Array.isArray(entities) ? entities : [];
+  
   const renderField = (question, entityIndex) => {
-    const entity = entities[entityIndex] || {};
+    const entity = safeEntities[entityIndex] || {};
     const fieldValue = entity[question.key] || (question.type === 'checkbox' ? [] : '');
     const errorKey = `${entityIndex}.${question.key}`;
     const hasError = errors[errorKey];
@@ -37,7 +41,7 @@ const DynamicFormTable = ({
               disabled={isDisabled}
             >
               <option value="">-- Select --</option>
-              {question.options.map((option, idx) => (
+              {(question.options || []).map((option, idx) => (
                 <option key={idx} value={option.value || option}>
                   {option.label || option}
                 </option>
@@ -53,7 +57,7 @@ const DynamicFormTable = ({
         return (
           <div>
             <div className="flex gap-2 flex-wrap">
-              {question.options.map((option, idx) => (
+              {(question.options || []).map((option, idx) => (
                 <label key={idx} className="flex items-center gap-1 text-sm">
                   <input
                     type="radio"
@@ -78,7 +82,7 @@ const DynamicFormTable = ({
         return (
           <div>
             <div className="grid grid-cols-2 gap-1">
-              {question.options.map((option, idx) => {
+              {(question.options || []).map((option, idx) => {
                 const optionValue = option.value || option;
                 const isChecked = Array.isArray(fieldValue) && fieldValue.includes(optionValue);
                 return (
@@ -134,6 +138,15 @@ const DynamicFormTable = ({
     return 'border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10';
   };
 
+  // If no entities or questions, show a message
+  if (!questions.length) {
+    return (
+      <div className="text-center p-4">
+        <p>No questions configured for this form.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
@@ -161,7 +174,7 @@ const DynamicFormTable = ({
                   >
                     Field Description
                   </th>
-                  {Array.from({ length: entityCount }, (_, i) => (
+                  {Array.from({ length: Math.max(1, entityCount) }, (_, i) => (
                     <th
                       key={i}
                       className="border px-4 py-3 text-center font-semibold min-w-[300px] sticky top-0 bg-blue-500 z-20"
@@ -176,7 +189,7 @@ const DynamicFormTable = ({
                 {questions.map((question, questionIndex) => {
                   // Check if this question should be rendered based on conditional logic
                   const shouldRender = !question.showCondition || 
-                    entities.slice(0, entityCount).some(entity => question.showCondition(entity));
+                    safeEntities.slice(0, entityCount).some(entity => question.showCondition(entity));
 
                   if (!shouldRender) return null;
 
@@ -185,7 +198,7 @@ const DynamicFormTable = ({
                       <td className={getHeaderClass(question)}>
                         {question.label}
                       </td>
-                      {entities.slice(0, entityCount).map((entity, entityIndex) => (
+                      {safeEntities.slice(0, Math.max(1, entityCount)).map((_, entityIndex) => (
                         <td key={entityIndex} className="border px-2 py-2">
                           {renderField(question, entityIndex)}
                         </td>

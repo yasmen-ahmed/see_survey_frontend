@@ -20,12 +20,28 @@ const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
             }));
           };
           reader.readAsDataURL(file);
-        } else if (file.file_url) {
-          // For existing images from server
-          const imageUrl = file.file_url.startsWith('http') 
+        } else if (file.url || file.file_url) {
+          // Handle different URL formats
+          let imageUrl;
+          
+          // Check if this is a radio unit, GPS, or FPFH image
+          if (category.includes('new_radio_unit_') || 
+              category.includes('new_gps_') || 
+              category.includes('new_fpfh_')) {
+            // For radio units, GPS, and FPFH, use the url property
+            imageUrl = file.url || `${API_BASE_URL}/${file.file_url}`;
+          } else {
+            // For other components, use the existing logic
+             imageUrl = file.file_url.startsWith('http') 
             ? file.file_url 
             : `${API_BASE_URL}${file.file_url}`;
+          }
+          
+          // Store the preview URL
           newPreviews[category] = imageUrl;
+          
+          // Log for debugging
+          console.log('Setting preview for category:', category, 'URL:', imageUrl);
         }
       }
     });
@@ -35,6 +51,16 @@ const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
   const handleImageChange = (e, imageName) => {
     const file = e.target.files[0];
     if (file) {
+      // Create a preview immediately for the new file
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreviews(prev => ({
+          ...prev,
+          [imageName]: reader.result
+        }));
+      };
+      reader.readAsDataURL(file);
+      
       onImageUpload(imageName, [file]);
     }
   };
@@ -56,6 +82,7 @@ const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
           <div key={image.name} className="border rounded-lg p-3">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               {image.label}
+              {image.required && <span className="text-red-500 ml-1">*</span>}
             </label>
             
             {imagePreviews[image.name] ? (
@@ -64,6 +91,10 @@ const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
                   src={imagePreviews[image.name]}
                   alt={image.label}
                   className="w-full h-32 object-cover rounded-lg mb-2"
+                  onError={(e) => {
+                    console.error('Image load error:', e);
+                    e.target.src = 'placeholder.jpg'; // You can add a placeholder image
+                  }}
                 />
                 <button
                   onClick={() => handleDelete(image.name)}

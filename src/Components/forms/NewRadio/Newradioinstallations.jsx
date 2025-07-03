@@ -187,4 +187,3 @@ const NewSectorPlanningTab = () => {
 };
 
 export default NewSectorPlanningTab;
-

@@ -28,6 +28,7 @@ export const useAntennaForm = (sessionId) => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState({});
 
   // Load existing data when component mounts
   useEffect(() => {
@@ -71,6 +72,20 @@ export const useAntennaForm = (sessionId) => {
           });
           
           setAntennaForms(newAntennaForms);
+
+          // Initialize uploaded images from existing data
+          const initialImages = {};
+          data.antennas.forEach(antenna => {
+            if (antenna.images && antenna.images.length > 0) {
+              antenna.images.forEach(image => {
+                initialImages[image.category] = [{
+                  file_url: `/${image.path}`,
+                  id: image.id
+                }];
+              });
+            }
+          });
+          setUploadedImages(initialImages);
         }
       } catch (err) {
         console.error("Error loading new antennas data:", err);
@@ -108,7 +123,7 @@ export const useAntennaForm = (sessionId) => {
   const handleChange = (antennaIndex, field, value) => {
     setAntennaForms(prev => {
       const updated = [...prev];
-      const antenna = { ...updated[antennaIndex] }; // Clone the specific antenna object
+      const antenna = { ...updated[antennaIndex] };
 
       if (field === 'technologies') {
         const currentTechs = antenna.technologies || [];
@@ -119,8 +134,7 @@ export const useAntennaForm = (sessionId) => {
         antenna[field] = value;
       }
 
-      updated[antennaIndex] = antenna; // Replace with updated antenna object
-
+      updated[antennaIndex] = antenna;
       return updated;
     });
 
@@ -135,7 +149,6 @@ export const useAntennaForm = (sessionId) => {
 
   const validateForm = () => {
     const newErrors = {};
-
     antennaForms.slice(0, antennaCount).forEach((antenna, index) => {
       if (!antenna.sectorNumber) {
         newErrors[`${index}.sectorNumber`] = 'Please select sector number';
@@ -168,6 +181,9 @@ export const useAntennaForm = (sessionId) => {
     setIsSubmitting(true);
 
     try {
+      const formData = new FormData();
+      
+      // Add antenna data as JSON string
       const submitData = {
         new_antennas_planned: antennaCount,
         antennas: antennaForms.slice(0, antennaCount).map((antenna, index) => ({
@@ -191,19 +207,46 @@ export const useAntennaForm = (sessionId) => {
         }))
       };
 
-      console.log("Submitting new antennas data:", submitData);
+      formData.append('data', JSON.stringify(submitData));
+
+      // Add new images
+      Object.entries(uploadedImages).forEach(([category, files]) => {
+        if (Array.isArray(files) && files.length > 0 && files[0] instanceof File) {
+          formData.append(category, files[0]);
+        }
+      });
 
       const response = await axios.put(
         `${import.meta.env.VITE_API_URL}/api/new-antennas/${sessionId}`,
-        submitData
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
       );
 
-      showSuccess('New antennas data submitted successfully!');
-      console.log("Response:", response.data);
-      setErrors({});
+      // Update images with response data
+      if (response.data.results) {
+        const updatedImages = {};
+        response.data.results.forEach(result => {
+          if (result.status === 'success' && result.data.images) {
+            result.data.images.forEach(image => {
+              updatedImages[image.category] = [{
+                file_url: `/${image.path}`,
+                id: image.id
+              }];
+            });
+          }
+        });
+        setUploadedImages(updatedImages);
+      }
+
+      console.log("New antennas response:", response.data);
+      showSuccess('Antennas updated successfully');
     } catch (err) {
-      console.error("Error submitting new antennas data:", err);
-      showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+      console.error("Error submitting new antennas:", err);
+      showError(err.response?.data?.error || 'Error updating antennas');
     } finally {
       setIsSubmitting(false);
     }
@@ -218,5 +261,7 @@ export const useAntennaForm = (sessionId) => {
     handleAntennaCountChange,
     handleChange,
     handleSubmit,
+    uploadedImages,
+    setUploadedImages
   };
 }; 

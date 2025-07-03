@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import DynamicFormTable from '../../common/DynamicFormTable';
 import { useAntennaForm } from '../../../hooks/useAntennaForm';
 import { antennaQuestions } from '../../../config/antennaQuestions';
+import ImageUploader from '../../GalleryComponent';
 
 const NewAntennaForm = () => {
   const { sessionId } = useParams();
@@ -13,22 +14,64 @@ const NewAntennaForm = () => {
     isSubmitting,
     handleChange,
     handleSubmit,
+    uploadedImages,
+    setUploadedImages
   } = useAntennaForm(sessionId);
 
+  // Generate image fields for each antenna
+  const getAntennaImages = (antennaIndex) => {
+    return [
+      {
+        label: `New Antenna ${antennaIndex} Proposed Location`,
+        name: `new_antenna_${antennaIndex}_proposed_location`,
+        required: true
+      },
+      {
+        label: `New Antenna ${antennaIndex} Proposed Location (Optional)`,
+        name: `new_antenna_${antennaIndex}_proposed_location_optional_photo`
+      }
+    ];
+  };
+
+  // Generate all image fields based on antenna count
+  const getAllImages = () => {
+    if (!antennaCount) return [];
+    const count = parseInt(antennaCount);
+    let allImages = [];
+    for (let i = 1; i <= count; i++) {
+      allImages = [...allImages, ...getAntennaImages(i)];
+    }
+    return allImages;
+  };
+
+  const handleImageUpload = (imageName, files) => {
+    setUploadedImages(prev => ({
+      ...prev,
+      [imageName]: files // files is already an array as expected by GalleryComponent
+    }));
+  };
+
   return (
-    <DynamicFormTable
-      title=""
-      entityName="Antenna"
-      entityCount={antennaCount}
-      entities={antennaForms}
-      questions={antennaQuestions}
-      errors={errors}
-      onChange={handleChange}
-      onSubmit={handleSubmit}
-      isSubmitting={isSubmitting}
-      maxHeight="600px"
-      submitButtonText="Save and Continue"
-    />
+    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
+      <DynamicFormTable
+        title=""
+        entityName="Antenna"
+        entityCount={antennaCount}
+        entities={antennaForms}
+        questions={antennaQuestions}
+        errors={errors}
+        onChange={handleChange}
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
+        maxHeight="600px"
+        submitButtonText="Save and Continue"
+      />
+      <ImageUploader
+        images={getAllImages()}
+        onImageUpload={handleImageUpload}
+        uploadedImages={uploadedImages}
+      />
+    </div>
   );
 };
 

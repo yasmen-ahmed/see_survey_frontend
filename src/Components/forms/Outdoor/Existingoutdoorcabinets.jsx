@@ -285,7 +285,7 @@ const OutdoorCabinetsForm = () => {
     try {
       // Create FormData for multipart submission
       const submitFormData = new FormData();
-
+      
       // Add cabinet count
       submitFormData.append('numberOfCabinets', parseInt(formData.numberOfCabinets));
 

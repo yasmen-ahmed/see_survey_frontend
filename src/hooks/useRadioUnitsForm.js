@@ -30,6 +30,7 @@ export const useRadioUnitsForm = (sessionId) => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState({});
 
   // Load existing data when component mounts
   useEffect(() => {
@@ -78,6 +79,38 @@ export const useRadioUnitsForm = (sessionId) => {
           });
           
           setRadioUnitsForms(newRadioUnitsForms);
+
+          // Set up initial images state from response
+          const initialImages = {};
+          responseData.radio_units.forEach((unit, index) => {
+            if (unit.images && unit.images.length > 0) {
+              unit.images.forEach(img => {
+                const unitNumber = unit.radio_unit_index;
+                let imageKey;
+                
+                // Determine the correct image key based on category
+                if (img.category === 'proposed_location') {
+                  imageKey = `new_radio_unit_${unitNumber}_proposed_location`;
+                } else {
+                  imageKey = `new_radio_unit_${unitNumber}_proposed_location_optional_photo`;
+                }
+                
+                // Initialize the array if it doesn't exist
+                initialImages[imageKey] = initialImages[imageKey] || [];
+                
+                // Add the image with the full URL
+                initialImages[imageKey].push({
+                  id: img.id,
+                  url: `${import.meta.env.VITE_API_URL}/${img.file_url}`,
+                  file_url: img.file_url,
+                  preview: `${import.meta.env.VITE_API_URL}/${img.file_url}`
+                });
+              });
+            }
+          });
+          
+          console.log("Initialized images:", initialImages);
+          setUploadedImages(initialImages);
         }
       } catch (err) {
         console.error("Error loading new radio units data:", err);
@@ -110,6 +143,18 @@ export const useRadioUnitsForm = (sessionId) => {
 
     setRadioUnitsCount(newCount);
     setRadioUnitsForms(newRadioUnitsForms);
+
+    // Clean up images for removed radio units
+    setUploadedImages(prev => {
+      const newImages = { ...prev };
+      Object.keys(newImages).forEach(key => {
+        const unitNumber = parseInt(key.match(/\d+/)[0]);
+        if (unitNumber > newCount) {
+          delete newImages[key];
+        }
+      });
+      return newImages;
+    });
   };
 
   const handleChange = (radioUnitIndex, field, value) => {
@@ -206,6 +251,12 @@ export const useRadioUnitsForm = (sessionId) => {
       if (!radioUnit.earthBusExists) {
         newErrors[`${index}.earthBusExists`] = 'Please select earth bus bar option';
       }
+
+      // Validate required images
+      const requiredImageKey = `new_radio_unit_${index + 1}_proposed_location`;
+      if (!uploadedImages[requiredImageKey]?.length) {
+        newErrors[requiredImageKey] = 'Please upload proposed location photo';
+      }
     });
 
     setErrors(newErrors);
@@ -215,76 +266,127 @@ export const useRadioUnitsForm = (sessionId) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      // Build radio_units array for API
-      const radioUnits = radioUnitsForms.slice(0, radioUnitsCount).map((radioUnit, index) => {
-        // Parse angular dimensions back to separate L1 and L2 values
-        let angularL1 = '';
-        let angularL2 = '';
-        
-        if (radioUnit.angularDimensions && radioUnit.angularDimensions.trim()) {
-          if (radioUnit.angularDimensions.includes(' x ')) {
-            const dimensions = radioUnit.angularDimensions.split(' x ');
-            angularL1 = dimensions[0] ? dimensions[0].trim() : '';
-            angularL2 = dimensions[1] ? dimensions[1].trim() : '';
-          } else {
-            // If it doesn't contain ' x ', maybe it's a single value or different format
-            console.warn('Angular dimensions format unexpected:', radioUnit.angularDimensions);
-          }
-        }
-        
-        const radioUnitData = {
-          radio_unit_index: index + 1,
-          radio_unit_number: (200 + index + 1).toString(), // Convert to string like "201", "202"
-          new_radio_unit_sector: radioUnit.sector || '',
-          connected_to_antenna: radioUnit.antennaConnection || '',
-          connected_antenna_technology: radioUnit.technologies || [],
-          new_radio_unit_model: radioUnit.model || '',
-          radio_unit_location: radioUnit.location || '',
-          feeder_length_to_antenna: radioUnit.feederLength || '',
-          tower_leg_section: radioUnit.towerLegSection || '',
-          angular_l1_dimension: angularL1 || '',
-          angular_l2_dimension: angularL2 || '',
-          tubular_cross_section: radioUnit.tubularSection || '',
-          side_arm_type: radioUnit.sideArmOption || '',
-          side_arm_length: radioUnit.sideArmLength || '',
-          side_arm_cross_section: radioUnit.sideArmCrossSection || '',
-          side_arm_offset: radioUnit.sideArmOffset || '',
-          dc_power_source: radioUnit.dcPowerSource || '',
-          dc_power_cable_length: radioUnit.dcCableLength || '',
-          fiber_cable_length: radioUnit.fiberLength || '',
-          jumper_length: radioUnit.jumperLength || '',
-          earth_bus_bar_exists: radioUnit.earthBusExists || '',
-          earth_cable_length: radioUnit.earthCableLength || '',
-        };
-        
-        console.log(`Radio Unit ${index + 1} data:`, radioUnitData);
-        return radioUnitData;
-      });
+      const formData = new FormData();
 
-      const submitData = {
-        radio_units: radioUnits
+      // Add the radio units data
+      const radioUnitsData = {
+        new_radio_units_planned: radioUnitsCount,
+        radio_units: radioUnitsForms.slice(0, radioUnitsCount).map((unit, index) => ({
+          radio_unit_index: index + 1,
+          radio_unit_number: (200 + index + 1).toString(),
+          new_radio_unit_sector: unit.sector || '',
+          connected_to_antenna: unit.antennaConnection || '',
+          connected_antenna_technology: unit.technologies || [],
+          new_radio_unit_model: unit.model || '',
+          radio_unit_location: unit.location || '',
+          feeder_length_to_antenna: unit.feederLength || '',
+          tower_leg_section: unit.towerLegSection || '',
+          angular_l1_dimension: unit.angularDimensions ? unit.angularDimensions.split(' x ')[0] : '',
+          angular_l2_dimension: unit.angularDimensions ? unit.angularDimensions.split(' x ')[1] : '',
+          tubular_cross_section: unit.tubularSection || '',
+          side_arm_type: unit.sideArmOption || '',
+          side_arm_length: unit.sideArmLength || '',
+          side_arm_cross_section: unit.sideArmCrossSection || '',
+          side_arm_offset: unit.sideArmOffset || '',
+          dc_power_source: unit.dcPowerSource || '',
+          dc_power_cable_length: unit.dcCableLength || '',
+          fiber_cable_length: unit.fiberLength || '',
+          jumper_length: unit.jumperLength || '',
+          earth_bus_bar_exists: unit.earthBusExists || '',
+          earth_cable_length: unit.earthCableLength || ''
+        }))
       };
 
-      console.log("Submitting new radio units data:", submitData);
+      formData.append('data', JSON.stringify(radioUnitsData));
+
+      // Track if any images were added
+      let imagesAdded = false;
+
+      // Add images for each radio unit
+      for (let i = 1; i <= radioUnitsCount; i++) {
+        // Handle required proposed location image
+        const requiredImageKey = `new_radio_unit_${i}_proposed_location`;
+        const requiredImages = uploadedImages[requiredImageKey];
+        
+        if (requiredImages?.length > 0) {
+          const image = requiredImages[0];
+          if (image instanceof File) {
+            formData.append(`new_radio_${i}_proposed_location`, image);
+            imagesAdded = true;
+          } else if (image.file instanceof File) {
+            formData.append(`new_radio_${i}_proposed_location`, image.file);
+            imagesAdded = true;
+          }
+        }
+
+        // Handle optional proposed location image
+        const optionalImageKey = `new_radio_unit_${i}_proposed_location_optional_photo`;
+        const optionalImages = uploadedImages[optionalImageKey];
+        
+        if (optionalImages?.length > 0) {
+          const image = optionalImages[0];
+          if (image instanceof File) {
+            formData.append(`new_radio_${i}_proposed_location_optional`, image);
+            imagesAdded = true;
+          } else if (image.file instanceof File) {
+            formData.append(`new_radio_${i}_proposed_location_optional`, image.file);
+            imagesAdded = true;
+          }
+        }
+      }
+
+      // Log the request details for debugging
+      console.log('Form submission details:', {
+        radioUnitsCount,
+        radioUnitsData,
+        formDataKeys: Array.from(formData.keys()),
+        uploadedImages,
+        imagesAdded
+      });
+
+      if (!imagesAdded) {
+        console.warn('No images were added to the form data');
+      }
 
       const response = await axios.put(
         `${import.meta.env.VITE_API_URL}/api/new-radio-units/${sessionId}`,
-        submitData
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
       );
 
-      showSuccess(`Processed ${radioUnitsCount} radio units successfully!`);
-      console.log("Response:", response.data);
-      setErrors({});
+      console.log('Server response:', response.data);
+
+      if (response.data.message) {
+        showSuccess(response.data.message);
+      } else {
+        showSuccess('Data submitted successfully');
+      }
+
     } catch (err) {
-      console.error("Error submitting new radio units data:", err);
-      showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+      // Log the full error details
+      console.error('Submission error:', {
+        message: err.message,
+        responseData: err.response?.data,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        uploadedImages
+      });
+
+      // Show the error message from the response if available
+      const errorMessage = err.response?.data?.message || err.response?.data || err.message;
+      showError(errorMessage);
+
+      // Set form errors if they exist
+      if (err.response?.data?.errors) {
+        setErrors(err.response.data.errors);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -296,6 +398,8 @@ export const useRadioUnitsForm = (sessionId) => {
     errors,
     isLoading,
     isSubmitting,
+    uploadedImages,
+    setUploadedImages,
     handleRadioUnitsCountChange,
     handleChange,
     handleSubmit,

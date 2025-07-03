@@ -21,6 +21,7 @@ export const useFpfhForm = (sessionId) => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState({});
 
   // Load existing data when component mounts
   useEffect(() => {
@@ -53,12 +54,42 @@ export const useFpfhForm = (sessionId) => {
                 dcCableLength: fpfhData.dc_power_cable_length || '',
                 earthBusExists: fpfhData.earth_bus_bar_exists || '',
                 earthCableLength: fpfhData.earth_cable_length || '',
+                images: {
+                  new_fpfh_proposed_location: fpfhData.images?.filter(img => img.category === 'new_fpfh_proposed_location')?.map(img => ({
+                    id: img.id,
+                    file_url: img.file_url
+                  })) || [],
+                  new_fpfh_proposed_location_optional_photo: fpfhData.images?.filter(img => img.category === 'new_fpfh_proposed_location_optional_photo')?.map(img => ({
+                    id: img.id,
+                    file_url: img.file_url
+                  })) || []
+                }
               };
             }
             return { ...initialFpfhForm };
           });
           
           setFpfhForms(newFpfhForms);
+
+          // Set up initial images state from response
+          const initialImages = {};
+          responseData.fpfhs?.forEach((fpfh, index) => {
+            if (fpfh.images) {
+              fpfh.images.forEach(img => {
+                const fpfhNumber = index + 1;
+                const imageKey = img.category === `new_fpfh_${fpfhNumber}_proposed_location`
+                  ? `new_fpfh_${fpfhNumber}_proposed_location`
+                  : `new_fpfh_${fpfhNumber}_proposed_location_optional_photo`;
+                
+                initialImages[imageKey] = initialImages[imageKey] || [];
+                initialImages[imageKey].push({
+                  id: img.id,
+                  file_url: img.file_url
+                });
+              });
+            }
+          });
+          setUploadedImages(initialImages);
         }
       } catch (err) {
         console.error("Error loading new FPFHs data:", err);
@@ -77,6 +108,7 @@ export const useFpfhForm = (sessionId) => {
 
   const handleFpfhCountChange = (count) => {
     const newCount = parseInt(count, 10);
+    setFpfhCount(newCount);
 
     // Create new array preserving existing data
     const newFpfhForms = Array(6).fill(null).map((_, index) => {
@@ -89,8 +121,19 @@ export const useFpfhForm = (sessionId) => {
       }
     });
 
-    setFpfhCount(newCount);
     setFpfhForms(newFpfhForms);
+
+    // Clean up images for removed FPFHs
+    setUploadedImages(prev => {
+      const newImages = { ...prev };
+      Object.keys(newImages).forEach(key => {
+        const fpfhNumber = parseInt(key.match(/\d+/)[0]);
+        if (fpfhNumber > newCount) {
+          delete newImages[key];
+        }
+      });
+      return newImages;
+    });
   };
 
   const handleChange = (fpfhIndex, field, value) => {
@@ -98,20 +141,29 @@ export const useFpfhForm = (sessionId) => {
       const updated = [...prev];
       const fpfh = { ...updated[fpfhIndex] }; // Clone the specific FPFH object
 
-      fpfh[field] = value;
+      // Handle image changes differently
+      if (field.startsWith('images.')) {
+        const imageCategory = field.split('.')[1];
+        fpfh.images = {
+          ...fpfh.images,
+          [imageCategory]: value
+        };
+      } else {
+        fpfh[field] = value;
 
-      // Clear dependent fields when changing certain values
-      if (field === 'proposedLocation' && value !== 'On tower') {
-        fpfh.baseHeight = '';
-        fpfh.towerLeg = '';
-      }
-      
-      if (field === 'dcPowerSource' && value !== 'from the existing rectifier cabinet') {
-        fpfh.dcDistribution = '';
-      }
+        // Clear dependent fields when changing certain values
+        if (field === 'proposedLocation' && value !== 'On tower') {
+          fpfh.baseHeight = '';
+          fpfh.towerLeg = '';
+        }
+        
+        if (field === 'dcPowerSource' && value !== 'from the existing rectifier cabinet') {
+          fpfh.dcDistribution = '';
+        }
 
-      if (field === 'earthBusExists' && value !== 'Yes') {
-        fpfh.earthCableLength = '';
+        if (field === 'earthBusExists' && value !== 'Yes') {
+          fpfh.earthCableLength = '';
+        }
       }
 
       updated[fpfhIndex] = fpfh; // Replace with updated FPFH object
@@ -150,6 +202,12 @@ export const useFpfhForm = (sessionId) => {
       if (!fpfh.earthBusExists) {
         newErrors[`${index}.earthBusExists`] = 'Please select earth bus bar option';
       }
+
+      // Validate required images
+      const requiredImageKey = `new_fpfh_${index + 1}_proposed_location`;
+      if (!uploadedImages[requiredImageKey]?.length) {
+        newErrors[requiredImageKey] = 'Please upload proposed location photo';
+      }
     });
 
     setErrors(newErrors);
@@ -157,20 +215,19 @@ export const useFpfhForm = (sessionId) => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
 
     setIsSubmitting(true);
+    console.log('Starting form submission...');
 
     try {
+      const formData = new FormData();
+      
+      // Add the form data
       const submitData = {
         new_fpfh_installed: fpfhCount,
         fpfhs: fpfhForms.slice(0, fpfhCount).map((fpfh, index) => ({
           fpfh_index: index + 1,
-          fpfh_number: '',
           fpfh_installation_type: fpfh.installationType || '',
           fpfh_location: fpfh.proposedLocation || '',
           fpfh_base_height: fpfh.baseHeight ? parseFloat(fpfh.baseHeight) : null,
@@ -184,19 +241,114 @@ export const useFpfhForm = (sessionId) => {
         }))
       };
 
-      console.log("Submitting new FPFHs data:", submitData);
+      console.log('Form data prepared:', submitData);
+      formData.append('data', JSON.stringify(submitData));
 
+      // Append all images
+      Object.entries(uploadedImages).forEach(([key, files]) => {
+        if (files && files.length > 0) {
+          const file = files[0];
+          if (file instanceof File) {
+            console.log('Appending file:', key, file.name);
+            formData.append(key, file);
+          }
+        }
+      });
+
+      console.log('Making API request...');
       const response = await axios.put(
         `${import.meta.env.VITE_API_URL}/api/new-fpfh/${sessionId}`,
-        submitData
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
       );
+      console.log('API response received:', response.data);
 
-      showSuccess('New FPFHs data submitted successfully!');
-      console.log("Response:", response.data);
-      setErrors({});
+      if (response.data.results) {
+        // Update the form data with the response
+        const newFpfhForms = Array(6).fill().map((_, index) => {
+          if (index < response.data.results.length) {
+            const fpfhData = response.data.results[index].data;
+            return {
+              installationType: fpfhData.fpfh_installation_type || '',
+              proposedLocation: fpfhData.fpfh_location || '',
+              baseHeight: fpfhData.fpfh_base_height || '',
+              towerLeg: fpfhData.fpfh_tower_leg || '',
+              dcPowerSource: fpfhData.fpfh_dc_power_source || '',
+              dcDistribution: fpfhData.dc_distribution_source || '',
+              ethernetLength: fpfhData.ethernet_cable_length || '',
+              dcCableLength: fpfhData.dc_power_cable_length || '',
+              earthBusExists: fpfhData.earth_bus_bar_exists || '',
+              earthCableLength: fpfhData.earth_cable_length || '',
+              images: fpfhData.images?.reduce((acc, img) => {
+                const fpfhNumber = img.fpfh_index || 1; // Default to 1 if not specified
+                let imageKey;
+
+                // Log the raw image data
+                console.log('Raw image data:', img);
+
+                // Match exactly with the backend category structure
+                if (img.category == `new_fpfh_${fpfhNumber}_proposed_location`) {
+                  imageKey = `new_fpfh_${fpfhNumber}_proposed_location`;
+                } else {
+                  imageKey = `new_fpfh_${fpfhNumber}_proposed_location_optional_photo`;
+                }
+
+                // Log the assigned key and URL
+                console.log('Image processing:', {
+                  category: img.category,
+                  assignedKey: imageKey,
+                  fileUrl: img.file_url
+                });
+
+                // Initialize array if needed
+                acc[imageKey] = acc[imageKey] || [];
+                
+                // Add the image with consistent URL structure
+                acc[imageKey].push({
+                  id: img.id,
+                  url: `${import.meta.env.VITE_API_URL}/${img.file_url}`,
+                  file_url: img.file_url,
+                  category: img.category // Keep the original category
+                });
+
+                return acc;
+              }, {})
+            };
+          }
+          return { ...initialFpfhForm };
+        });
+        
+        setFpfhForms(newFpfhForms);
+
+        // Update uploaded images state
+        const newUploadedImages = {};
+        response.data.results.forEach((result, index) => {
+          if (result.data.images) {
+            result.data.images.forEach(img => {
+              const fpfhNumber = index + 1;
+              const imageKey = img.category === 'new_fpfh_proposed_location' 
+                ? `new_fpfh_${fpfhNumber}_proposed_location`
+                : `new_fpfh_${fpfhNumber}_proposed_location_optional_photo`;
+              
+              newUploadedImages[imageKey] = newUploadedImages[imageKey] || [];
+              newUploadedImages[imageKey].push({
+                id: img.id,
+                file_url: img.file_url
+              });
+            });
+          }
+        });
+        setUploadedImages(newUploadedImages);
+      }
+
+      showSuccess('FPFHs saved successfully');
     } catch (err) {
-      console.error("Error submitting new FPFHs data:", err);
-      showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+      console.error('Error saving FPFHs:', err);
+      showError('Error saving FPFHs');
     } finally {
       setIsSubmitting(false);
     }
@@ -208,6 +360,8 @@ export const useFpfhForm = (sessionId) => {
     errors,
     isLoading,
     isSubmitting,
+    uploadedImages,
+    setUploadedImages,
     handleFpfhCountChange,
     handleChange,
     handleSubmit,
