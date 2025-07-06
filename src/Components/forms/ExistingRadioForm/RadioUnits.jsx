@@ -196,6 +196,9 @@ const RadioUnitsForm = () => {
   // Add uploadedImages state
   const [uploadedImages, setUploadedImages] = useState({});
 
+  // Add hasUnsavedChanges state
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
   // Generate cabinet options based on number of cabinets
   const generateCabinetOptions = () => {
     const options = [];
@@ -553,31 +556,41 @@ const RadioUnitsForm = () => {
       numberOfRadioUnits: count,
       radioUnits: newRadioUnits
     });
+    setHasUnsavedChanges(true);
   };
 
   const handleChange = (unitIndex, field, value) => {
     const newRadioUnits = [...formData.radioUnits];
+    
+    if (unitIndex === 0) {
+      const numUnits = parseInt(formData.numberOfRadioUnits) || 1;
+      for (let i = 1; i < numUnits; i++) {
+        if (!newRadioUnits[i][field]) {
+          newRadioUnits[i] = {
+            ...newRadioUnits[i],
+            [field]: value,
+            [`${field}AutoFilled`]: true
+          };
+        }
+      }
+    }
+    
     newRadioUnits[unitIndex] = {
       ...newRadioUnits[unitIndex],
-      [field]: value
+      [field]: value,
+      [`${field}AutoFilled`]: false
     };
-
-    setFormData({
-      ...formData,
-      radioUnits: newRadioUnits
-    });
+    
+    setFormData({ ...formData, radioUnits: newRadioUnits });
+    setHasUnsavedChanges(true);
 
     // If changing DC power source to a cabinet, fetch DC options
     if (field === 'dcPowerSource' && value && value.startsWith('Cabinet ')) {
-      const cabinetNumber = value.split(' ')[1]; // Extract cabinet number from "Cabinet X"
+      const cabinetNumber = value.split(' ')[1];
       fetchDcOptions(unitIndex, cabinetNumber);
       
       // Clear the DC CB/Fuse selection when cabinet changes
       newRadioUnits[unitIndex].dcCbFuse = '';
-      setFormData({
-        ...formData,
-        radioUnits: newRadioUnits
-      });
     }
 
     // Clear error for this field
@@ -614,7 +627,7 @@ const RadioUnitsForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const prevFormData = { ...formData }; // Keep a copy of current form data
+    const prevFormData = { ...formData };
 
     try {
       const apiData = mapFormToApiData(formData);
@@ -694,9 +707,8 @@ const RadioUnitsForm = () => {
         }
       }
       
-      showSuccess('Radio units data and images submitted successfully!');
-      console.log("Response:", response.data);
-      setErrors({});
+      setHasUnsavedChanges(false); // Reset unsaved changes after successful save
+      showSuccess('Radio units data submitted successfully!');
     } catch (err) {
       console.error("Error submitting radio units data:", err);
       console.error("Full error response:", err.response?.data);
@@ -735,37 +747,61 @@ const RadioUnitsForm = () => {
     return allImages;
   };
 
+  // Add useEffect for window beforeunload event
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-        {isLoading ? (
-          <div className="flex justify-center items-center py-8">
-            <div className="text-gray-600">Loading radio units data...</div>
-          </div>
-        ) : (
-      <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-lg font-semibold mb-1">
-          How many radio units on site?
-        </label>
-        <select
-          className="w-full border border-gray-300 rounded-md p-2"
-                value={formData.numberOfRadioUnits}
-                onChange={handleRadioUnitCountChange}
-        >
-          {Array.from({ length: 20 }, (_, i) => (
-            <option key={i + 1} value={i + 1}>
-              {i + 1}
-            </option>
-          ))}
-        </select>
-      </div>
-
-            {errors.submit && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                {errors.submit}
+        {/* Unsaved Changes Warning */}
+        {hasUnsavedChanges && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  ⚠️ You have unsaved changes
+                </p>
+                <p className="text-sm">
+                  Don't forget to save your changes before leaving this page.
+                </p>
               </div>
-            )}
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-lg font-semibold mb-1">
+              How many radio units on site?
+            </label>
+            <select
+              className="w-full border border-gray-300 rounded-md p-2"
+                    value={formData.numberOfRadioUnits}
+                    onChange={handleRadioUnitCountChange}
+            >
+              {Array.from({ length: 20 }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {i + 1}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {errors.submit && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              {errors.submit}
+            </div>
+          )}
 
   {/* Table Layout */}
   <div className="overflow-auto max-h-[600px]">
@@ -800,7 +836,9 @@ const RadioUnitsForm = () => {
                       <select
                           value={unit.operator}
                           onChange={(e) => handleChange(unitIndex, 'operator', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm ${
+                          unit.operatorAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}
                       >
                         <option value="">-- Select --</option>
                           {operators.map(op => (
@@ -824,7 +862,9 @@ const RadioUnitsForm = () => {
                       <select
                         value={unit.sector}
                         onChange={(e) => handleChange(unitIndex, 'sector', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm ${
+                          unit.sectorAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}
                       >
                         <option value="">-- Select --</option>
                         {[1, 2, 3, 4, 5, 6].map(sector => (
@@ -842,18 +882,22 @@ const RadioUnitsForm = () => {
                   </td>
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-2 py-2">
-                      <div className="flex gap-4">
+                      <div className={`flex gap-4 ${
+                        unit.antennaConnectionAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                      }`}>
                         {['New', 'Existing'].map(option => (
-                          <label key={option} className="flex items-center gap-1 text-sm">
+                          <label key={option} className="flex items-center gap-1 text-sm cursor-pointer">
                             <input
                               type="radio"
                               name={`antennaConnection-${unitIndex}`}
                               value={option}
                               checked={unit.antennaConnection === option}
                               onChange={(e) => handleChange(unitIndex, 'antennaConnection', e.target.value)}
-                              className="w-4 h-4"
+                              className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                             />
-                            {option}
+                            <span className={unit.antennaConnectionAutoFilled ? 'text-[#006100]' : ''}>
+                              {option}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -864,20 +908,22 @@ const RadioUnitsForm = () => {
                 {/* Base Height */}
                 <tr>
                   <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                  Radio unit base height from tower base level (m)
+                    Radio unit base height from tower base level (m)
                   </td>
-                    {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
-                      <td key={unitIndex} className="border px-2 py-2">
+                  {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
+                    <td key={unitIndex} className="border px-2 py-2">
                       <input
                         type="number"
-                          value={unit.baseHeight}
-                          onChange={(e) => handleChange(unitIndex, 'baseHeight', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        value={unit.baseHeight}
+                        onChange={(e) => handleChange(unitIndex, 'baseHeight', e.target.value)}
+                        className={`w-full p-2 border rounded text-sm ${
+                          unit.baseHeightAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}
                         placeholder="000"
                       />
-                        {errors[`${unitIndex}.baseHeight`] && (
-                          <div className="text-red-500 text-xs mt-1">{errors[`${unitIndex}.baseHeight`]}</div>
-                        )}
+                      {errors[`${unitIndex}.baseHeight`] && (
+                        <div className="text-red-500 text-xs mt-1">{errors[`${unitIndex}.baseHeight`]}</div>
+                      )}
                     </td>
                   ))}
                 </tr>
@@ -885,28 +931,32 @@ const RadioUnitsForm = () => {
                 {/* Tower Leg */}
                 <tr className="bg-gray-50">
                   <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                  Radio unit located at tower leg
+                    Radio unit located at tower leg
                   </td>
-                    {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
-                      <td key={unitIndex} className="border px-2 py-2">
-                      <div className="flex gap-2">
+                  {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
+                    <td key={unitIndex} className="border px-2 py-2">
+                      <div className={`flex gap-2 ${
+                        unit.towerLegAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                      }`}>
                         {['A', 'B', 'C', 'D'].map(leg => (
-                          <label key={leg} className="flex items-center gap-1 text-sm">
+                          <label key={leg} className="flex items-center gap-1 text-sm cursor-pointer">
                             <input
                               type="radio"
-                                name={`towerLeg-${unitIndex}`}
+                              name={`towerLeg-${unitIndex}`}
                               value={leg}
-                                checked={unit.towerLeg === leg}
-                                onChange={(e) => handleChange(unitIndex, 'towerLeg', e.target.value)}
-                              className="w-4 h-4"
+                              checked={unit.towerLeg === leg}
+                              onChange={(e) => handleChange(unitIndex, 'towerLeg', e.target.value)}
+                              className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                             />
-                            {leg}
+                            <span className={unit.towerLegAutoFilled ? 'text-[#006100]' : ''}>
+                              {leg}
+                            </span>
                           </label>
                         ))}
                       </div>
-                        {errors[`${unitIndex}.towerLeg`] && (
-                          <div className="text-red-500 text-xs mt-1">{errors[`${unitIndex}.towerLeg`]}</div>
-                        )}
+                      {errors[`${unitIndex}.towerLeg`] && (
+                        <div className="text-red-500 text-xs mt-1">{errors[`${unitIndex}.towerLeg`]}</div>
+                      )}
                     </td>
                   ))}
                 </tr>
@@ -914,22 +964,26 @@ const RadioUnitsForm = () => {
                 {/* Radio Unit Vendor */}
                   <tr>
                   <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                  Radio unit vendor
+                    Radio unit vendor
                   </td>
                     {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                       <td key={unitIndex} className="border px-2 py-2">
-                        <div className="grid grid-cols-3 gap-1">
+                        <div className={`grid grid-cols-3 gap-1 ${
+                          unit.vendorAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}>
                           {['Nokia', 'Huawei', 'Ericsson', 'ZTE', 'Other'].map(vendor => (
-                          <label key={vendor} className="flex items-center gap-1 text-sm">
+                          <label key={vendor} className="flex items-center gap-1 text-sm cursor-pointer">
                             <input
                               type="radio"
                                 name={`vendor-${unitIndex}`}
                               value={vendor}
                                 checked={unit.vendor === vendor}
                                 onChange={(e) => handleChange(unitIndex, 'vendor', e.target.value)}
-                              className="w-4 h-4"
+                              className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                             />
-                            {vendor}
+                            <span className={unit.vendorAutoFilled ? 'text-[#006100]' : ''}>
+                              {vendor}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -952,9 +1006,9 @@ const RadioUnitsForm = () => {
                         <select
                               value={unit.nokiaModel}
                               onChange={(e) => handleChange(unitIndex, 'nokiaModel', e.target.value)}
-                              className={`w-full p-2 border rounded text-sm ${unit.vendor !== 'Nokia'
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : ''}`}
+                              className={`w-full p-2 border rounded text-sm ${
+                                unit.vendor !== 'Nokia' ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
+                              }`}
                               disabled={unit.vendor !== 'Nokia'}
                             >
                               <option value="">-- Select Nokia Model --</option>
@@ -1034,9 +1088,9 @@ const RadioUnitsForm = () => {
                           type="text"
                               value={unit.otherModel}
                               onChange={(e) => handleChange(unitIndex, 'otherModel', e.target.value)}
-                              className={`w-full p-2 border rounded text-sm ${unit.vendor === 'Nokia' || !unit.vendor
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                            : ''}`}
+                              className={`w-full p-2 border rounded text-sm ${
+                                unit.vendor === 'Nokia' || !unit.vendor ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
+                              }`}
                               placeholder={unit.vendor !== 'Nokia' && unit.vendor ? 'Enter model' : 'N/A'}
                               disabled={unit.vendor === 'Nokia' || !unit.vendor}
                         />
@@ -1057,9 +1111,9 @@ const RadioUnitsForm = () => {
                           type="number"
                               value={unit.otherLength}
                               onChange={(e) => handleChange(unitIndex, 'otherLength', e.target.value)}
-                              className={`w-full p-2 border rounded text-sm ${unit.vendor === 'Nokia' || !unit.vendor
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                            : ''}`}
+                              className={`w-full p-2 border rounded text-sm ${
+                                unit.vendor === 'Nokia' || !unit.vendor ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
+                              }`}
                               placeholder={unit.vendor !== 'Nokia' && unit.vendor ? '000' : 'N/A'}
                               disabled={unit.vendor === 'Nokia' || !unit.vendor}
                         />
@@ -1077,9 +1131,9 @@ const RadioUnitsForm = () => {
                           type="number"
                               value={unit.otherWidth}
                               onChange={(e) => handleChange(unitIndex, 'otherWidth', e.target.value)}
-                              className={`w-full p-2 border rounded text-sm ${unit.vendor === 'Nokia' || !unit.vendor
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                            : ''}`}
+                              className={`w-full p-2 border rounded text-sm ${
+                                unit.vendor === 'Nokia' || !unit.vendor ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
+                              }`}
                               placeholder={unit.vendor !== 'Nokia' && unit.vendor ? '000' : 'N/A'}
                               disabled={unit.vendor === 'Nokia' || !unit.vendor}
                         />
@@ -1097,9 +1151,9 @@ const RadioUnitsForm = () => {
                           type="number"
                               value={unit.otherDepth}
                               onChange={(e) => handleChange(unitIndex, 'otherDepth', e.target.value)}
-                              className={`w-full p-2 border rounded text-sm ${unit.vendor === 'Nokia' || !unit.vendor
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                            : ''}`}
+                              className={`w-full p-2 border rounded text-sm ${
+                                unit.vendor === 'Nokia' || !unit.vendor ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
+                              }`}
                               placeholder={unit.vendor !== 'Nokia' && unit.vendor ? '000' : 'N/A'}
                               disabled={unit.vendor === 'Nokia' || !unit.vendor}
                         />
@@ -1206,7 +1260,9 @@ const RadioUnitsForm = () => {
                         <select
                           value={unit.dcPowerSource}
                           onChange={(e) => handleChange(unitIndex, 'dcPowerSource', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
+                          className={`w-full p-2 border rounded text-sm ${
+                            unit.dcPowerSourceAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
                         >
                           <option value="">-- Select --</option>
                           {generateCabinetOptions().map(cabinet => (
@@ -1331,18 +1387,22 @@ const RadioUnitsForm = () => {
                     </td>
                     {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                       <td key={unitIndex} className="border px-2 py-2">
-                        <div className="grid grid-cols-4 gap-1">
+                        <div className={`grid grid-cols-4 gap-1 ${
+                          unit.feederTypeAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}>
                           {feederTypes.map(type => (
-                            <label key={type} className="flex items-center gap-1 text-xs">
+                            <label key={type} className="flex items-center gap-1 text-xs cursor-pointer">
                               <input
                                 type="radio"
                                 name={`feederType-${unitIndex}`}
                                 value={type}
                                 checked={unit.feederType === type}
                                 onChange={(e) => handleChange(unitIndex, 'feederType', e.target.value)}
-                                className="w-3 h-3"
+                                className="w-3 h-3 text-blue-600 border-gray-300 focus:ring-blue-500"
                               />
-                              {type}
+                              <span className={unit.feederTypeAutoFilled ? 'text-[#006100]' : ''}>
+                                {type}
+                              </span>
                             </label>
                           ))}
                         </div>
@@ -1437,7 +1497,7 @@ const RadioUnitsForm = () => {
             </button>
           </div>
       </form>
-        )}
+       
     </div>
     <ImageUploader 
       images={getAllImages()} 

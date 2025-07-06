@@ -13,6 +13,7 @@ const MwAntennasForm = () => {
   const [uploadedImages, setUploadedImages] = useState({});
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Generate image fields for a single antenna
   const getAntennaImages = (antennaNumber) => [ 
@@ -71,7 +72,8 @@ const MwAntennasForm = () => {
             id: antenna.antenna_number,
             height: antenna.height || "",
             diameter: antenna.diameter || "",
-            azimuth: antenna.azimuth || ""
+            azimuth: antenna.azimuth || "",
+            includeInPlan: antenna.includeInPlan || "",
           }));
 
           setFormData({
@@ -100,13 +102,13 @@ const MwAntennasForm = () => {
     if (!count || count < 1) {
       setFormData({ antennaCount: "", antennas: [] });
       setUploadedImages({});
+      setHasUnsavedChanges(true);
       return;
     }
 
     // Create antennas array matching the selected count
     const currentAntennas = formData.antennas || [];
     const antennas = Array.from({ length: count }, (_, index) => {
-      // Keep existing data if available, otherwise create empty antenna
       if (index < currentAntennas.length) {
         return currentAntennas[index];
       }
@@ -119,7 +121,8 @@ const MwAntennasForm = () => {
     });
 
     setFormData({ antennaCount: e.target.value, antennas });
-    setError(""); // clear previous errors
+    setHasUnsavedChanges(true);
+    setError("");
   };
 
   const handleAntennaChange = (index, field, value) => {
@@ -129,20 +132,24 @@ const MwAntennasForm = () => {
     if (index === 0) {
       const numAntennas = parseInt(formData.antennaCount) || 1;
       for (let i = 1; i < numAntennas; i++) {
-        updated[i] = {
-          ...updated[i],
-          [field]: value
-        };
+        if (!updated[i][field]) {
+          updated[i] = {
+            ...updated[i],
+            [field]: value,
+            [`${field}AutoFilled`]: true
+          };
+        }
       }
     }
     
-    // Always update the current antenna
     updated[index] = {
       ...updated[index],
-      [field]: value
+      [field]: value,
+      [`${field}AutoFilled`]: false
     };
     
     setFormData({ ...formData, antennas: updated });
+    setHasUnsavedChanges(true);
   };
 
   // Handle image uploads from ImageUploader component
@@ -152,17 +159,18 @@ const MwAntennasForm = () => {
       ...prev,
       [imageCategory]: files
     }));
+    setHasUnsavedChanges(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const prevFormData = { ...formData }; // Keep a copy of current form data
+    const prevFormData = { ...formData };
 
     try {
       // Validate that all fields are filled
       const isValid = formData.antennas.every(
-        (ant) => ant.height && ant.diameter && ant.azimuth
+        (ant) => ant.height && ant.diameter && ant.azimuth && ant.includeInPlan
       );
 
       if (!isValid) {
@@ -183,6 +191,7 @@ const MwAntennasForm = () => {
         submitFormData.append(`mwAntennasData[mw_antennas][${index}][height]`, parseFloat(antenna.height) || 0);
         submitFormData.append(`mwAntennasData[mw_antennas][${index}][diameter]`, parseFloat(antenna.diameter) || 0);
         submitFormData.append(`mwAntennasData[mw_antennas][${index}][azimuth]`, parseFloat(antenna.azimuth) || 0);
+        submitFormData.append(`mwAntennasData[mw_antennas][${index}][includeInPlan]`, antenna.includeInPlan);
       });
 
       // Get all possible image fields
@@ -243,7 +252,8 @@ const MwAntennasForm = () => {
           id: antenna.antenna_number,
           height: antenna.height || "",
           diameter: antenna.diameter || "",
-          azimuth: antenna.azimuth || ""
+          azimuth: antenna.azimuth || "",
+          includeInPlan: antenna.includeInPlan || "",
         }));
 
         setFormData({
@@ -269,6 +279,7 @@ const MwAntennasForm = () => {
         }
       }
       
+      setHasUnsavedChanges(false);
       showSuccess('MW antennas data and images submitted successfully!');
     } catch (err) {
       console.error("Error submitting MW antennas data:", err);
@@ -281,9 +292,38 @@ const MwAntennasForm = () => {
     }
   };
 
+  // Add useEffect for window beforeunload event
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+        {/* Unsaved Changes Warning */}
+        {hasUnsavedChanges && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  ⚠️ You have unsaved changes
+                </p>
+                <p className="text-sm">
+                  Don't forget to save your changes before leaving this page.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <form className="space-y-4" onSubmit={handleSubmit}>
           {/* MW Antenna Count */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -295,7 +335,7 @@ const MwAntennasForm = () => {
                 name="antennaCount"
                 value={formData.antennaCount}
                 onChange={handleAntennaCountChange}
-                className="border p-3 rounded-md"
+                className="w-full p-2 border rounded text-sm"
                 required
               >
                 <option value="">-- Select --</option>
@@ -345,7 +385,9 @@ const MwAntennasForm = () => {
                             step="0.1"
                             value={antenna.height}
                             onChange={(e) => handleAntennaChange(antennaIndex, 'height', e.target.value)}
-                            className="w-full p-2 border rounded text-sm"
+                            className={`w-full p-2 border rounded text-sm ${
+                              antenna.heightAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                            }`}
                             placeholder="Enter height..."
                             required
                           />
@@ -365,7 +407,9 @@ const MwAntennasForm = () => {
                             step="0.1"
                             value={antenna.diameter}
                             onChange={(e) => handleAntennaChange(antennaIndex, 'diameter', e.target.value)}
-                            className="w-full p-2 border rounded text-sm"
+                            className={`w-full p-2 border rounded text-sm ${
+                              antenna.diameterAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                            }`}
                             placeholder="Enter diameter..."
                             required
                           />
@@ -387,13 +431,43 @@ const MwAntennasForm = () => {
                             max="360"
                             value={antenna.azimuth}
                             onChange={(e) => handleAntennaChange(antennaIndex, 'azimuth', e.target.value)}
-                            className="w-full p-2 border rounded text-sm"
+                            className={`w-full p-2 border rounded text-sm ${
+                              antenna.azimuthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                            }`}
                             placeholder="Enter azimuth..."
                             required
                           />
                         </td>
                       ))}
                     </tr>
+
+                    {/* MW antenna includeInPlan */}
+                    {/* <tr className="bg-gray-50">
+                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-500 text-white z-10">
+                        Include in Plan
+                      </td>
+                      {formData.antennas.slice(0, parseInt(formData.antennaCount)).map((antenna, antennaIndex) => (
+                        <td key={antennaIndex} className="border px-2 py-2">
+                          <div className="flex gap-4">
+                            {['Yes', 'No'].map(option => (
+                              <label key={option} className="flex items-center gap-1 text-sm cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name={`includeInPlan-${antennaIndex}`}
+                                  value={option}
+                                  checked={antenna.includeInPlan === option}
+                                  onChange={(e) => handleAntennaChange(antennaIndex, 'includeInPlan', e.target.value)}
+                                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                />
+                                <span className={antenna.includeInPlanAutoFilled ? 'text-[#006100]' : ''}>
+                                  {option}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </td>
+                      ))}
+                    </tr> */}
                   </tbody>
                 </table>
               </div>

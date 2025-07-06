@@ -19,6 +19,13 @@ const TransmissionInformationForm = () => {
     how_many_mw_link_exist: '',
     mw_links: []
   });
+  const bgColorFillAuto = "bg-[#c6efce]"
+  const colorFillAuto = 'text-[#006100]'
+  
+  const isFieldAutoFilled = (linkIndex, fieldName) => {
+    if (linkIndex === 0) return false; // First row is never auto-filled
+    return formData.mw_links[linkIndex]?.[`${fieldName}AutoFilled`] || false;
+  };
 
   // Generate MW equipment-based image categories
   const generateMWImages = () => {
@@ -169,14 +176,41 @@ const TransmissionInformationForm = () => {
 
   const handleMWLinkChange = (linkIndex, fieldName, value) => {
     console.log(`Changing MW link ${linkIndex} field ${fieldName} to:`, value);
-    setFormData(prev => ({
-      ...prev,
-      mw_links: prev.mw_links.map((link, index) =>
-        index === linkIndex
-          ? { ...link, [fieldName]: value }
-          : link
-      )
-    }));
+    setFormData(prev => {
+      const newFormData = { ...prev };
+      const numLinks = parseInt(prev.how_many_mw_link_exist) || 1;
+      
+      // Always update the current link first
+      if (!newFormData.mw_links[linkIndex]) {
+        newFormData.mw_links[linkIndex] = {};
+      }
+      
+      newFormData.mw_links[linkIndex] = {
+        ...newFormData.mw_links[linkIndex],
+        [fieldName]: value,
+        [`${fieldName}AutoFilled`]: false // Reset auto-fill flag when manually changed
+      };
+      
+      // If this is the first link (index 0), auto-fill other empty fields
+      if (linkIndex === 0 && value) {
+        for (let i = 1; i < numLinks; i++) {
+          if (!newFormData.mw_links[i]) {
+            newFormData.mw_links[i] = {};
+          }
+          
+          // Only auto-fill if the field is empty or was previously auto-filled
+          if (!newFormData.mw_links[i][fieldName] || newFormData.mw_links[i][`${fieldName}AutoFilled`]) {
+            newFormData.mw_links[i] = {
+              ...newFormData.mw_links[i],
+              [fieldName]: value,
+              [`${fieldName}AutoFilled`]: true // Mark as auto-filled
+            };
+          }
+        }
+      }
+      
+      return newFormData;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -458,7 +492,7 @@ const TransmissionInformationForm = () => {
                           Located in?
                         </td>
                         {formData.mw_links.slice(0, parseInt(formData.how_many_mw_link_exist)).map((link, linkIndex) => (
-                          <td key={linkIndex} className="border px-2 py-2">
+                          <td key={linkIndex} className={`border px-2 py-2 ${isFieldAutoFilled(linkIndex, 'located_in') ? bgColorFillAuto : ''}`}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
                               {[...cabinetOptions, 'Other'].map(option => (
                                 <label key={option} className="flex items-center gap-1 text-sm">
@@ -472,9 +506,9 @@ const TransmissionInformationForm = () => {
                                         : currentValues.filter(v => v !== option);
                                       handleMWLinkChange(linkIndex, 'located_in', newValues.join(', '));
                                     }}
-                                    className="w-4 h-4"
+                                    className={`w-4 h-4 ${isFieldAutoFilled(linkIndex, 'located_in') ? colorFillAuto : ''}`}
                                   />
-                                  {option}
+                                  <span className={isFieldAutoFilled(linkIndex, 'located_in') ? colorFillAuto : ''}>{option}</span>
                                 </label>
                               ))}
                             </div>
@@ -488,7 +522,7 @@ const TransmissionInformationForm = () => {
                           MW equipment vendor
                         </td>
                         {formData.mw_links.slice(0, parseInt(formData.how_many_mw_link_exist)).map((link, linkIndex) => (
-                          <td key={linkIndex} className="border px-2 py-2">
+                          <td key={linkIndex} className={`border px-2 py-2 ${isFieldAutoFilled(linkIndex, 'mw_equipment_vendor') ? bgColorFillAuto : ''}`}>
                             <div className="grid grid-cols-3 gap-1">
                               {mwVendors.map(vendor => (
                                 <label key={vendor} className="flex items-center gap-1 text-sm">
@@ -498,9 +532,9 @@ const TransmissionInformationForm = () => {
                                     value={vendor}
                                     checked={link.mw_equipment_vendor === vendor}
                                     onChange={(e) => handleMWLinkChange(linkIndex, 'mw_equipment_vendor', e.target.value)}
-                                    className="w-4 h-4"
+                                    className={`w-4 h-4 ${isFieldAutoFilled(linkIndex, 'mw_equipment_vendor') ? colorFillAuto : ''}`}
                                   />
-                                  {vendor}
+                                  <span className={isFieldAutoFilled(linkIndex, 'mw_equipment_vendor') ? colorFillAuto : ''}>{vendor}</span>
                                 </label>
                               ))}
                             </div>
@@ -514,12 +548,12 @@ const TransmissionInformationForm = () => {
                           IDU type
                         </td>
                         {formData.mw_links.slice(0, parseInt(formData.how_many_mw_link_exist)).map((link, linkIndex) => (
-                          <td key={linkIndex} className="border px-2 py-2">
+                          <td key={linkIndex} className={`border px-2 py-2 ${isFieldAutoFilled(linkIndex, 'idu_type') ? bgColorFillAuto : ''}`}>
                             <input
                               type="text"
                               value={link.idu_type}
                               onChange={(e) => handleMWLinkChange(linkIndex, 'idu_type', e.target.value)}
-                              className="w-full p-2 border rounded text-sm"
+                              className={`w-full p-2 border rounded text-sm ${isFieldAutoFilled(linkIndex, 'idu_type') ? colorFillAuto : ''}`}
                               placeholder="Enter IDU type..."
                             />
                           </td>
@@ -568,7 +602,7 @@ const TransmissionInformationForm = () => {
                           MW backhauling type
                         </td>
                         {formData.mw_links.slice(0, parseInt(formData.how_many_mw_link_exist)).map((link, linkIndex) => (
-                          <td key={linkIndex} className="border px-2 py-2">
+                          <td key={linkIndex} className={`border px-2 py-2 ${isFieldAutoFilled(linkIndex, 'mw_backhauling_type') ? bgColorFillAuto : ''}`}>
                             <div className="flex gap-4">
                               {backhaulingTypes.map(type => (
                                 <label key={type} className="flex items-center gap-1 text-sm">
@@ -578,9 +612,9 @@ const TransmissionInformationForm = () => {
                                     value={type}
                                     checked={link.mw_backhauling_type === type}
                                     onChange={(e) => handleMWLinkChange(linkIndex, 'mw_backhauling_type', e.target.value)}
-                                    className="w-4 h-4"
+                                    className={`w-4 h-4 ${isFieldAutoFilled(linkIndex, 'mw_backhauling_type') ? colorFillAuto : ''}`}
                                   />
-                                  {type}
+                                  <span className={isFieldAutoFilled(linkIndex, 'mw_backhauling_type') ? colorFillAuto : ''}>{type}</span>
                                 </label>
                               ))}
                             </div>
@@ -594,11 +628,11 @@ const TransmissionInformationForm = () => {
                           How many ethernet port used?
                         </td>
                         {formData.mw_links.slice(0, parseInt(formData.how_many_mw_link_exist)).map((link, linkIndex) => (
-                          <td key={linkIndex} className="border px-2 py-2">
+                          <td key={linkIndex} className={`border px-2 py-2 ${isFieldAutoFilled(linkIndex, 'ethernet_ports_used') ? bgColorFillAuto : ''}`}>
                             <select
                               value={link.ethernet_ports_used}
                               onChange={(e) => handleMWLinkChange(linkIndex, 'ethernet_ports_used', e.target.value)}
-                              className="w-full p-2 border rounded text-sm"
+                              className={`w-full p-2 border rounded text-sm ${isFieldAutoFilled(linkIndex, 'ethernet_ports_used') ? colorFillAuto : ''}`}
                             >
                               <option value="">Select</option>
                               {[...Array(15)].map((_, i) => (
@@ -615,11 +649,11 @@ const TransmissionInformationForm = () => {
                           How many ethernet port free?
                         </td>
                         {formData.mw_links.slice(0, parseInt(formData.how_many_mw_link_exist)).map((link, linkIndex) => (
-                          <td key={linkIndex} className="border px-2 py-2">
+                          <td key={linkIndex} className={`border px-2 py-2 ${isFieldAutoFilled(linkIndex, 'ethernet_ports_free') ? bgColorFillAuto : ''}`}>
                             <select
                               value={link.ethernet_ports_free}
                               onChange={(e) => handleMWLinkChange(linkIndex, 'ethernet_ports_free', e.target.value)}
-                              className="w-full p-2 border rounded text-sm"
+                              className={`w-full p-2 border rounded text-sm ${isFieldAutoFilled(linkIndex, 'ethernet_ports_free') ? colorFillAuto : ''}`}
                             >
                               <option value="">Select</option>
                               {[...Array(15)].map((_, i) => (

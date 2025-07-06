@@ -35,7 +35,7 @@ const DynamicTable = ({
         ...item,
         id: item.id || index + 1
       }));
-      
+
       // Always ensure there's an empty column at the end for auto-expansion
       if (autoExpand) {
         const maxId = Math.max(...processedData.map(item => item.id));
@@ -44,15 +44,15 @@ const DynamicTable = ({
           const value = lastColumn[row.key];
           return value && value.toString().trim() !== '';
         });
-        
+
         if (hasContent) {
           processedData.push(createEmptyColumn(maxId + 1));
         }
       }
-      
+
       return processedData;
     }
-    
+
     // Create initial empty column
     return [createEmptyColumn(1)];
   });
@@ -94,7 +94,7 @@ const DynamicTable = ({
         ...item,
         id: item.id || index + 1
       }));
-      
+
       // Always ensure there's an empty column at the end for auto-expansion
       if (autoExpand) {
         const maxId = Math.max(...newData.map(item => item.id));
@@ -103,12 +103,12 @@ const DynamicTable = ({
           const value = lastColumn[row.key];
           return value && value.toString().trim() !== '';
         });
-        
+
         if (hasContent) {
           newData.push(createEmptyColumn(maxId + 1));
         }
       }
-      
+
       setTableData(newData);
       initializedRef.current = true;
     }
@@ -117,16 +117,16 @@ const DynamicTable = ({
   // Ensure we always have an empty column at the end for auto-expansion
   useEffect(() => {
     if (!autoExpand || userInteractionRef.current) return;
-    
+
     setTableData(prev => {
       const lastColumn = prev[prev.length - 1];
       if (!lastColumn) return prev;
-      
+
       const hasContent = rows.some(row => {
         const value = lastColumn[row.key];
         return value && value.toString().trim() !== '';
       });
-      
+
       // If the last column has content, add a new empty column
       if (hasContent) {
         const maxId = Math.max(...prev.map(item => item.id));
@@ -134,7 +134,7 @@ const DynamicTable = ({
         console.log("Adding maintenance empty column");
         return [...prev, newColumn];
       }
-      
+
       return prev;
     });
   }, [tableData, autoExpand, rows]); // Run whenever tableData changes
@@ -143,7 +143,7 @@ const DynamicTable = ({
   const handleTableChange = (columnId, fieldKey, value) => {
     console.log(`Typing in column ${columnId}, field ${fieldKey}, value: "${value}"`);
     userInteractionRef.current = true;
-    
+
     setTableData(prev => {
       // Update the specific cell
       const updated = prev.map(item =>
@@ -169,7 +169,7 @@ const DynamicTable = ({
 
       return updated;
     });
-    
+
     // Reset user interaction flag after a delay
     setTimeout(() => {
       userInteractionRef.current = false;
@@ -179,24 +179,24 @@ const DynamicTable = ({
   // Delete a specific column
   const deleteColumn = (columnId) => {
     if (!enableDelete) return;
-    
+
     userInteractionRef.current = true;
-    
+
     setTableData(prev => {
       const filtered = prev.filter(item => item.id !== columnId);
-      
+
       // Always keep at least the minimum number of columns
       if (filtered.length < minColumns) {
         const maxId = Math.max(...prev.map(item => item.id), 0);
         const newColumn = createEmptyColumn(maxId + 1);
         return [...filtered, newColumn];
       }
-      
+
       // If no columns left, create an empty one
       if (filtered.length === 0) {
         return [createEmptyColumn(1)];
       }
-      
+
       // Ensure there's always an empty column at the end for auto-expansion
       if (autoExpand) {
         const lastColumn = filtered[filtered.length - 1];
@@ -204,16 +204,16 @@ const DynamicTable = ({
           const value = lastColumn[row.key];
           return value && value.toString().trim() !== '';
         });
-        
+
         if (hasContent) {
           const maxId = Math.max(...filtered.map(item => item.id));
           filtered.push(createEmptyColumn(maxId + 1));
         }
       }
-      
+
       return filtered;
     });
-    
+
     // Reset user interaction flag after a delay
     setTimeout(() => {
       userInteractionRef.current = false;
@@ -223,7 +223,7 @@ const DynamicTable = ({
   // Drag and drop handlers
   const handleDragStart = (e, index) => {
     if (!enableDragDrop) return;
-    
+
     setDraggedColumnIndex(index);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/html', e.target.outerHTML);
@@ -232,21 +232,21 @@ const DynamicTable = ({
 
   const handleDragEnd = (e) => {
     if (!enableDragDrop) return;
-    
+
     e.target.style.opacity = '';
     setDraggedColumnIndex(null);
   };
 
   const handleDragOver = (e) => {
     if (!enableDragDrop) return;
-    
+
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
 
   const handleDrop = (e, dropIndex) => {
     if (!enableDragDrop) return;
-    
+
     e.preventDefault();
 
     if (draggedColumnIndex === null || draggedColumnIndex === dropIndex) {
@@ -272,38 +272,38 @@ const DynamicTable = ({
   // Clean up empty columns (except the last one for auto-expansion) - IMPROVED VERSION
   const cleanupTable = () => {
     if (!autoExpand) return;
-    
+
     console.log("Cleanup triggered, current table data:", tableData.length);
     userInteractionRef.current = true;
-    
+
     setTableData(prev => {
       // Keep columns that have content
       const withContent = [];
       const withoutContent = [];
-      
+
       for (let i = 0; i < prev.length; i++) {
         const item = prev[i];
         const hasContent = rows.some(row => {
           const value = item[row.key];
           return value && value.toString().trim() !== '';
         });
-        
+
         if (hasContent) {
           withContent.push(item);
         } else {
           withoutContent.push(item);
         }
       }
-      
+
       console.log(`Columns with content: ${withContent.length}, without content: ${withoutContent.length}`);
-      
+
       // Start with all columns that have content
       let cleaned = [...withContent];
-      
+
       // Always keep at least one empty column at the end for typing
       if (withoutContent.length > 0) {
         // Keep the last empty column (highest ID)
-        const lastEmpty = withoutContent.reduce((latest, current) => 
+        const lastEmpty = withoutContent.reduce((latest, current) =>
           current.id > latest.id ? current : latest
         );
         cleaned.push(lastEmpty);
@@ -312,21 +312,21 @@ const DynamicTable = ({
         const maxId = cleaned.length > 0 ? Math.max(...cleaned.map(item => item.id)) : 0;
         cleaned.push(createEmptyColumn(maxId + 1));
       }
-      
+
       // Ensure we have at least minColumns
       while (cleaned.length < minColumns) {
         const maxId = Math.max(...cleaned.map(item => item.id));
         cleaned.push(createEmptyColumn(maxId + 1));
       }
-      
+
       // Sort by ID to maintain order
       cleaned.sort((a, b) => a.id - b.id);
-      
+
       console.log(`After cleanup: ${cleaned.length} columns`);
-      
+
       return cleaned;
     });
-    
+
     // Reset user interaction flag after a delay
     setTimeout(() => {
       userInteractionRef.current = false;
@@ -394,9 +394,8 @@ const DynamicTable = ({
               {tableData.map((_, index) => (
                 <th
                   key={`header-${index}`}
-                  className={`border px-4 py-2 w-32 relative cursor-move select-none ${
-                    draggedColumnIndex === index ? 'bg-blue-200' : ''
-                  }`}
+                  className={`border px-4 py-2 w-32 relative cursor-move select-none ${draggedColumnIndex === index ? 'bg-blue-200' : ''
+                    }`}
                   draggable={enableDragDrop}
                   onDragStart={(e) => handleDragStart(e, index)}
                   onDragEnd={handleDragEnd}
@@ -430,9 +429,8 @@ const DynamicTable = ({
                 {tableData.map((item, index) => (
                   <td
                     key={`${row.key}-${item.id}-${index}`}
-                    className={`${cellClassName} ${
-                      draggedColumnIndex === index ? 'bg-blue-100' : ''
-                    }`}
+                    className={`${cellClassName} ${draggedColumnIndex === index ? 'bg-blue-100' : ''
+                      }`}
                   >
                     {renderInput(row, item, index)}
                   </td>

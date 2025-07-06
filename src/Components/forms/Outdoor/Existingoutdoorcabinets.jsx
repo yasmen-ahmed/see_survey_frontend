@@ -7,6 +7,8 @@ import DynamicTable from '../../DynamicTable';
 
 const OutdoorCabinetsForm = () => {
   const { sessionId } = useParams();
+  const bgColorFillAuto = "bg-[#c6efce]"
+  const colorFillAuto = 'text-[#006100]'
   const [formData, setFormData] = useState({
     numberOfCabinets: '',
     cabinets: Array(10).fill(null).map((_, index) => ({
@@ -40,6 +42,7 @@ const OutdoorCabinetsForm = () => {
 
   const [connectedModules, setConnectedModules] = useState([]);
   const [uploadedImages, setUploadedImages] = useState({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Generate image fields for a single cabinet
   const getCabinetImages = (cabinetNumber) => [
@@ -199,30 +202,73 @@ const OutdoorCabinetsForm = () => {
   };
 
   const handleChange = (cabinetIndex, fieldName, value) => {
-    setFormData(prev => ({
-      ...prev,
-      cabinets: prev.cabinets.map((cabinet, index) =>
-        index === cabinetIndex
-          ? { ...cabinet, [fieldName]: value }
-          : cabinet
-      )
-    }));
+    setHasUnsavedChanges(true);
+    
+    setFormData(prevData => {
+      const newCabinets = [...prevData.cabinets];
+      newCabinets[cabinetIndex] = {
+        ...newCabinets[cabinetIndex],
+        [fieldName]: value,
+        [`${fieldName}AutoFilled`]: false // Reset auto-fill flag when manually changed
+      };
+
+      // If this is the first cabinet and the field has a value, auto-fill other cabinets
+      if (cabinetIndex === 0 && value) {
+        for (let i = 1; i < parseInt(prevData.numberOfCabinets || 0); i++) {
+          if (!newCabinets[i][fieldName] || newCabinets[i][`${fieldName}AutoFilled`]) { // Only auto-fill if field is empty or was previously auto-filled
+            newCabinets[i] = {
+              ...newCabinets[i],
+              [fieldName]: value,
+              [`${fieldName}AutoFilled`]: true // Mark as auto-filled
+            };
+          }
+        }
+      }
+
+      return {
+        ...prevData,
+        cabinets: newCabinets
+      };
+    });
   };
 
   const handleCheckboxChange = (cabinetIndex, fieldName, value, checked) => {
-    setFormData(prev => ({
-      ...prev,
-      cabinets: prev.cabinets.map((cabinet, index) =>
-        index === cabinetIndex
-          ? {
-            ...cabinet,
-            [fieldName]: checked
-              ? [...cabinet[fieldName], value]
-              : cabinet[fieldName].filter(item => item !== value)
+    setHasUnsavedChanges(true);
+    
+    setFormData(prevData => {
+      const newCabinets = [...prevData.cabinets];
+      const currentValues = new Set((newCabinets[cabinetIndex][fieldName] || []).map(String));
+      
+      if (checked) {
+        currentValues.add(String(value));
+      } else {
+        currentValues.delete(String(value));
+      }
+
+      newCabinets[cabinetIndex] = {
+        ...newCabinets[cabinetIndex],
+        [fieldName]: Array.from(currentValues),
+        [`${fieldName}AutoFilled`]: false // Reset auto-fill flag when manually changed
+      };
+
+      // If this is the first cabinet, auto-fill other cabinets
+      if (cabinetIndex === 0) {
+        for (let i = 1; i < parseInt(prevData.numberOfCabinets || 0); i++) {
+          if (!newCabinets[i][fieldName]?.length || newCabinets[i][`${fieldName}AutoFilled`]) { // Only auto-fill if field is empty or was previously auto-filled
+            newCabinets[i] = {
+              ...newCabinets[i],
+              [fieldName]: Array.from(currentValues),
+              [`${fieldName}AutoFilled`]: true // Mark as auto-filled
+            };
           }
-          : cabinet
-      )
-    }));
+        }
+      }
+
+      return {
+        ...prevData,
+        cabinets: newCabinets
+      };
+    });
   };
 
   // Get table data for a specific cabinet and equipment type with proper formatting
@@ -409,6 +455,7 @@ const OutdoorCabinetsForm = () => {
         }
       }
       
+      setHasUnsavedChanges(false); // Reset unsaved changes after successful save
       showSuccess('Outdoor cabinets data and images submitted successfully!');
     } catch (err) {
       console.error("Error submitting outdoor cabinets data:", err);
@@ -416,6 +463,19 @@ const OutdoorCabinetsForm = () => {
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
     }
   };
+
+  // Add useEffect for window beforeunload event
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   const cabinetTypes = ['RAN', 'MW', 'Power', 'All in one', 'Other'];
   const vendors = ['Nokia', 'Ericsson', 'Huawei', 'ZTE', 'Eltek', 'Vertiv'];
@@ -453,6 +513,22 @@ const OutdoorCabinetsForm = () => {
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+        {/* Unsaved Changes Warning */}
+        {hasUnsavedChanges && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  ⚠️ You have unsaved changes
+                </p>
+                <p className="text-sm">
+                  Don't forget to save your changes before leaving this page.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
 
           {/* Number of Cabinets Selection */}
@@ -505,7 +581,7 @@ const OutdoorCabinetsForm = () => {
                     Cabinet type
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className="border px-2 py-2">
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.typeAutoFilled ? bgColorFillAuto : ''}`}>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-1">
                         {cabinetTypes.map(type => (
                           <label key={type} className="flex items-center gap-1 text-sm">
@@ -513,9 +589,11 @@ const OutdoorCabinetsForm = () => {
                               type="checkbox"
                               checked={cabinet.type.includes(type)}
                               onChange={(e) => handleCheckboxChange(cabinetIndex, 'type', type, e.target.checked)}
-                              className="w-4 h-4"
+                              className={`w-4 h-4 ${cabinet.typeAutoFilled ? colorFillAuto : ''}`}
                             />
-                            {type}
+                            <span className={cabinet.typeAutoFilled ? colorFillAuto : ''}>
+                              {type}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -529,7 +607,7 @@ const OutdoorCabinetsForm = () => {
                     Cabinet vendor
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className="border px-2 py-2">
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.vendorAutoFilled ? bgColorFillAuto : ''}`}>
                       <div className="grid grid-cols-3 gap-1">
                         {vendors.map(vendor => (
                           <label key={vendor} className="flex items-center gap-1 text-sm">
@@ -539,9 +617,11 @@ const OutdoorCabinetsForm = () => {
                               value={vendor}
                               checked={cabinet.vendor === vendor}
                               onChange={(e) => handleChange(cabinetIndex, 'vendor', e.target.value)}
-                              className="w-4 h-4"
+                              className={`w-4 h-4 ${cabinet.vendorAutoFilled ? colorFillAuto : ''}`}
                             />
-                            {vendor}
+                            <span className={cabinet.vendorAutoFilled ? colorFillAuto : ''}>
+                              {vendor}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -555,11 +635,11 @@ const OutdoorCabinetsForm = () => {
                     Cabinet model
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className="border px-2 py-2">
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.modelAutoFilled ? bgColorFillAuto : ''}`}>
                       <select
                         value={cabinet.model}
                         onChange={(e) => handleChange(cabinetIndex, 'model', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm ${cabinet.modelAutoFilled ? colorFillAuto : ''}`}
                       >
                         <option value="">Select</option>
                         {models.map(model => (
@@ -576,7 +656,7 @@ const OutdoorCabinetsForm = () => {
                     Cabinet has anti theft?
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className="border px-2 py-2">
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.antiTheftAutoFilled ? bgColorFillAuto : ''}`}>
                       <div className="flex gap-4">
                         {['Yes', 'No'].map(option => (
                           <label key={option} className="flex items-center gap-1 text-sm">
@@ -586,9 +666,11 @@ const OutdoorCabinetsForm = () => {
                               value={option}
                               checked={cabinet.antiTheft === option}
                               onChange={(e) => handleChange(cabinetIndex, 'antiTheft', e.target.value)}
-                              className="w-4 h-4"
+                              className={`w-4 h-4 ${cabinet.antiTheftAutoFilled ? colorFillAuto : ''}`}
                             />
-                            {option}
+                            <span className={cabinet.antiTheftAutoFilled ? colorFillAuto : ''}>
+                              {option}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -602,7 +684,7 @@ const OutdoorCabinetsForm = () => {
                     Cooling type
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className="border px-2 py-2">
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.coolingTypeAutoFilled ? bgColorFillAuto : ''}`}>
                       <div className="grid grid-cols-2 gap-1">
                         {['Air-condition', 'Fan-filter'].map(option => (
                           <label key={option} className="flex items-center gap-1 text-sm">
@@ -612,9 +694,11 @@ const OutdoorCabinetsForm = () => {
                               value={option}
                               checked={cabinet.coolingType === option}
                               onChange={(e) => handleChange(cabinetIndex, 'coolingType', e.target.value)}
-                              className="w-4 h-4"
+                              className={`w-4 h-4 ${cabinet.coolingTypeAutoFilled ? colorFillAuto : ''}`}
                             />
-                            {option}
+                            <span className={cabinet.coolingTypeAutoFilled ? colorFillAuto : ''}>
+                              {option}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -628,12 +712,12 @@ const OutdoorCabinetsForm = () => {
                     Cooling capacity (watt)
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className="border px-2 py-2">
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.coolingCapacityAutoFilled ? bgColorFillAuto : ''}`}>
                       <input
                         type="number"
                         value={cabinet.coolingCapacity}
                         onChange={(e) => handleChange(cabinetIndex, 'coolingCapacity', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm ${cabinet.coolingCapacityAutoFilled ? colorFillAuto : ''}`}
                         placeholder="0000"
                       />
                     </td>
@@ -646,7 +730,7 @@ const OutdoorCabinetsForm = () => {
                     How many compartment?
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className="border px-2 py-2">
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.compartmentsAutoFilled ? bgColorFillAuto : ''}`}>
                       <div className="flex gap-4">
                         {['1', '2'].map(option => (
                           <label key={option} className="flex items-center gap-1 text-sm">
@@ -656,9 +740,11 @@ const OutdoorCabinetsForm = () => {
                               value={option}
                               checked={cabinet.compartments === option}
                               onChange={(e) => handleChange(cabinetIndex, 'compartments', e.target.value)}
-                              className="w-4 h-4"
+                              className={`w-4 h-4 ${cabinet.compartmentsAutoFilled ? colorFillAuto : ''}`}
                             />
-                            {option}
+                            <span className={cabinet.compartmentsAutoFilled ? colorFillAuto : ''}>
+                              {option}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -672,17 +758,19 @@ const OutdoorCabinetsForm = () => {
                     Existing hardware inside the cabinet
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className="border px-2 py-2">
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.hardwareAutoFilled ? bgColorFillAuto : ''}`}>
                       <div className="grid grid-cols-2 gap-1">
                         {hardwareOptions.map(option => (
-                          <label key={option} className="flex items-center gap-1 text-sm">
+                          <label key={option} className="flex items-center gap-1 text-sm cursor-pointer">
                             <input
                               type="checkbox"
                               checked={cabinet.hardware.includes(option)}
                               onChange={(e) => handleCheckboxChange(cabinetIndex, 'hardware', option, e.target.checked)}
-                              className="w-4 h-4"
+                              className={`w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${cabinet.hardwareAutoFilled ? colorFillAuto : ''}`}
                             />
-                            {option}
+                            <span className={cabinet.hardwareAutoFilled ? colorFillAuto : ''}>
+                              {option}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -696,7 +784,7 @@ const OutdoorCabinetsForm = () => {
                     Does the cabinet has AC power feed from the main AC panel?
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className="border px-2 py-2">
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.acPowerFeedAutoFilled ? bgColorFillAuto : ''}`}>
                       <div className="flex gap-4">
                         {['Yes', 'No'].map(option => (
                           <label key={option} className="flex items-center gap-1 text-sm">
@@ -706,9 +794,11 @@ const OutdoorCabinetsForm = () => {
                               value={option}
                               checked={cabinet.acPowerFeed === option}
                               onChange={(e) => handleChange(cabinetIndex, 'acPowerFeed', e.target.value)}
-                              className="w-4 h-4"
+                              className={`w-4 h-4 ${cabinet.acPowerFeedAutoFilled ? colorFillAuto : ''}`}
                             />
-                            {option}
+                            <span className={cabinet.acPowerFeedAutoFilled ? colorFillAuto : ''}>
+                              {option}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -727,7 +817,7 @@ const OutdoorCabinetsForm = () => {
                         <select
                           value={cabinet.cbNumber}
                           onChange={(e) => handleChange(cabinetIndex, 'cbNumber', e.target.value)}
-                          className="w-full p-2 border rounded text-sm "
+                          className="w-full p-2 border rounded text-sm"
                           disabled={cabinet.acPowerFeed !== 'Yes'}
                         >
                           <option value="">Select</option>
@@ -794,7 +884,7 @@ const OutdoorCabinetsForm = () => {
                     Is there BLVD in the cabinet?
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className="border px-2 py-2">
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.blvdAutoFilled ? bgColorFillAuto : ''}`}>
                       <div className="flex gap-4">
                         {['Yes', 'No'].map(option => (
                           <label key={option} className="flex items-center gap-1 text-sm">
@@ -804,9 +894,11 @@ const OutdoorCabinetsForm = () => {
                               value={option}
                               checked={cabinet.blvd === option}
                               onChange={(e) => handleChange(cabinetIndex, 'blvd', e.target.value)}
-                              className="w-4 h-4"
+                              className={`w-4 h-4 ${cabinet.blvdAutoFilled ? colorFillAuto : ''}`}
                             />
-                            {option}
+                            <span className={cabinet.blvdAutoFilled ? colorFillAuto : ''}>
+                              {option}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -816,12 +908,12 @@ const OutdoorCabinetsForm = () => {
 
                 {/* BLVD Free CBs - Only show if any cabinet has BLVD */}
                 {hasAnyBLVD() && (
-                  <tr >
+                  <tr>
                     <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
                       Does the BLVD has free CBs?
                     </td>
                     {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                      <td key={cabinetIndex} className="border px-2 py-2">
+                      <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.blvdFreeCBsAutoFilled ? bgColorFillAuto : ''}`}>
                         <div className="flex gap-4">
                           {['Yes', 'No'].map(option => (
                             <label key={option} className="flex items-center gap-1 text-sm">
@@ -831,10 +923,10 @@ const OutdoorCabinetsForm = () => {
                                 value={option}
                                 checked={cabinet.blvdFreeCBs === option}
                                 onChange={(e) => handleChange(cabinetIndex, 'blvdFreeCBs', e.target.value)}
-                                className="w-4 h-4"
+                                className={`w-4 h-4 ${cabinet.blvdFreeCBsAutoFilled ? colorFillAuto : ''}`}
                                 disabled={cabinet.blvd !== 'Yes'}
                               />
-                              <span className={cabinet.blvd !== 'Yes' ? 'text-gray-400' : ''}>
+                              <span className={cabinet.blvd !== 'Yes' ? 'text-gray-400' : cabinet.blvdFreeCBsAutoFilled ? colorFillAuto : ''}>
                                 {option}
                               </span>
                             </label>
@@ -888,7 +980,7 @@ const OutdoorCabinetsForm = () => {
                     Is there LLVD in the cabinet?
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className="border px-2 py-2">
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.llvdAutoFilled ? bgColorFillAuto : ''}`}>
                       <div className="flex gap-4">
                         {['Yes', 'No'].map(option => (
                           <label key={option} className="flex items-center gap-1 text-sm">
@@ -898,9 +990,11 @@ const OutdoorCabinetsForm = () => {
                               value={option}
                               checked={cabinet.llvd === option}
                               onChange={(e) => handleChange(cabinetIndex, 'llvd', e.target.value)}
-                              className="w-4 h-4"
+                              className={`w-4 h-4 ${cabinet.llvdAutoFilled ? colorFillAuto : ''}`}
                             />
-                            {option}
+                            <span className={cabinet.llvdAutoFilled ? colorFillAuto : ''}>
+                              {option}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -910,12 +1004,12 @@ const OutdoorCabinetsForm = () => {
 
                 {/* LLVD Free CBs - Only show if any cabinet has LLVD */}
                 {hasAnyLLVD() && (
-                  <tr >
+                  <tr>
                     <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
                       Does the LLVD has free CBs?
                     </td>
                     {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                      <td key={cabinetIndex} className="border px-2 py-2">
+                      <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.llvdFreeCBsAutoFilled ? bgColorFillAuto : ''}`}>
                         <div className="flex gap-4">
                           {['Yes', 'No'].map(option => (
                             <label key={option} className="flex items-center gap-1 text-sm">
@@ -925,10 +1019,10 @@ const OutdoorCabinetsForm = () => {
                                 value={option}
                                 checked={cabinet.llvdFreeCBs === option}
                                 onChange={(e) => handleChange(cabinetIndex, 'llvdFreeCBs', e.target.value)}
-                                className="w-4 h-4"
+                                className={`w-4 h-4 ${cabinet.llvdFreeCBsAutoFilled ? colorFillAuto : ''}`}
                                 disabled={cabinet.llvd !== 'Yes'}
                               />
-                              <span className={cabinet.llvd !== 'Yes' ? 'text-gray-400' : ''}>
+                              <span className={cabinet.llvd !== 'Yes' ? 'text-gray-400' : cabinet.llvdFreeCBsAutoFilled ? colorFillAuto : ''}>
                                 {option}
                               </span>
                             </label>
@@ -982,7 +1076,7 @@ const OutdoorCabinetsForm = () => {
                     Is there PDU in the cabinet?
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className="border px-2 py-2">
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.pduAutoFilled ? bgColorFillAuto : ''}`}>
                       <div className="flex gap-4">
                         {['Yes', 'No'].map(option => (
                           <label key={option} className="flex items-center gap-1 text-sm">
@@ -992,9 +1086,11 @@ const OutdoorCabinetsForm = () => {
                               value={option}
                               checked={cabinet.pdu === option}
                               onChange={(e) => handleChange(cabinetIndex, 'pdu', e.target.value)}
-                              className="w-4 h-4"
+                              className={`w-4 h-4 ${cabinet.pduAutoFilled ? colorFillAuto : ''}`}
                             />
-                            {option}
+                            <span className={cabinet.pduAutoFilled ? colorFillAuto : ''}>
+                              {option}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -1004,12 +1100,12 @@ const OutdoorCabinetsForm = () => {
 
                 {/* PDU Free CBs - Only show if any cabinet has PDU */}
                 {hasAnyPDU() && (
-                  <tr >
+                  <tr>
                     <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
                       Does the PDU has free CBs?
                     </td>
                     {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                      <td key={cabinetIndex} className="border px-2 py-2">
+                      <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.pduFreeCBsAutoFilled ? bgColorFillAuto : ''}`}>
                         <div className="flex gap-4">
                           {['Yes', 'No'].map(option => (
                             <label key={option} className="flex items-center gap-1 text-sm">
@@ -1019,10 +1115,10 @@ const OutdoorCabinetsForm = () => {
                                 value={option}
                                 checked={cabinet.pduFreeCBs === option}
                                 onChange={(e) => handleChange(cabinetIndex, 'pduFreeCBs', e.target.value)}
-                                className="w-4 h-4"
+                                className={`w-4 h-4 ${cabinet.pduFreeCBsAutoFilled ? colorFillAuto : ''}`}
                                 disabled={cabinet.pdu !== 'Yes'}
                               />
-                              <span className={cabinet.pdu !== 'Yes' ? 'text-gray-400' : ''}>
+                              <span className={cabinet.pdu !== 'Yes' ? 'text-gray-400' : cabinet.pduFreeCBsAutoFilled ? colorFillAuto : ''}>
                                 {option}
                               </span>
                             </label>
@@ -1076,7 +1172,7 @@ const OutdoorCabinetsForm = () => {
                     Internal cabinet layout suitable for the installation of new Nokia base band? 19'' rack, internal spacing...
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className="border px-2 py-2">
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.internalLayoutAutoFilled ? bgColorFillAuto : ''}`}>
                       <div className="grid grid-cols-1 gap-1">
                         {['Yes', 'No', 'Yes, with some modifications'].map(option => (
                           <label key={option} className="flex items-center gap-1 text-sm">
@@ -1086,9 +1182,11 @@ const OutdoorCabinetsForm = () => {
                               value={option}
                               checked={cabinet.internalLayout === option}
                               onChange={(e) => handleChange(cabinetIndex, 'internalLayout', e.target.value)}
-                              className="w-4 h-4"
+                              className={`w-4 h-4 ${cabinet.internalLayoutAutoFilled ? colorFillAuto : ''}`}
                             />
-                            {option}
+                            <span className={cabinet.internalLayoutAutoFilled ? colorFillAuto : ''}>
+                              {option}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -1102,12 +1200,12 @@ const OutdoorCabinetsForm = () => {
                     How many free 19'' U available for telecom hardware installation?
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className="border px-2 py-2">
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.freeUAutoFilled ? bgColorFillAuto : ''}`}>
                       <input
                         type="number"
                         value={cabinet.freeU}
                         onChange={(e) => handleChange(cabinetIndex, 'freeU', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm ${cabinet.freeUAutoFilled ? colorFillAuto : ''}`}
                         placeholder="00"
                       />
                     </td>

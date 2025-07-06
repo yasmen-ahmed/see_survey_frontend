@@ -46,6 +46,7 @@ const RadioAntenasForm = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Helper function to map API data to form data
   const mapApiToFormData = (apiData) => {
@@ -291,60 +292,85 @@ const RadioAntenasForm = () => {
     setFormData(prev => {
       const newFormData = { ...prev };
       
-      // If this is the first column (index 0), auto-fill other columns
       if (antennaIndex === 0) {
         const numAntennas = parseInt(prev.numberOfAntennas) || 1;
         for (let i = 1; i < numAntennas; i++) {
-          newFormData.antennas[i] = {
-            ...newFormData.antennas[i],
-            [fieldName]: value
-          };
+          if (!newFormData.antennas[i][fieldName]) {
+            newFormData.antennas[i] = {
+              ...newFormData.antennas[i],
+              [fieldName]: value,
+              [`${fieldName}AutoFilled`]: true
+            };
+          }
         }
       }
       
-      // Always update the current antenna
       newFormData.antennas[antennaIndex] = {
         ...newFormData.antennas[antennaIndex],
-        [fieldName]: value
+        [fieldName]: value,
+        [`${fieldName}AutoFilled`]: false
       };
       
       return newFormData;
     });
+    setHasUnsavedChanges(true);
   };
 
-  const handleCheckboxChange = (antennaIndex, fieldName, value, checked) => {
+  const handleCheckboxChange = (antennaIndex, fieldName, checked) => {
     setFormData(prev => {
       const newFormData = { ...prev };
       
-      // If this is the first column (index 0), auto-fill other columns
       if (antennaIndex === 0) {
         const numAntennas = parseInt(prev.numberOfAntennas) || 1;
         for (let i = 1; i < numAntennas; i++) {
-          newFormData.antennas[i] = {
-            ...newFormData.antennas[i],
-            [fieldName]: checked
-              ? [...(newFormData.antennas[i][fieldName] || []), value]
-              : (newFormData.antennas[i][fieldName] || []).filter(item => item !== value)
-          };
+          if (!newFormData.antennas[i][fieldName]) {
+            newFormData.antennas[i] = {
+              ...newFormData.antennas[i],
+              [fieldName]: checked,
+              [`${fieldName}AutoFilled`]: true
+            };
+          }
         }
       }
       
-      // Always update the current antenna
       newFormData.antennas[antennaIndex] = {
         ...newFormData.antennas[antennaIndex],
-        [fieldName]: checked
-          ? [...(newFormData.antennas[antennaIndex][fieldName] || []), value]
-          : (newFormData.antennas[antennaIndex][fieldName] || []).filter(item => item !== value)
+        [fieldName]: checked,
+        [`${fieldName}AutoFilled`]: false
       };
       
       return newFormData;
     });
+    setHasUnsavedChanges(true);
+  };
+
+  const handleNumberOfAntennasChange = (e) => {
+    const count = parseInt(e.target.value);
+    if (!count || count < 1) {
+      setFormData({ numberOfAntennas: "", antennas: [] });
+      setHasUnsavedChanges(true);
+      return;
+    }
+
+    const currentAntennas = formData.antennas || [];
+    const antennas = Array.from({ length: count }, (_, index) => {
+      if (index < currentAntennas.length) {
+        return currentAntennas[index];
+      }
+      return {
+        id: index + 1,
+        // ... default antenna properties
+      };
+    });
+
+    setFormData({ numberOfAntennas: e.target.value, antennas });
+    setHasUnsavedChanges(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const prevFormData = { ...formData }; // Keep a copy of current form data
+    const prevFormData = { ...formData };
     
     try {
       if (!formData.numberOfAntennas) {
@@ -433,6 +459,7 @@ const RadioAntenasForm = () => {
         }
       }
       
+      setHasUnsavedChanges(false);
       showSuccess('Antenna configuration data and images submitted successfully!');
       console.log("Response:", response.data);
       setError("");
@@ -490,14 +517,38 @@ const RadioAntenasForm = () => {
     return allImages;
   };
 
+  // Add useEffect for window beforeunload event
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-        {isLoading ? (
-          <div className="flex justify-center items-center py-8">
-            <div className="text-gray-600">Loading antenna configuration data...</div>
+        {/* Unsaved Changes Warning */}
+        {hasUnsavedChanges && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  ⚠️ You have unsaved changes
+                </p>
+                <p className="text-sm">
+                  Don't forget to save your changes before leaving this page.
+                </p>
+              </div>
+            </div>
           </div>
-        ) : (
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           
           {/* Number of Antennas Selection */}
@@ -506,10 +557,7 @@ const RadioAntenasForm = () => {
             <select
               name="numberOfAntennas"
               value={formData.numberOfAntennas}
-              onChange={(e) => {
-                setFormData(prev => ({ ...prev, numberOfAntennas: e.target.value }));
-                setError("");
-              }}
+              onChange={handleNumberOfAntennasChange}
               className="border p-3 rounded-md w-48"
               required
             >
@@ -553,7 +601,9 @@ const RadioAntenasForm = () => {
                       <select
                         value={antenna.operator}
                         onChange={(e) => handleChange(antennaIndex, 'operator', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm ${
+                          antenna.operatorAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}
                       >
                         <option value="">-- Select --</option>
                         <option value="Operator 1">Operator 1</option>
@@ -576,8 +626,11 @@ const RadioAntenasForm = () => {
                         type="number"
                         value={antenna.baseHeight}
                         onChange={(e) => handleChange(antennaIndex, 'baseHeight', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
-                        placeholder="000"
+                        className={`w-full p-2 border rounded text-sm ${
+                          antenna.baseHeightAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}
+                        placeholder="Enter height..."
+                        required
                       />
                     </td>
                   ))}
@@ -619,7 +672,9 @@ const RadioAntenasForm = () => {
                       <select
                         value={antenna.sector}
                         onChange={(e) => handleChange(antennaIndex, 'sector', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm ${
+                          antenna.sectorAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}
                       >
                         <option value="">-- Select --</option>
                         {[1, 2, 3, 4, 5].map(sector => (
@@ -637,16 +692,20 @@ const RadioAntenasForm = () => {
                   </td>
                   {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                     <td key={antennaIndex} className="border px-2 py-2">
-                      <div className="grid grid-cols-2 gap-1">
+                      <div className={`grid grid-cols-2 gap-1 ${
+                        antenna.technologyAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                      }`}>
                         {['2G', '3G', '4G', '5G'].map(tech => (
-                          <label key={tech} className="flex items-center gap-1 text-sm">
+                          <label key={tech} className="flex items-center gap-1 text-sm cursor-pointer">
                             <input
                               type="checkbox"
                               checked={antenna.technology.includes(tech)}
-                              onChange={(e) => handleCheckboxChange(antennaIndex, 'technology', tech, e.target.checked)}
-                              className="w-4 h-4"
+                              onChange={(e) => handleCheckboxChange(antennaIndex, 'technology', e.target.checked)}
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                             />
-                            {tech}
+                            <span className={antenna.technologyAutoFilled ? 'text-[#006100]' : ''}>
+                              {tech}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -665,7 +724,9 @@ const RadioAntenasForm = () => {
                         type="number"
                         value={antenna.azimuth}
                         onChange={(e) => handleChange(antennaIndex, 'azimuth', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm ${
+                          antenna.azimuthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}
                         placeholder="0000"
                         min="0"
                         max="360"
@@ -683,16 +744,18 @@ const RadioAntenasForm = () => {
                     <td key={antennaIndex} className="border px-2 py-2">
                       <div className="flex gap-4">
                         {['Yes', 'No'].map(option => (
-                          <label key={option} className="flex items-center gap-1 text-sm">
+                          <label key={option} className="flex items-center gap-1 text-sm cursor-pointer">
                             <input
                               type="radio"
                               name={`mechanicalTiltExist-${antennaIndex}`}
                               value={option}
                               checked={antenna.mechanicalTiltExist === option}
                               onChange={(e) => handleChange(antennaIndex, 'mechanicalTiltExist', e.target.value)}
-                              className="w-4 h-4"
+                              className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                             />
-                            {option}
+                            <span className={antenna.mechanicalTiltExistAutoFilled ? 'text-[#006100]' : ''}>
+                              {option}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -712,9 +775,9 @@ const RadioAntenasForm = () => {
                           type="number"
                           value={antenna.mechanicalTilt}
                           onChange={(e) => handleChange(antennaIndex, 'mechanicalTilt', e.target.value)}
-                          className={`w-full p-2 border rounded text-sm ${antenna.mechanicalTiltExist !== 'Yes' 
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                            : ''}`}
+                          className={`w-full p-2 border rounded text-sm ${
+                            antenna.mechanicalTiltAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
                           placeholder={antenna.mechanicalTiltExist === 'Yes' ? '0000' : 'N/A'}
                           disabled={antenna.mechanicalTiltExist !== 'Yes'}
                         />
@@ -734,7 +797,9 @@ const RadioAntenasForm = () => {
                         type="number"
                         value={antenna.electricalTilt}
                         onChange={(e) => handleChange(antennaIndex, 'electricalTilt', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm ${
+                          antenna.electricalTiltAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}
                         placeholder="0000"
                       />
                     </td>
@@ -751,7 +816,9 @@ const RadioAntenasForm = () => {
                       <select
                         value={antenna.retConnectivity}
                         onChange={(e) => handleChange(antennaIndex, 'retConnectivity', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm ${
+                          antenna.retConnectivityAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}
                       >
                         <option value="">-- Select --</option>
                         <option value="Chaining">Chaining</option>
@@ -829,7 +896,9 @@ const RadioAntenasForm = () => {
                         <select
                         value={antenna.nokiaModuleName}
                         onChange={(e) => handleChange(antennaIndex, 'nokiaModuleName', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm ${
+                          antenna.nokiaModuleNameAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}
                       >
                         <option value="">-- Select --</option>
                         <option value="A">A</option>
@@ -880,7 +949,9 @@ const RadioAntenasForm = () => {
                           type="number"
                           value={antenna.nokiaFiberLength}
                           onChange={(e) => handleChange(antennaIndex, 'nokiaFiberLength', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
+                          className={`w-full p-2 border rounded text-sm ${
+                            antenna.nokiaFiberLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
                           placeholder="0000"
                         />
                       </td>
@@ -905,9 +976,9 @@ const RadioAntenasForm = () => {
                           type="text"
                           value={antenna.otherModelNumber}
                           onChange={(e) => handleChange(antennaIndex, 'otherModelNumber', e.target.value)}
-                          className={`w-full p-2 border rounded text-sm ${antenna.vendor === 'Nokia' || !antenna.vendor 
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                            : ''}`}
+                          className={`w-full p-2 border rounded text-sm ${
+                            antenna.otherModelNumberAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
                           placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? 'Xxxx' : 'N/A'}
                           disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
                         />
@@ -925,9 +996,9 @@ const RadioAntenasForm = () => {
                           type="number"
                           value={antenna.otherLength}
                           onChange={(e) => handleChange(antennaIndex, 'otherLength', e.target.value)}
-                              className={`w-full p-2 border rounded text-sm ${antenna.vendor === 'Nokia' || !antenna.vendor 
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                            : ''}`}
+                              className={`w-full p-2 border rounded text-sm ${
+                                antenna.otherLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                              }`}
                           placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? '0000' : 'N/A'}
                           disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
                         />
@@ -945,9 +1016,9 @@ const RadioAntenasForm = () => {
                           type="number"
                           value={antenna.otherWidth}
                           onChange={(e) => handleChange(antennaIndex, 'otherWidth', e.target.value)}
-                          className={`w-full p-2 border rounded text-sm ${antenna.vendor === 'Nokia' || !antenna.vendor 
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                            : ''}`}
+                          className={`w-full p-2 border rounded text-sm ${
+                            antenna.otherWidthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
                           placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? '0000' : 'N/A'}
                           disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
                         />
@@ -965,9 +1036,9 @@ const RadioAntenasForm = () => {
                           type="number"
                           value={antenna.otherDepth}
                           onChange={(e) => handleChange(antennaIndex, 'otherDepth', e.target.value)}
-                          className={`w-full p-2 border rounded text-sm ${antenna.vendor === 'Nokia' || !antenna.vendor 
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                            : ''}`}
+                          className={`w-full p-2 border rounded text-sm ${
+                            antenna.otherDepthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
                           placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? '0000' : 'N/A'}
                           disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
                         />
@@ -987,7 +1058,7 @@ const RadioAntenasForm = () => {
                             <input
                               type="checkbox"
                               checked={antenna.otherPortType.includes(port)}
-                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherPortType', port, e.target.checked)}
+                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherPortType', e.target.checked)}
                               className="w-4 h-4"
                             />
                             {port}
@@ -1010,7 +1081,7 @@ const RadioAntenasForm = () => {
                             <input
                               type="checkbox"
                               checked={antenna.otherBands.includes(band)}
-                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherBands', band, e.target.checked)}
+                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherBands', e.target.checked)}
                               className="w-4 h-4"
                             />
                             {band}
@@ -1031,7 +1102,9 @@ const RadioAntenasForm = () => {
                           type="number"
                           value={antenna.otherPortCount}
                           onChange={(e) => handleChange(antennaIndex, 'otherPortCount', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
+                          className={`w-full p-2 border rounded text-sm ${
+                            antenna.otherPortCountAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
                           placeholder="0000"
                         />
                       </td>
@@ -1048,7 +1121,9 @@ const RadioAntenasForm = () => {
                           type="number"
                           value={antenna.otherFreePorts}
                           onChange={(e) => handleChange(antennaIndex, 'otherFreePorts', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
+                          className={`w-full p-2 border rounded text-sm ${
+                            antenna.otherFreePortsAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
                           placeholder="0000"
                         />
                       </td>
@@ -1067,7 +1142,7 @@ const RadioAntenasForm = () => {
                             <input
                               type="checkbox"
                               checked={antenna.otherFreeBands.includes(freeBand)}
-                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherFreeBands', freeBand, e.target.checked)}
+                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherFreeBands', e.target.checked)}
                               className="w-4 h-4"
                             />
                             {freeBand}
@@ -1122,7 +1197,9 @@ const RadioAntenasForm = () => {
                         type="number"
                         value={antenna.sideArmLength}
                         onChange={(e) => handleChange(antennaIndex, 'sideArmLength', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm ${
+                          antenna.sideArmLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}
                         placeholder="000"
                       />
                     </td>
@@ -1139,7 +1216,9 @@ const RadioAntenasForm = () => {
                         type="number"
                         value={antenna.sideArmDiameter}
                         onChange={(e) => handleChange(antennaIndex, 'sideArmDiameter', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm ${
+                          antenna.sideArmDiameterAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}
                         placeholder="000"
                       />
                     </td>
@@ -1156,7 +1235,9 @@ const RadioAntenasForm = () => {
                         type="number"
                         value={antenna.sideArmOffset}
                         onChange={(e) => handleChange(antennaIndex, 'sideArmOffset', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm ${
+                          antenna.sideArmOffsetAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}
                         placeholder="000"
                       />
                     </td>
@@ -1174,7 +1255,9 @@ const RadioAntenasForm = () => {
                         type="number"
                         value={antenna.earthCableLength}
                         onChange={(e) => handleChange(antennaIndex, 'earthCableLength', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm ${
+                          antenna.earthCableLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}
                         placeholder="000"
                       />
                     </td>
@@ -1237,7 +1320,6 @@ const RadioAntenasForm = () => {
             </button>
           </div>
         </form>
-        )}
       </div>
       <ImageUploader 
         images={getAllImages()} 
