@@ -14,6 +14,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configure Git safe directory
+        shell: powershell
+        run: |
+          git config --global --add safe.directory "$env:GITHUB_WORKSPACE"
+
       - name: Debug environment
         shell: powershell  # Use PowerShell for Windows compatibility
         run: |
