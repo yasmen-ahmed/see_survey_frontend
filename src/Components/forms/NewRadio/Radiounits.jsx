@@ -72,7 +72,10 @@ const RadioUnitsForm = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-screen bg-gray-100">
+      <div className="flex w-full p-4 gap-4">
+        {/* Main form container - 80% width */}
+        <div className="w-4/5 bg-white rounded-xl shadow-md p-4">
       <DynamicFormTable
         title=""
         entityName="Radio Unit"
@@ -87,11 +90,13 @@ const RadioUnitsForm = () => {
         maxHeight="600px"
         submitButtonText="Save and Continue"
       />
+      </div>
       <ImageUploader
         images={allImages}
         onImageUpload={handleImageUpload}
         uploadedImages={uploadedImages}
       />
+      </div>
     </div>
   );
 };

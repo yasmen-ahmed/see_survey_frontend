@@ -26,6 +26,7 @@ const NewFPFHForm = () => {
       {
         label: `New FPFH ${fpfhNumber} Proposed Location`,
         name: `new_fpfh_${fpfhNumber}_proposed_location`,
+        required: true
       },
       {
         label: `New FPFH ${fpfhNumber} Proposed Location (Optional)`,
@@ -53,32 +54,45 @@ const NewFPFHForm = () => {
   };
 
   const handleFormSubmit = async (e) => {
-    e.preventDefault(); // Prevent default form submission
+    e.preventDefault();
     await handleSubmit(e);
   };
 
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  }
+
   return (
-    <>
-      <DynamicFormTable
-        title=""
-        entityName="FPFH"
-        entityCount={fpfhCount}
-        entities={fpfhForms}
-        questions={fpfhQuestions}
-        errors={errors}
-        onChange={handleChange}
-        onSubmit={handleFormSubmit}
-        onEntityCountChange={handleFpfhCountChange}
-        isSubmitting={isSubmitting}
-        maxHeight="600px"
-        submitButtonText="Save and Continue"
-      />
-      <ImageUploader
-        images={allImages}
-        onImageUpload={handleImageUpload}
-        uploadedImages={uploadedImages}
-      />
-    </>
+    <div className="flex min-h-screen bg-gray-100">
+      <div className="flex w-full p-4 gap-4">
+        {/* Main form container - 80% width */}
+        <div className="w-4/5 bg-white rounded-xl shadow-md p-4">
+          <DynamicFormTable
+            title=""
+            entityName="FPFH"
+            entityCount={fpfhCount}
+            entities={fpfhForms}
+            questions={fpfhQuestions}
+            errors={errors}
+            onChange={handleChange}
+            onSubmit={handleFormSubmit}
+            onEntityCountChange={handleFpfhCountChange}
+            isSubmitting={isSubmitting}
+            maxHeight="calc(100vh - 150px)"
+            submitButtonText="Save and Continue"
+          />
+        </div>
+
+        {/* Right side - Image uploader (20%) */}
+  
+          <ImageUploader
+            images={allImages}
+            onImageUpload={handleImageUpload}
+            uploadedImages={uploadedImages}
+          />
+      
+      </div>
+    </div>
   );
 };
 
