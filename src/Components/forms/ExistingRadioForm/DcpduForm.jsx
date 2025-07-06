@@ -18,6 +18,76 @@ const DcDistributionForm = () => {
   const [loadingCbOptions, setLoadingCbOptions] = useState({});
   // Add state to track auto-filled fields
   const [autoFilledFields, setAutoFilledFields] = useState({});
+  
+  // Add state to track form changes
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [initialFormState, setInitialFormState] = useState(null);
+
+  // Function to get current form state
+  const getCurrentFormState = useCallback(() => {
+    return {
+      dcPduExist,
+      pduCount,
+      pdus,
+      uploadedImages
+    };
+  }, [dcPduExist, pduCount, pdus, uploadedImages]);
+
+  // Function to compare form states
+  const hasFormChanged = useCallback((current, initial) => {
+    if (!initial) return false;
+    return JSON.stringify(current) !== JSON.stringify(initial);
+  }, []);
+
+  // Track form changes
+  useEffect(() => {
+    if (initialFormState) {
+      const currentState = getCurrentFormState();
+      const changed = hasFormChanged(currentState, initialFormState);
+      setHasUnsavedChanges(changed);
+    }
+  }, [dcPduExist, pduCount, pdus, uploadedImages, initialFormState, getCurrentFormState, hasFormChanged]);
+
+  // Set initial form state when data is loaded
+  useEffect(() => {
+    if (dcPduExist !== null && !initialFormState) {
+      setInitialFormState(getCurrentFormState());
+    }
+  }, [dcPduExist, initialFormState, getCurrentFormState]);
+
+  // Add warning for page navigation/refresh
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return 'You have unsaved changes. Are you sure you want to leave?';
+      }
+    };
+
+    // Add event listener for browser navigation
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Add event listener for React Router navigation
+    const handlePopState = (e) => {
+      if (hasUnsavedChanges) {
+        const userConfirmed = window.confirm(
+          'You have unsaved changes. Are you sure you want to leave this page? All unsaved data will be lost.'
+        );
+        if (!userConfirmed) {
+          // Push current state back to prevent navigation
+          window.history.pushState(null, '', window.location.pathname);
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [hasUnsavedChanges]);
 
   // Function to fetch CB options for a specific PDU
   const fetchCbOptions = useCallback(async (pduIndex, feedCabinet, feedDistribution) => {
@@ -573,6 +643,10 @@ const DcDistributionForm = () => {
       console.log("Response:", response.data);
       setError(""); // Clear any previous errors
       setAutoFilledFields({}); // Clear auto-filled status after successful save
+      
+      // Reset unsaved changes flag and update initial form state
+      setHasUnsavedChanges(false);
+      setInitialFormState(getCurrentFormState());
     } catch (err) {
       console.error("Error submitting External DC Distribution data:", err);
       console.error("Full error response:", err.response?.data);
@@ -584,6 +658,29 @@ const DcDistributionForm = () => {
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
         <form className="space-y-4" onSubmit={handleSubmit}>
+          
+          {/* Unsaved Changes Indicator */}
+          {hasUnsavedChanges && (
+            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+              <div className="flex items-center">
+                <div className="ml-3">
+                  <p className="text-sm font-medium">
+                    ⚠️ You have unsaved changes
+                  </p>
+                  <p className="text-sm">
+                    Don't forget to save your changes before leaving this page.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Error Display */}
+          {error && (
+            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
 
           {/* Radio: Is there a separate PDU? */}
           <div className="flex flex-col">
@@ -669,10 +766,10 @@ const DcDistributionForm = () => {
                         Is this a shared panel with other operator?
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'shared') ? 'bg-red-50' : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'shared') ? 'bg-yellow-100 ' : ''}`}>
                           <div className="flex gap-4 mt-1">
                             {["Yes", "No"].map((opt) => (
-                              <label key={opt} className={`flex items-center gap-2 ${isFieldAutoFilled(pduIndex, 'shared') ? 'text-red-600' : ''}`}>
+                              <label key={opt} className={`flex items-center gap-2 ${isFieldAutoFilled(pduIndex, 'shared') ? 'text-yellow-500' : ''}`}>
                                 <input
                                   type="radio"
                                   checked={pdu.shared === opt}
@@ -692,10 +789,10 @@ const DcDistributionForm = () => {
                         What is the model of this DC distribution module?
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'model') ? 'bg-red-50' : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'model') ? 'bg-yellow-100' : ''}`}>
                           <div className="grid grid-cols-2 gap-1">
                             {["Nokia FPFH", "Nokia FPFD", "DC panel", "Other"].map((model) => (
-                              <label key={model} className={`flex items-center gap-2 ${isFieldAutoFilled(pduIndex, 'model') ? 'text-red-600' : ''}`}>
+                              <label key={model} className={`flex items-center gap-2 ${isFieldAutoFilled(pduIndex, 'model') ? 'text-yellow-500' : ''}`}>
                                 <input
                                   type="radio"
                                   checked={pdu.model === model}
@@ -715,10 +812,10 @@ const DcDistributionForm = () => {
                         Where is this DC module located?
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'location') ? 'bg-red-50' : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'location') ? 'bg-yellow-100' : ''}`}>
                           <div className="flex gap-4 mt-1">
                             {["On ground level", "On tower"].map((loc) => (
-                              <label key={loc} className={`flex items-center gap-2 ${isFieldAutoFilled(pduIndex, 'location') ? 'text-red-600' : ''}`}>
+                              <label key={loc} className={`flex items-center gap-2 ${isFieldAutoFilled(pduIndex, 'location') ? 'text-yellow-500' : ''}`}>
                                 <input
                                   type="radio"
                                   checked={pdu.location === loc}
@@ -738,7 +835,7 @@ const DcDistributionForm = () => {
                         DC PDU base height from tower base level (meter)
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'towerBaseHeight') ? 'bg-red-50' : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'towerBaseHeight') ? 'bg-yellow-100' : ''}`}>
                           {pdu.location === "On tower" ? (
                             <input
                               type="number"
@@ -760,7 +857,7 @@ const DcDistributionForm = () => {
                         DC feed is coming from which cabinet?
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'feedCabinet') ? 'bg-red-50' : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'feedCabinet') ? 'bg-yellow-100' : ''}`}>
                           <select
                             value={pdu.feedCabinet}
                             onChange={(e) => updatePdu(pduIndex, "feedCabinet", e.target.value)}
@@ -782,10 +879,10 @@ const DcDistributionForm = () => {
                         DC feed is coming from which DC distribution inside the cabinet?
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'feedDistribution') ? 'bg-red-50' : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'feedDistribution') ? 'bg-yellow-100' : ''}`}>
                           <div className="flex gap-4 mt-1">
                             {["BLVD", "LLVD", "PDU"].map((dist) => (
-                              <label key={dist} className={`flex items-center gap-2 ${isFieldAutoFilled(pduIndex, 'feedDistribution') ? 'text-red-600' : ''}`}>
+                              <label key={dist} className={`flex items-center gap-2 ${isFieldAutoFilled(pduIndex, 'feedDistribution') ? 'text-yellow-500' : ''}`}>
                                 <input
                                   type="radio"
                                   checked={pdu.feedDistribution === dist}
@@ -811,7 +908,7 @@ const DcDistributionForm = () => {
                         const canShowOptions = pdu.feedCabinet && pdu.feedDistribution;
                         
                         return (
-                          <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'cbFuse') ? 'bg-red-50' : ''}`}>
+                          <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'cbFuse') ? 'bg-yellow-100' : ''}`}>
                             <select
                               value={pdu.cbFuse}
                               onChange={(e) => updatePdu(pduIndex, "cbFuse", e.target.value)}
@@ -860,7 +957,7 @@ const DcDistributionForm = () => {
                         Length of DC power cable (m)
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'cableLength') ? 'bg-red-50' : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'cableLength') ? 'bg-yellow-100' : ''}`}>
                           <input
                             type="number"
                             className={`w-full p-2 border rounded text-sm ${isFieldAutoFilled(pduIndex, 'cableLength') ? 'border-red-300 text-red-600' : ''}`}
@@ -878,7 +975,7 @@ const DcDistributionForm = () => {
                         Cross section of DC cable (mm²)
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'cableCrossSection') ? 'bg-red-50' : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'cableCrossSection') ? 'bg-yellow-100' : ''}`}>
                           <input
                             type="number"
                             className={`w-full p-2 border rounded text-sm ${isFieldAutoFilled(pduIndex, 'cableCrossSection') ? 'border-red-300 text-red-600' : ''}`}
@@ -896,10 +993,10 @@ const DcDistributionForm = () => {
                         Does the DC PDU have free CBs/Fuses?
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'hasFreeCbs') ? 'bg-red-50' : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'hasFreeCbs') ? 'bg-yellow-100' : ''}`}>
                           <div className="flex gap-4 mt-1">
                             {["Yes", "No"].map((opt) => (
-                              <label key={opt} className={`flex items-center gap-2 ${isFieldAutoFilled(pduIndex, 'hasFreeCbs') ? 'text-red-600' : ''}`}>
+                              <label key={opt} className={`flex items-center gap-2 ${isFieldAutoFilled(pduIndex, 'hasFreeCbs') ? 'text-yellow-500' : ''}`}>
                                 <input
                                   type="radio"
                                   checked={pdu.hasFreeCbs === opt}
@@ -919,7 +1016,7 @@ const DcDistributionForm = () => {
                       Ratings of DC CBs/Fuses in the PDU
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'cbDetails') ? 'bg-red-50' : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'cbDetails') ? 'bg-yellow-100' : ''}`}>
                           <DynamicTable
                             title=""
                             rows={tableRows}
@@ -941,12 +1038,6 @@ const DcDistributionForm = () => {
                   </tbody>
                 </table>
               </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="text-red-600 text-sm mt-2">
-              {error}
             </div>
           )}
 
