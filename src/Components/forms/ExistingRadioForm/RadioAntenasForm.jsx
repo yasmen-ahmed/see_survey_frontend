@@ -558,7 +558,7 @@ const RadioAntenasForm = () => {
               name="numberOfAntennas"
               value={formData.numberOfAntennas}
               onChange={handleNumberOfAntennasChange}
-              className="border p-3 rounded-md w-48"
+              className="form-input"
               required
             >
           
@@ -569,12 +569,12 @@ const RadioAntenasForm = () => {
           </div>
 
           {/* Table Layout */}
-          <div className="overflow-auto max-h-[600px]">
+          <div className="overflow-auto max-h-[700px]">
             <table className="table-auto w-full border-collapse">
               <thead className="bg-blue-500 text-white">
                 <tr>
                   <th
-                    className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-30"
+                    className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-10"
                     style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
                   >
                     Field Description
@@ -582,7 +582,7 @@ const RadioAntenasForm = () => {
                   {Array.from({ length: parseInt(formData.numberOfAntennas) || 1 }, (_, i) => (
                     <th
                       key={i}
-                      className="border px-4 py-3 text-center font-semibold min-w-[300px] sticky top-0 bg-blue-500 z-20"
+                      className="border px-4 py-3 text-center font-semibold min-w-[300px] sticky top-0 bg-blue-500 z-10"
                     >
                       Antenna #{i + 1}
                     </th>

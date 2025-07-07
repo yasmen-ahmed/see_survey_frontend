@@ -385,7 +385,7 @@ const MwAntennasForm = () => {
                             step="0.1"
                             value={antenna.height}
                             onChange={(e) => handleAntennaChange(antennaIndex, 'height', e.target.value)}
-                            className={`w-full p-2 border rounded text-sm ${
+                            className={`form-input ${
                               antenna.heightAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
                             }`}
                             placeholder="Enter height..."

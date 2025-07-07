@@ -211,7 +211,7 @@ const GPSAntennaTab = () => {
                 min="0"
                 value={formData.height}
                 onChange={(e) => handleChange('height', e.target.value)}
-                className="w-full border border-gray-300 p-2 rounded"
+                className="form-input"
                 placeholder="Enter height in meters"
                 required
               />
@@ -227,7 +227,7 @@ const GPSAntennaTab = () => {
                 min="0"
                 value={formData.cableLength}
                 onChange={(e) => handleChange('cableLength', e.target.value)}
-                className="w-full border border-gray-300 p-2 rounded"
+                className="form-input"
                 placeholder="Enter cable length in meters"
                 required
               />

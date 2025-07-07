@@ -553,12 +553,12 @@ const OutdoorCabinetsForm = () => {
           </div>
 
           {/* Table Layout */}
-          <div className="overflow-auto max-h-[600px]">
+          <div className="overflow-auto max-h-[700px]">
             <table className="table-auto w-full border-collapse">
               <thead className="bg-blue-500 text-white">
                 <tr>
                   <th
-                    className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-30"
+                    className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-10"
                     style={{ width: '200px', minWidth: '200px', maxWidth: '200px' }}
                   >
                     Field Description
@@ -566,7 +566,7 @@ const OutdoorCabinetsForm = () => {
                   {Array.from({ length: parseInt(formData.numberOfCabinets) || 1 }, (_, i) => (
                     <th
                       key={i}
-                      className="border px-4 py-3 text-center font-semibold min-w-[340px] sticky top-0 bg-blue-500 z-20"
+                      className="border px-4 py-3 text-center font-semibold min-w-[340px] sticky top-0 bg-blue-500 z-10"
                     >
                       Existing outdoor cabinet #{i + 1}
                     </th>

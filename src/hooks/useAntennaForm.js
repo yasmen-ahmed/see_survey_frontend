@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { showSuccess, showError } from '../utils/notifications';
+import { antennaQuestions } from '../config/antennaQuestions';
 
 const initialAntennaForm = {
   operator: '',
@@ -149,22 +150,87 @@ export const useAntennaForm = (sessionId) => {
 
   const validateForm = () => {
     const newErrors = {};
+    
+    // Get required fields from antennaQuestions configuration
+    const requiredFields = antennaQuestions.reduce((acc, question) => {
+      if (question.required) {
+        acc[question.key] = question.label;
+      }
+      return acc;
+    }, {});
+
     antennaForms.slice(0, antennaCount).forEach((antenna, index) => {
-      if (!antenna.sectorNumber) {
-        newErrors[`${index}.sectorNumber`] = 'Please select sector number';
+      // Validate all required fields
+      Object.entries(requiredFields).forEach(([field, label]) => {
+        const value = antenna[field];
+        if (!value || (Array.isArray(value) && value.length === 0)) {
+          newErrors[`${index}.${field}`] = `Please enter ${label.toLowerCase()}`;
+        }
+      });
+
+      // Additional conditional validations
+    
+    if (!antenna.towerSection) {
+        newErrors[`${index}.towerSection`] = 'Please enter tower section ';
       }
-      if (!antenna.newOrSwap) {
-        newErrors[`${index}.newOrSwap`] = 'Please select new or swap';
+      if (antenna.towerSection === 'Angular') {
+        if (!antenna.angularL1Dimension) {
+          newErrors[`${index}.angularL1Dimension`] = 'Please enter L1 dimension';
+        }
+        if (!antenna.angularL2Dimension) {
+          newErrors[`${index}.angularL2Dimension`] = 'Please enter L2 dimension';
+        }
       }
-      if (!antenna.technologies || antenna.technologies.length === 0) {
-        newErrors[`${index}.technologies`] = 'Please select at least one technology';
+
+      if (antenna.towerSection === 'Tubular' && !antenna.tubularCrossSection) {
+        newErrors[`${index}.tubularCrossSection`] = 'Please enter cross section';
       }
-      if (!antenna.baseHeight) {
-        newErrors[`${index}.baseHeight`] = 'Please enter base height';
+      if (!antenna.sideArmOption) {
+          newErrors[`${index}.sideArmOption`] = 'Please enter earth cable ';
+        }
+
+      if (antenna.sideArmOption && antenna.sideArmOption !== 'Use existing empty side arm') {
+        if (!antenna.sideArmLength) {
+          newErrors[`${index}.sideArmLength`] = 'Please enter side arm length';
+        }
+        if (!antenna.sideArmCrossSection) {
+          newErrors[`${index}.sideArmCrossSection`] = 'Please enter side arm cross section';
+        }
+        if (!antenna.sideArmOffset) {
+          newErrors[`${index}.sideArmOffset`] = 'Please enter side arm offset';
+        }
       }
-      if (!antenna.towerLeg) {
-        newErrors[`${index}.towerLeg`] = 'Please select tower leg';
+
+      if (!antenna.earthBusExists ) {
+        newErrors[`${index}.earthBusExists`] = 'Please enter earth cable ';
       }
+      if (antenna.earthBusExists === 'Yes' && !antenna.earthCableLength) {
+        newErrors[`${index}.earthCableLength`] = 'Please enter earth cable length';
+      }
+
+      // Validate numeric fields have valid values
+      const numericFields = [
+        { key: 'azimuth', min: 0, max: 360, label: 'Azimuth' },
+        { key: 'baseHeight', min: 0, label: 'Base height' },
+        { key: 'angularL1Dimension', min: 0, label: 'L1 dimension' },
+        { key: 'angularL2Dimension', min: 0, label: 'L2 dimension' },
+        { key: 'tubularCrossSection', min: 0, label: 'Cross section' },
+        { key: 'sideArmLength', min: 0, label: 'Side arm length' },
+        { key: 'sideArmCrossSection', min: 0, label: 'Side arm cross section' },
+        { key: 'sideArmOffset', min: 0, label: 'Side arm offset' },
+        { key: 'earthCableLength', min: 0, max: 10, label: 'Earth cable length' }
+      ];
+
+      numericFields.forEach(({ key, min, max, label }) => {
+        const value = parseFloat(antenna[key]);
+        if (antenna[key] && isNaN(value)) {
+          newErrors[`${index}.${key}`] = `${label} must be a number`;
+        } else if (antenna[key] && value < min) {
+          newErrors[`${index}.${key}`] = `${label} must be greater than ${min}`;
+        } else if (max && antenna[key] && value > max) {
+          newErrors[`${index}.${key}`] = `${label} must be less than ${max}`;
+        }
+      });
     });
 
     setErrors(newErrors);
@@ -175,6 +241,7 @@ export const useAntennaForm = (sessionId) => {
     e.preventDefault();
 
     if (!validateForm()) {
+      showError('Please fill in all required fields');
       return;
     }
 

@@ -203,7 +203,7 @@ const AntennaStructureForm = () => {
               name="gfHeight"
               value={formData.gfHeight}
               onChange={handleChange}
-              className="border p-3 rounded-md"
+              className="form-input"
               placeholder="000"
             />
               <hr className='mt-2' /> 
@@ -220,7 +220,7 @@ const AntennaStructureForm = () => {
               name="rtStructureCount"
               value={formData.rtStructureCount}
               onChange={handleChange}
-              className="border p-3 rounded-md"
+              className="form-input"
             >
               <option value="">-- Select --</option>
               {[...Array(10)].map((_, i) => (
@@ -258,7 +258,7 @@ const AntennaStructureForm = () => {
               name="buildingHeight"
               value={formData.buildingHeight}
               onChange={handleChange}
-              className="border p-3 rounded-md"
+              className="form-input"
               placeholder="000"
             />
             <hr className='mt-2' /> 
@@ -293,7 +293,7 @@ const AntennaStructureForm = () => {
               name="freeHoles"
               value={formData.freeHoles}
               onChange={handleChange}
-              className="border p-3 rounded-md"
+              className="form-input"
             >
               <option value="">-- Select --</option>
               {[...Array(10)].map((_, i) => (

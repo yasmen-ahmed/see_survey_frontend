@@ -206,42 +206,46 @@ const AcInformationForm = () => {
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
         <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" onSubmit={handleSubmit}>
           {/* Power Source Selection */}
-          <div>
+          <div className="col-span-2">
             <label className="font-semibold mb-1">Select Power Source</label>
             <div className="grid grid-cols-4 gap-2">
-    <label>
-        <input
-            type="checkbox"
-            checked={powerSources.includes('commercial_power')}
-            onChange={() => handlePowerSourceChange('commercial_power')}
-        />
-        Commercial power
-    </label>
-    <label>
-        <input
-            type="checkbox"
-            checked={powerSources.includes('diesel_generator')}
-            onChange={() => handlePowerSourceChange('diesel_generator')}
-        />
-        Diesel generator
-    </label>
-    <label>
-        <input
-            type="checkbox"
-            checked={powerSources.includes('solar_cell')}
-            onChange={() => handlePowerSourceChange('solar_cell')}
-        />
-        Solar cell
-    </label>
-    <label>
-        <input
-            type="checkbox"
-            checked={powerSources.includes('other')}
-            onChange={() => handlePowerSourceChange('other')}
-        />
-        Other
-    </label>
-</div>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={powerSources.includes('commercial_power')}
+                  onChange={() => handlePowerSourceChange('commercial_power')}
+
+                />
+                Commercial power
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={powerSources.includes('diesel_generator')}
+                  onChange={() => handlePowerSourceChange('diesel_generator')}
+                
+                />
+                Diesel generator
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={powerSources.includes('solar_cell')}
+                  onChange={() => handlePowerSourceChange('solar_cell')}
+                 
+                />
+                Solar cell
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={powerSources.includes('other')}
+                  onChange={() => handlePowerSourceChange('other')}
+                
+                />
+                Other
+              </label>
+            </div>
           </div>
 
 
@@ -288,7 +292,7 @@ const AcInformationForm = () => {
                           onChange={(e) =>
                             handleGeneratorChange(index, 'capacity', e.target.value)
                           }
-                          className="border p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="border p-3 form-input focus:outline-none focus:ring-2 focus:ring-blue-500 "
                           required
                         />
                       </div>
@@ -334,7 +338,7 @@ const AcInformationForm = () => {
                   name="solarCapacity"
                   value={solarCapacity}
                   onChange={(e) => setSolarCapacity(e.target.value)}
-                  className="border p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="border p-3 form-input focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>

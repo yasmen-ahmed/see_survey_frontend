@@ -269,7 +269,7 @@ const ACPanelForm = () => {
               name="cableLength"
               value={formData.cableLength}
               onChange={handleChange}
-              className="border p-3 rounded-md"
+              className="form-input"
               required
             />
           </div>
@@ -281,7 +281,7 @@ const ACPanelForm = () => {
               name="crossSection"
               value={formData.crossSection}
               onChange={handleChange}
-              className="border p-3 rounded-md"
+              className="form-input"
               required
             />
           </div>
@@ -293,7 +293,7 @@ const ACPanelForm = () => {
               name="mainCBRating"
               value={formData.mainCBRating}
               onChange={handleChange}
-              className="border p-3 rounded-md"
+              className="form-input"
               required
             />
           </div>
@@ -332,7 +332,7 @@ const ACPanelForm = () => {
                       handleChange({
                         target: {
                           name: "hasFreeCBs",
-                          value: e.target.value === "true", // convert string to boolean
+                          value: e.target.value === "true",
                         },
                       })
                     }
@@ -353,7 +353,7 @@ const ACPanelForm = () => {
               name="free_cb_spaces"
               value={formData.free_cb_spaces}
               onChange={handleChange}
-              className="border p-3 rounded-md"
+              className="form-input"
               required
             >
               <option value="">Select</option>

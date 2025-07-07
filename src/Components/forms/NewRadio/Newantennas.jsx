@@ -66,7 +66,7 @@ const NewAntennaForm = () => {
             onChange={handleChange}
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
-            maxHeight="600px"
+            maxHeight="800px"
             submitButtonText="Save and Continue"
           />
         </div>

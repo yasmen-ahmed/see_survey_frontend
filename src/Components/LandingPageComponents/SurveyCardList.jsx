@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useSurveyContext } from '../../context/SurveyContext';
 
 const SurveyCardList = () => {
   const [surveys, setSurveys] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { updateSurveyData } = useSurveyContext();
 
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/surveys`)
@@ -80,6 +82,21 @@ const SurveyCardList = () => {
     return responseData;
   };
 
+  const handleContinue = (survey) => {
+    // Update the context with the survey data
+    updateSurveyData({
+      sessionId: survey.session_id,
+      siteId: survey.site_id,
+      createdBy: survey.createdBy?.username,
+      assignedTo: survey.user?.username,
+      project: survey.project,
+      status: survey.TSSR_Status
+    });
+
+    // Navigate to the site page
+    navigate(`/sites/${survey.session_id}/${survey.site_id}/site-info/site-location`);
+  };
+
   if (loading) {
     return <div className="p-6">Loading surveys...</div>;
   }
@@ -124,9 +141,7 @@ const SurveyCardList = () => {
               </td>
               <td className="px-6 py-4">
                 <button
-                  onClick={() => navigate(
-                    `/sites/${survey.session_id}/${survey.site_id}/site-info/site-location`
-                  )}
+                  onClick={() => handleContinue(survey)}
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
                 >
                   Continue

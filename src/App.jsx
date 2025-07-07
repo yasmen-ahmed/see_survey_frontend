@@ -1,17 +1,15 @@
 import './App.css'
-import Mainlayout from './pages/Mainlayout.jsx'
-import Createform from './Components/LandingPageComponents/Createform.jsx'
-import LandingPage from './pages/LandingPage.jsx'
-import SignupForm from './Components/Auth/SignupForm.jsx'
-import RoutesComponent from './routes/routes.jsx'
-function App() {
+import { BrowserRouter } from 'react-router-dom'
+import RoutesComponent from './routes/routes'
+import { SurveyProvider } from './context/SurveyContext'
 
+function App() {
   return (
-    <>
-      <RoutesComponent/>
-   {/* <Createform/> */}
-   {/*<Mainlayout/>*/} 
-    </>
+    // <BrowserRouter>
+      <SurveyProvider>
+        <RoutesComponent />
+      </SurveyProvider>
+    // </BrowserRouter>
   )
 }
 

@@ -307,7 +307,7 @@ const DCPowerInformationForm = () => {
             <div>
               <label className='block font-semibold mb-2'>Existing DC rectifiers are located in?</label>
               <select
-                className='border p-2 rounded w-full'
+                className='form-input'
                 value={formData.dc_rectifiers.existing_dc_rectifiers_location}
                 onChange={(e) => handleChange('dc_rectifiers', 'existing_dc_rectifiers_location', e.target.value)}
               >
@@ -322,7 +322,7 @@ const DCPowerInformationForm = () => {
             <div>
               <label className='block font-semibold mb-2'>Existing DC rectifiers vendor</label>
               <select
-                className='border p-2 rounded w-full'
+                className='form-input'
                 value={formData.dc_rectifiers.existing_dc_rectifiers_vendor}
                 onChange={(e) => handleChange('dc_rectifiers', 'existing_dc_rectifiers_vendor', e.target.value)}
               >
@@ -337,7 +337,7 @@ const DCPowerInformationForm = () => {
               <label className='block font-semibold mb-2'>Existing DC rectifiers model</label>
               <input
                 type='text'
-                className='border p-2 rounded w-full'
+                className='form-input'
                 value={formData.dc_rectifiers.existing_dc_rectifiers_model}
                 onChange={(e) => handleChange('dc_rectifiers', 'existing_dc_rectifiers_model', e.target.value)}
                 placeholder='Model'
@@ -347,7 +347,7 @@ const DCPowerInformationForm = () => {
             <div>
               <label className='block font-semibold mb-2'>How many existing DC rectifier modules?</label>
               <select
-                className='border p-2 rounded w-full'
+                className='form-input'
                 value={formData.dc_rectifiers.how_many_existing_dc_rectifier_modules}
                 onChange={(e) => handleChange('dc_rectifiers', 'how_many_existing_dc_rectifier_modules', e.target.value)}
               >
@@ -363,7 +363,7 @@ const DCPowerInformationForm = () => {
               <input
                 type='number'
                 step='0.1'
-                className='border p-2 rounded w-full'
+                className='form-input'
                 value={formData.dc_rectifiers.rectifier_module_capacity}
                 onChange={(e) => handleChange('dc_rectifiers', 'rectifier_module_capacity', e.target.value)}
                 placeholder='2.5'
@@ -375,7 +375,7 @@ const DCPowerInformationForm = () => {
               <input
                 type='number'
                 step='0.1'
-                className='border p-2 rounded w-full'
+                className='form-input'
                 value={formData.dc_rectifiers.total_capacity_existing_dc_power_system}
                 onChange={(e) => handleChange('dc_rectifiers', 'total_capacity_existing_dc_power_system', e.target.value)}
                 placeholder='12.5'
@@ -385,7 +385,7 @@ const DCPowerInformationForm = () => {
             <div>
               <label className='block font-semibold mb-2'>How many free slot available for new rectifier modules?</label>
               <select
-                className='border p-2 rounded w-full'
+                className='form-input'
                 value={formData.dc_rectifiers.how_many_free_slot_available_rectifier}
                 onChange={(e) => handleChange('dc_rectifiers', 'how_many_free_slot_available_rectifier', e.target.value)}
               >
@@ -403,7 +403,7 @@ const DCPowerInformationForm = () => {
             <div>
               <label className='block font-semibold mb-2'>Existing batteries strings are located in?</label>
               <select
-                className='border p-2 rounded w-full'
+                className='form-input'
                 value={formData.batteries.existing_batteries_strings_location}
                 onChange={(e) => handleChange('batteries', 'existing_batteries_strings_location', e.target.value)}
               >
@@ -418,7 +418,7 @@ const DCPowerInformationForm = () => {
             <div>
               <label className='block font-semibold mb-2'>Existing batteries vendor</label>
               <select
-                className='border p-2 rounded w-full'
+                className='form-input'
                 value={formData.batteries.existing_batteries_vendor}
                 onChange={(e) => handleChange('batteries', 'existing_batteries_vendor', e.target.value)}
               >
@@ -450,7 +450,7 @@ const DCPowerInformationForm = () => {
             <div>
               <label className='block font-semibold mb-2'>How many existing battery string?</label>
               <select
-                className='border p-2 rounded w-full'
+                className='form-input' 
                 value={formData.batteries.how_many_existing_battery_string}
                 onChange={(e) => handleChange('batteries', 'how_many_existing_battery_string', e.target.value)}
               >
@@ -465,7 +465,7 @@ const DCPowerInformationForm = () => {
               <label className='block font-semibold mb-2'>Total battery Capacity (Ah)</label>
               <input
                 type='number'
-                className='border p-2 rounded w-full'
+                className='form-input'
                 value={formData.batteries.total_battery_capacity}
                 onChange={(e) => handleChange('batteries', 'total_battery_capacity', e.target.value)}
                 placeholder='200'
@@ -475,7 +475,7 @@ const DCPowerInformationForm = () => {
             <div>
               <label className='block font-semibold mb-2'>How many free slot available for new battery string?</label>
               <select
-                className='border p-2 rounded w-full'
+                className='form-input'
                 value={formData.batteries.how_many_free_slot_available_battery}
                 onChange={(e) => handleChange('batteries', 'how_many_free_slot_available_battery', e.target.value)}
               >

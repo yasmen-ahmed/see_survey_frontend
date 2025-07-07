@@ -275,29 +275,10 @@ const OutdoorForm = () => {
                 </label>
               ))}
             </div>
-            <hr className="my-4" />
+            <hr className="mt-9" />
           </div>
 
-          {/* Space for New Cables */}
-          <div>
-            <label className='block font-semibold mb-2'>Is there available space on existing cable tray for new cables?</label>
-            <div className='flex gap-4'>
-              {['Yes', 'No'].map((option) => (
-                <label key={option} className='flex items-center'>
-                  <input
-                    type='radio'
-                    name='spaceForNewCables'
-                    value={option}
-                    checked={formData.spaceForNewCables === option}
-                    onChange={handleChange}
-                    className='mr-2'
-                  />
-                  {option}
-                </label>
-              ))}
-            </div>
-            <hr className="my-4" />
-          </div>
+         
           {/* Free Positions Field */}
           <div>
             <label className='block font-semibold mb-2'>How many free positions available for new cabinets installation?</label>
@@ -305,7 +286,7 @@ const OutdoorForm = () => {
               name='freePositions'
               value={formData.freePositions}
               onChange={handleChange}
-              className='border p-2 rounded w-full'
+              className='form-input'
             >
               <option value=''>Select</option>
               {[0, 1, 2, 3, 4, 5].map((num) => (
@@ -326,13 +307,32 @@ const OutdoorForm = () => {
                 name={['cableTrayHeight', 'cableTrayWidth', 'cableTrayDepth'][index]}
                 value={formData[['cableTrayHeight', 'cableTrayWidth', 'cableTrayDepth'][index]]}
                 onChange={handleChange}
-                className='border p-2 rounded w-full'
+                className='form-input'
               />
               <hr className="my-4" />
             </div>
           ))}
 
-
+ {/* Space for New Cables */}
+ <div>
+            <label className='block font-semibold mb-2'>Is there available space on existing cable tray for new cables?</label>
+            <div className='flex gap-4'>
+              {['Yes', 'No'].map((option) => (
+                <label key={option} className='flex items-center'>
+                  <input
+                    type='radio'
+                    name='spaceForNewCables'
+                    value={option}
+                    checked={formData.spaceForNewCables === option}
+                    onChange={handleChange}
+                    className='mr-2'
+                  />
+                  {option}
+                </label>
+              ))}
+            </div>
+            <hr className="mt-9" />
+          </div>
 
           {/* Earth Bus Bars Field */}
           <div>
@@ -341,7 +341,7 @@ const OutdoorForm = () => {
               name='earthBusBars'
               value={formData.earthBusBars}
               onChange={handleChange}
-              className='border p-2 rounded w-full'
+              className='form-input'
             >
               <option value=''>Select</option>
               {[1, 2, 3].map((num) => (
@@ -360,7 +360,7 @@ const OutdoorForm = () => {
               name='freeHolesInBusBars'
               value={formData.freeHolesInBusBars}
               onChange={handleChange}
-              className='border p-2 rounded w-full'
+              className='form-input' 
             >
               <option value=''>Select</option>
               {[1, 2, 3].map((num) => (

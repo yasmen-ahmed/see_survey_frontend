@@ -205,7 +205,7 @@ const PowerMeterForm = () => {
               name="serialNumber"
               value={formData.serialNumber}
               onChange={handleChange}
-              className="border p-3 rounded-md"
+              className="form-input"
               required
             />
           </div>
@@ -218,7 +218,7 @@ const PowerMeterForm = () => {
               name="meterReading"
               value={formData.meterReading}
               onChange={handleChange}
-              className="border p-3 rounded-md"
+              className="form-input"
               required
             />
           </div>
@@ -251,7 +251,7 @@ const PowerMeterForm = () => {
               name="cableLength"
               value={formData.cableLength}
               onChange={handleChange}
-              className="border p-3 rounded-md"
+              className="form-input"
               required
             />
           </div>
@@ -264,7 +264,7 @@ const PowerMeterForm = () => {
               name="crossSection"
               value={formData.crossSection}
               onChange={handleChange}
-              className="border p-3 rounded-md"
+              className="form-input"
               required
             />
           </div>
@@ -277,7 +277,7 @@ const PowerMeterForm = () => {
               name="mainCBRating"
               value={formData.mainCBRating}
               onChange={handleChange}
-              className="border p-3 rounded-md"
+              className="form-input"
               required
             />
           </div>

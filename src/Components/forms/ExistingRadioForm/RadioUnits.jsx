@@ -785,7 +785,7 @@ const RadioUnitsForm = () => {
               How many radio units on site?
             </label>
             <select
-              className="w-full border border-gray-300 rounded-md p-2"
+              className="form-input"
                     value={formData.numberOfRadioUnits}
                     onChange={handleRadioUnitCountChange}
             >
@@ -804,12 +804,12 @@ const RadioUnitsForm = () => {
           )}
 
   {/* Table Layout */}
-  <div className="overflow-auto max-h-[600px]">
+  <div className="overflow-auto max-h-[750px]">
             <table className="table-auto w-full border-collapse">
               <thead className="bg-blue-500 text-white">
                 <tr>
                   <th
-                    className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-30"
+                    className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-10"
                     style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
                   >
                     Field Description
@@ -817,7 +817,7 @@ const RadioUnitsForm = () => {
                     {Array.from({ length: formData.numberOfRadioUnits }, (_, i) => (
                     <th
                       key={i}
-                      className="border px-4 py-3 text-center font-semibold min-w-[300px] sticky top-0 bg-blue-500 z-20"
+                      className="border px-4 py-3 text-center font-semibold min-w-[300px] sticky top-0 bg-blue-500 z-10"
                     >
                       Radio Unit #{i + 1}
                     </th>

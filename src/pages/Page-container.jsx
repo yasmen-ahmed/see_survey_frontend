@@ -1,55 +1,114 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, Suspense } from "react";
 import { tabsConfig } from "../Components/Tabs/Alltabs.jsx";
+import { useSurveyContext } from "../context/SurveyContext";
 
 const PageContainer = () => {
-  const { sessionId, siteId, pageName, tabKey } = useParams();  // Getting route params
+  const { sessionId, siteId, pageName, tabKey } = useParams();
   const navigate = useNavigate();
-  const tabs = tabsConfig[pageName] || [];  // Get tabs for the current page (e.g. site-info)
-  const ct = localStorage.getItem('ct');
-  const project = localStorage.getItem('project');
-  const site_id = localStorage.getItem('site_id');
-  // Normalize tabKey and find the active tab
+  const { surveyData } = useSurveyContext();
+  const tabs = tabsConfig[pageName] || [];
+
   const normalizedTabKey = tabKey?.toLowerCase();
   const activeTab = tabs.find(tab => tab.key === normalizedTabKey);
 
   useEffect(() => {
-    // If no active tab, navigate to the first tab
     if (!activeTab && tabs.length > 0) {
       navigate(`/sites/${siteId}/${pageName}/${tabs[0].key}`, { replace: true });
     }
   }, [activeTab, tabs, siteId, pageName, navigate]);
 
   return (
-    <div className="pt-32 pb-4">
+    <div className="page-container">
       {/* Tab Navigation */}
-      <div
-        className="flex gap-2 fixed z-20 top-20 left-60 w-[calc(100vw-15rem)] bg-gray-50 py-2 px-4 border-b"
-        style={{ minWidth: 0 }}
-      >
-        {tabs.map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => navigate(`/sites/${sessionId}/${siteId}/${pageName}/${tab.key}`)}
-            className={`px-4 py-2 border rounded font-semibold ${
-              tab.key === normalizedTabKey ? "bg-blue-500 text-white" : "bg-gray-200"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-        <div className="m-auto text-xl text-gray-500 font-semibold ">
-          {ct} , {project} , {site_id}
+      <div className="tab-navigation">
+        <div className="tabs-wrapper">
+          {tabs.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => navigate(`/sites/${sessionId}/${siteId}/${pageName}/${tab.key}`)}
+              className={`tab-button ${tab.key === normalizedTabKey ? "active" : ""}`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-        
+        <div className="site-info">
+          <span>Site ID: {surveyData.siteId}</span>
+          <span>Project: {surveyData.project}</span>
+        </div>
       </div>
 
       {/* Dynamic Form Rendering */}
-      <div className="border p-4 rounded bg-white shadow w-full overflow-auto">
+      <div className="form-container">
         <Suspense fallback={<div>Loading...</div>}>
           {activeTab ? <activeTab.component /> : <div>No form available</div>}
         </Suspense>
       </div>
+
+      <style jsx>{`
+        .page-container {
+          padding-top: var(--header-height);
+          padding-bottom: var(--spacing-md);
+        }
+
+        .tab-navigation {
+          position: fixed;
+          z-index: 20;
+          top: var(--header-height);
+          left: var(--sidebar-width);
+          width: calc(100vw - var(--sidebar-width));
+          background-color: var(--background-secondary);
+          padding: var(--spacing-md) var(--container-padding);
+          border-bottom: 1px solid var(--border-color);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .tabs-wrapper {
+          display: flex;
+          gap: var(--spacing-sm);
+        }
+
+        .tab-button {
+          padding: var(--spacing-sm) var(--spacing-md);
+          border: 1px solid var(--border-color);
+          border-radius: var(--border-radius-md);
+          font-weight: 600;
+          background-color: var(--background-primary);
+          transition: all 0.2s ease;
+        }
+
+        .tab-button.active {
+          background-color: var(--primary-color);
+          color: white;
+        }
+
+        .tab-button:hover:not(.active) {
+          background-color: var(--background-secondary);
+        }
+
+        .site-info {
+          margin-left: auto;
+          font-size: 1.25rem;
+          color: var(--text-secondary);
+          font-weight: 600;
+          display: flex;
+          gap: var(--spacing-lg);
+        }
+
+        .form-container {
+          border: 1px solid var(--border-color);
+          padding: var(--spacing-md);
+          border-radius: var(--border-radius-md);
+          background-color: var(--background-primary);
+          box-shadow: var(--shadow-sm);
+          width: 100%;
+          overflow: auto;
+          margin-top: calc(var(--header-height) + var(--spacing-xl));
+        }
+      `}</style>
     </div>
   );
 };

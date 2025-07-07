@@ -104,7 +104,7 @@ const RANBaseBandForm = () => {
           <div className='mb-4'>
             <label className='block font-semibold '>Existing RAN base band located in?</label>
             <select
-              className='border p-2 rounded w-full'
+              className='form-input' 
               value={formData.existing_location}
               onChange={(e) => handleChange('existing_location', e.target.value)}
             >
@@ -120,7 +120,7 @@ const RANBaseBandForm = () => {
           <div className=''>
             <label className='block font-semibold '>Existing RAN base band vendor</label>
             <select
-              className='border p-2 rounded w-full'
+              className='form-input' 
               value={formData.existing_vendor}
               onChange={(e) => handleChange('existing_vendor', e.target.value)}
             >
@@ -178,7 +178,7 @@ const RANBaseBandForm = () => {
             <label className='block font-semibold '>Length of Transmission cable (Optical / Electrical) from new Nokia base band to MW IDU/ODF (meter)</label>
             <input
               type='number'
-              className='border p-2 rounded w-full'
+              className='form-input' 
               value={formData.length_of_transmission_cable}
               onChange={(e) => handleChange('length_of_transmission_cable', e.target.value)}
               placeholder='000'

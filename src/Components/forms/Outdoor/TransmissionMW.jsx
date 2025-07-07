@@ -175,7 +175,6 @@ const TransmissionInformationForm = () => {
   };
 
   const handleMWLinkChange = (linkIndex, fieldName, value) => {
-    console.log(`Changing MW link ${linkIndex} field ${fieldName} to:`, value);
     setFormData(prev => {
       const newFormData = { ...prev };
       const numLinks = parseInt(prev.how_many_mw_link_exist) || 1;
@@ -185,11 +184,23 @@ const TransmissionInformationForm = () => {
         newFormData.mw_links[linkIndex] = {};
       }
       
-      newFormData.mw_links[linkIndex] = {
-        ...newFormData.mw_links[linkIndex],
-        [fieldName]: value,
-        [`${fieldName}AutoFilled`]: false // Reset auto-fill flag when manually changed
-      };
+      // For checkbox fields (located_in), ensure we're working with arrays properly
+      if (fieldName === 'located_in') {
+        const currentValues = (newFormData.mw_links[linkIndex][fieldName] || '').split(',').map(v => v.trim()).filter(Boolean);
+        const newValues = value.split(',').map(v => v.trim()).filter(Boolean);
+        
+        newFormData.mw_links[linkIndex] = {
+          ...newFormData.mw_links[linkIndex],
+          [fieldName]: newValues.join(', '),
+          [`${fieldName}AutoFilled`]: false
+        };
+      } else {
+        newFormData.mw_links[linkIndex] = {
+          ...newFormData.mw_links[linkIndex],
+          [fieldName]: value,
+          [`${fieldName}AutoFilled`]: false
+        };
+      }
       
       // If this is the first link (index 0), auto-fill other empty fields
       if (linkIndex === 0 && value) {
@@ -198,12 +209,15 @@ const TransmissionInformationForm = () => {
             newFormData.mw_links[i] = {};
           }
           
+          const currentField = newFormData.mw_links[i][fieldName];
+          const wasAutoFilled = newFormData.mw_links[i][`${fieldName}AutoFilled`];
+          
           // Only auto-fill if the field is empty or was previously auto-filled
-          if (!newFormData.mw_links[i][fieldName] || newFormData.mw_links[i][`${fieldName}AutoFilled`]) {
+          if (!currentField || wasAutoFilled) {
             newFormData.mw_links[i] = {
               ...newFormData.mw_links[i],
               [fieldName]: value,
-              [`${fieldName}AutoFilled`]: true // Mark as auto-filled
+              [`${fieldName}AutoFilled`]: true
             };
           }
         }
@@ -314,7 +328,7 @@ const TransmissionInformationForm = () => {
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className='overflow-auto max-h-[670px]'>
+          <div className='overflow-auto max-h-[850px]'>
 
 
             {/* Basic Transmission Information */}
@@ -342,7 +356,7 @@ const TransmissionInformationForm = () => {
               <div className='mb-4'>
                 <label className='block font-semibold mb-2'>Existing Transmission base band located in?</label>
                 <select
-                  className='border p-2 rounded w-full'
+                  className='form-input' 
                   value={formData.existing_transmission_base_band_location}
                   onChange={(e) => handleChange('existing_transmission_base_band_location', e.target.value)}
                 >
@@ -358,7 +372,7 @@ const TransmissionInformationForm = () => {
               <div className='mb-4'>
                 <label className='block font-semibold mb-2'>Existing Transmission equipment vendor</label>
                 <select
-                  className='border p-2 rounded w-full'
+                  className='form-input' 
                   value={formData.existing_transmission_equipment_vendor}
                   onChange={(e) => handleChange('existing_transmission_equipment_vendor', e.target.value)}
                 >
@@ -376,7 +390,7 @@ const TransmissionInformationForm = () => {
                   <div className='mb-4'>
                     <label className='block font-semibold mb-2'>Existing ODF located in?</label>
                     <select
-                      className='border p-2 rounded w-full'
+                      className='form-input' 
                       value={formData.existing_odf_location}
                       onChange={(e) => handleChange('existing_odf_location', e.target.value)}
                     >
@@ -394,7 +408,7 @@ const TransmissionInformationForm = () => {
                     <input
                       type='number'
                       step='0.1'
-                      className='border p-2 rounded w-full'
+                      className='form-input' 
                       value={formData.cable_length_odf_to_baseband}
                       onChange={(e) => handleChange('cable_length_odf_to_baseband', e.target.value)}
                       placeholder='25.5'
@@ -424,7 +438,7 @@ const TransmissionInformationForm = () => {
                   <div className='mb-4'>
                     <label className='block font-semibold mb-2'>How many free ports on ODF?</label>
                     <select
-                      className='border p-2 rounded w-full'
+                      className='form-input' 
                       value={formData.how_many_free_ports_odf}
                       onChange={(e) => handleChange('how_many_free_ports_odf', e.target.value)}
                     >
@@ -443,7 +457,7 @@ const TransmissionInformationForm = () => {
                 <div className='mb-4'>
                   <label className='block font-semibold mb-2'>How many MW link exist on site?</label>
                   <select
-                    className='border p-2 rounded w-full'
+                    className='form-input' 
                     value={formData.how_many_mw_link_exist}
                     onChange={(e) => {
                       console.log("Changing number of MW links to:", e.target.value);
@@ -469,7 +483,7 @@ const TransmissionInformationForm = () => {
                     <thead className="bg-blue-500 text-white">
                       <tr>
                         <th
-                          className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-30"
+                          className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-10"
                           style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
                         >
                           Field Description
@@ -477,7 +491,7 @@ const TransmissionInformationForm = () => {
                         {Array.from({ length: parseInt(formData.how_many_mw_link_exist) }, (_, i) => (
                           <th
                             key={i}
-                            className="border px-4 py-3 text-center font-semibold min-w-[300px] sticky top-0 bg-blue-500 z-20"
+                            className="border px-4 py-3 text-center font-semibold min-w-[300px] sticky top-0 bg-blue-500 z-10"
                           >
                             MW Link #{i + 1}
                           </th>
@@ -498,12 +512,19 @@ const TransmissionInformationForm = () => {
                                 <label key={option} className="flex items-center gap-1 text-sm">
                                   <input
                                     type="checkbox"
-                                    checked={(link.located_in || '').includes(option)}
+                                    checked={(link.located_in || '').split(',').map(v => v.trim()).filter(Boolean).includes(option)}
                                     onChange={(e) => {
-                                      const currentValues = (link.located_in || '').split(',').filter(v => v.trim());
+                                      // Get current values as an array, ensuring we handle empty strings properly
+                                      const currentValues = (link.located_in || '').split(',')
+                                        .map(v => v.trim())
+                                        .filter(Boolean);
+                                      
+                                      // Create new array based on checkbox state
                                       const newValues = e.target.checked
-                                        ? [...currentValues, option]
-                                        : currentValues.filter(v => v !== option);
+                                        ? [...new Set([...currentValues, option])] // Add value if checked, ensuring no duplicates
+                                        : currentValues.filter(v => v !== option); // Remove value if unchecked
+                                      
+                                      // Update the field with the new comma-separated string
                                       handleMWLinkChange(linkIndex, 'located_in', newValues.join(', '));
                                     }}
                                     className={`w-4 h-4 ${isFieldAutoFilled(linkIndex, 'located_in') ? colorFillAuto : ''}`}

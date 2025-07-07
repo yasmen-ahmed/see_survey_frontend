@@ -120,7 +120,7 @@ const SiteLocationForm = () => {
               placeholder="Site-Id"
               value={formData.siteId}
               onChange={handleInputChange}
-              className="border p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="form-input"
               required
               disabled
             />
@@ -133,7 +133,7 @@ const SiteLocationForm = () => {
               placeholder="Site Name"
               value={formData.sitename}
               onChange={handleInputChange}
-              className="border p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="form-input"
               required
             />
           </div>
@@ -145,7 +145,7 @@ const SiteLocationForm = () => {
               placeholder="Region"
               value={formData.region}
               onChange={handleInputChange}
-              className="border p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="form-input"
               required
             />
           </div>
@@ -157,7 +157,7 @@ const SiteLocationForm = () => {
               placeholder="City"
               value={formData.city}
               onChange={handleInputChange}
-              className="border p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="form-input"
               required
             />
           </div>
@@ -169,7 +169,7 @@ const SiteLocationForm = () => {
               placeholder="Address"
               value={formData.address}
               onChange={handleInputChange}
-              className="border p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="form-input"
               required
             />
           </div>
@@ -181,7 +181,7 @@ const SiteLocationForm = () => {
               placeholder="Latitude"
               value={formData.latitude}
               onChange={handleInputChange}
-              className="border p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="form-input"
               required
             />
           </div>
@@ -193,7 +193,7 @@ const SiteLocationForm = () => {
               placeholder="Longitude"
               value={formData.longitude}
               onChange={handleInputChange}
-              className="border p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="form-input"
               required
             />
           </div>
@@ -205,7 +205,7 @@ const SiteLocationForm = () => {
               placeholder="site elevation"
               value={formData.siteelevation}
               onChange={handleInputChange}
-              className="border p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="form-input"
             // required
             />
           </div>

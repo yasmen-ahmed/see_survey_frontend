@@ -119,7 +119,7 @@ function SitevistinfoForm() {
               id="survey_date"
               value={formData.survey_date}
               onChange={handleInputChange}
-              className="border p-3 rounded-md"
+              className="form-input"
               required
             />
           </div>
@@ -133,7 +133,7 @@ function SitevistinfoForm() {
               id="subcontractor_company"
               value={formData.subcontractor_company }
               onChange={handleInputChange}
-              className="border p-3 rounded-md"
+              className="form-input"
               required
               disabled
             />
@@ -148,7 +148,7 @@ function SitevistinfoForm() {
               id="surveyor_name"
               value={formData.surveyor_name}
               onChange={handleInputChange}
-              className="border p-3 rounded-md"
+              className="form-input"
               required
               disabled
             />
@@ -163,7 +163,7 @@ function SitevistinfoForm() {
               id="surveyor_phone"
               value={formData.surveyor_phone}
               onChange={handleInputChange}
-              className="border p-3 rounded-md"
+              className="form-input" 
               required
               disabled
             />
@@ -178,7 +178,7 @@ function SitevistinfoForm() {
               id="nokia_representative_name"
               value={formData.nokia_representative_name}
               onChange={handleInputChange}
-              className="border p-3 rounded-md"
+              className="form-input"
               required
             />
           </div>
@@ -192,7 +192,7 @@ function SitevistinfoForm() {
               id="nokia_representative_title"
               value={formData.nokia_representative_title}
               onChange={handleInputChange}
-              className="border p-3 rounded-md"
+              className="form-input"
               required
             />
           </div>
@@ -206,7 +206,7 @@ function SitevistinfoForm() {
               id="customer_representative_name"
               value={formData.customer_representative_name}
               onChange={handleInputChange}
-              className="border p-3 rounded-md"
+              className="form-input"
               required
             />
           </div>
@@ -220,7 +220,7 @@ function SitevistinfoForm() {
               id="customer_representative_title"
               value={formData.customer_representative_title}
               onChange={handleInputChange}
-              className="border p-3 rounded-md"
+                className="form-input"
             />
           </div>
 

@@ -745,7 +745,7 @@ const DcDistributionForm = () => {
                   handlePduCountChange(value ? parseInt(value) : 0);
                   setError(""); // Clear error when user makes selection
                 }}
-                className="border p-3 rounded-md"
+                className="form-input"
               >
                 <option value="">-- Select --</option>
                 {[...Array(10)].map((_, i) => (
@@ -761,12 +761,12 @@ const DcDistributionForm = () => {
           {/* Dynamic DC PDU Table */}
           {pduCount && parseInt(pduCount) > 0 && pdus.length > 0 && (
             <div className="">
-              <div className="overflow-auto max-h-[400px]">
+              <div className="overflow-auto max-h-[700px]">
                 <table className="table-auto w-full border-collapse">
                   <thead className="bg-blue-500 text-white">
                     <tr>
                       <th
-                        className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-30"
+                        className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-10"
                         style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
                       >
                         Field Description
@@ -774,7 +774,7 @@ const DcDistributionForm = () => {
                       {Array.from({ length: parseInt(pduCount) }, (_, i) => (
                         <th
                           key={i}
-                          className="border px-4 py-3 text-center font-semibold min-w-[300px] sticky top-0 bg-blue-500 z-20"
+                          className="border px-4 py-3 text-center font-semibold min-w-[300px] sticky top-0 bg-blue-500 z-10"
                         >
                           DC PDU #{i + 1}
                         </th>

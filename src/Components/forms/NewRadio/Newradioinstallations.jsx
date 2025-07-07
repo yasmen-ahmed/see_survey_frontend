@@ -144,7 +144,7 @@ const NewSectorPlanningTab = () => {
                 <div key={question.key} className="bg-white  ">
                   <div className='mb-2 font-semibold text-gray-700'>{question.label}</div>
                   <select 
-                    className={`border rounded-md p-2 w-full ${
+                    className={`form-input ${
                       errors[question.key] ? 'border-red-500' : 'border-gray-300'
                     } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                     value={formData[question.key]}
