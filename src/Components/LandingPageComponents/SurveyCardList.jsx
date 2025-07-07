@@ -43,6 +43,19 @@ const SurveyCardList = () => {
       alert("Failed to update status. Please try again.");
     }
   };
+  function generateReport(sessionId) {
+    fetch(`/api/report/${sessionId}`)
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Session_${sessionId}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        });
+  };
 
   const updateSurveyStatus = async (surveyId, newStatus) => {
     const token = localStorage.getItem('token');
@@ -100,6 +113,7 @@ const SurveyCardList = () => {
             <th className="px-6 py-3">Project</th>
             <th className="px-6 py-3">TSSR Status</th>
             <th className="px-6 py-3">Action</th>
+            <th className="px-6 py-3">Report</th>
           </tr>
         </thead>
         <tbody>
@@ -130,6 +144,14 @@ const SurveyCardList = () => {
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
                 >
                   Continue
+                </button>
+              </td>
+              <td className="px-6 py-4">
+                <button
+                  onClick={() => generateReport(survey.session_id)}
+                  className="bg-green-600 text-black px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                >
+                  Generate
                 </button>
               </td>
             </tr>
