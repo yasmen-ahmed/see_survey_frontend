@@ -46,7 +46,7 @@ const SurveyCardList = () => {
     }
   };
   function generateReport(sessionId) {
-    fetch(`/api/report/${sessionId}`)
+    fetch(`/api/export/site/${sessionId}`)
         .then(response => response.blob())
         .then(blob => {
             const url = window.URL.createObjectURL(blob);
