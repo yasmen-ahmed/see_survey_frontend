@@ -47,16 +47,16 @@ const SurveyCardList = () => {
   };
   function generateReport(sessionId) {
     fetch(`/api/export/site/${sessionId}`)
-        .then(response => response.blob())
-        .then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Session_${sessionId}.xlsx`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-        });
+//.then(response => response.blob())
+//        .then(blob => {
+//            const url = window.URL.createObjectURL(blob);
+//            const a = document.createElement('a');
+//            a.href = url;
+//            a.download = `Session_${sessionId}.xlsx`;
+//            document.body.appendChild(a);
+ //           a.click();
+ //           a.remove();
+ //       });
   };
 
   const updateSurveyStatus = async (surveyId, newStatus) => {
