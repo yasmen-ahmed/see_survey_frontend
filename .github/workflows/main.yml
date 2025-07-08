@@ -28,6 +28,17 @@ jobs:
           git status
           git remote -v
 
+      - name: Ensure on main branch
+        shell: powershell
+        run: |
+          cd $env:GITHUB_WORKSPACE
+          git checkout main
+
+      - name: Set up GitHub token for git
+        shell: powershell
+        run: |
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+
       - name: Perform git pull
         shell: powershell  # Use PowerShell for Windows
         run: |
