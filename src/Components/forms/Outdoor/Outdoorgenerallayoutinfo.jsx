@@ -30,31 +30,31 @@ const OutdoorForm = () => {
       name: `site_outdoor_location_general_photo`
     });
     for (let i = 1; i <= count; i++) {
-  
+
       allImages.push({
         label: `Free Position ${i}`,
         name: `free_position_${i}`
       });
     }
-  
+
     return allImages;
   };
 
   // Process images from API response
   const processImagesFromResponse = (data) => {
     const imagesByCategory = {};
-    
+
     if (data.images && Array.isArray(data.images)) {
       data.images.forEach(img => {
         // Handle the actual API response structure
         const category = img.category || img.image_category;
-        
+
         // Skip images with invalid or empty categories
         if (!category || category.trim() === "") {
           console.warn("Skipping image with empty category:", img);
           return;
         }
-        
+
         imagesByCategory[category] = [{
           id: img.id,
           file_url: img.url || img.file_url,
@@ -62,7 +62,7 @@ const OutdoorForm = () => {
         }];
       });
     }
-    
+
     return imagesByCategory;
   };
 
@@ -88,14 +88,14 @@ const OutdoorForm = () => {
             cableTrayHeight: data.cable_tray_config?.height?.toString() || "",
             cableTrayWidth: data.cable_tray_config?.width?.toString() || "",
             cableTrayDepth: data.cable_tray_config?.depth?.toString() || "",
-            spaceForNewCables: data.cable_tray_space_available === true ? "Yes" : 
-                              data.cable_tray_space_available === false ? "No" : 
-                              data.cable_tray_space_available || "",
+            spaceForNewCables: data.cable_tray_space_available === true ? "Yes" :
+              data.cable_tray_space_available === false ? "No" :
+                data.cable_tray_space_available || "",
             earthBusBars: data.earth_bus_bar_config?.available_bars?.toString() || "",
             freeHolesInBusBars: data.earth_bus_bar_config?.free_holes?.toString() || "",
-            hasSketch: data.has_site_sketch === true ? true : 
-                      data.has_site_sketch === false ? false : 
-                      data.has_site_sketch || "",
+            hasSketch: data.has_site_sketch === true ? true :
+              data.has_site_sketch === false ? false :
+                data.has_site_sketch || "",
           });
 
           // Process and set images from the response
@@ -116,10 +116,10 @@ const OutdoorForm = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -136,33 +136,33 @@ const OutdoorForm = () => {
         width: parseInt(formData.cableTrayWidth) || 0,
         depth: parseInt(formData.cableTrayDepth) || 0
       }));
-      
+
       // Convert Yes/No to boolean
-      const spaceAvailable = formData.spaceForNewCables === "Yes" ? true : 
-                            formData.spaceForNewCables === "No" ? false : 
-                            Boolean(formData.spaceForNewCables);
+      const spaceAvailable = formData.spaceForNewCables === "Yes" ? true :
+        formData.spaceForNewCables === "No" ? false :
+          Boolean(formData.spaceForNewCables);
       submitFormData.append('cable_tray_space_available', spaceAvailable);
-      
+
       submitFormData.append('earth_bus_bar_config', JSON.stringify({
         available_bars: parseInt(formData.earthBusBars) || 0,
         free_holes: parseInt(formData.freeHolesInBusBars) || 0
       }));
-      
+
       // Handle boolean conversion for hasSketch
       const hasSketch = formData.hasSketch === true || formData.hasSketch === "true";
       submitFormData.append('has_site_sketch', hasSketch);
 
       // Get all possible image fields
       const allImageFields = getPositionImages();
-      
+
       console.log("All image fields:", allImageFields);
       console.log("Uploaded images state:", uploadedImages);
-      
+
       // Handle all image fields - including removed ones
       allImageFields.forEach(imageField => {
         const imageFiles = uploadedImages[imageField.name];
         console.log(`Processing image field: ${imageField.name}`, imageFiles);
-        
+
         if (Array.isArray(imageFiles) && imageFiles.length > 0) {
           const file = imageFiles[0];
           if (file instanceof File) {
@@ -202,7 +202,7 @@ const OutdoorForm = () => {
       );
 
       console.log("Server response:", response.data);
-      
+
       // After successful submission, fetch the latest data
       const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/outdoor-general-layout/${sessionId}`);
       const latestData = getResponse.data.data || getResponse.data;
@@ -214,14 +214,14 @@ const OutdoorForm = () => {
           cableTrayHeight: latestData.cable_tray_config?.height?.toString() || "",
           cableTrayWidth: latestData.cable_tray_config?.width?.toString() || "",
           cableTrayDepth: latestData.cable_tray_config?.depth?.toString() || "",
-          spaceForNewCables: latestData.cable_tray_space_available === true ? "Yes" : 
-                            latestData.cable_tray_space_available === false ? "No" : 
-                            latestData.cable_tray_space_available || "",
+          spaceForNewCables: latestData.cable_tray_space_available === true ? "Yes" :
+            latestData.cable_tray_space_available === false ? "No" :
+              latestData.cable_tray_space_available || "",
           earthBusBars: latestData.earth_bus_bar_config?.available_bars?.toString() || "",
           freeHolesInBusBars: latestData.earth_bus_bar_config?.free_holes?.toString() || "",
-          hasSketch: latestData.has_site_sketch === true ? true : 
-                    latestData.has_site_sketch === false ? false : 
-                    latestData.has_site_sketch || "",
+          hasSketch: latestData.has_site_sketch === true ? true :
+            latestData.has_site_sketch === false ? false :
+              latestData.has_site_sketch || "",
         });
 
         // Process and update images
@@ -241,7 +241,7 @@ const OutdoorForm = () => {
           setUploadedImages(newUploadedImages);
         }
       }
-      
+
       showSuccess('Outdoor General Layout data and images submitted successfully!');
     } catch (err) {
       console.error("Error submitting outdoor general layout data:", err);
@@ -253,8 +253,8 @@ const OutdoorForm = () => {
   return (
     <div className="max-h-screen flex  items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-        <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" onSubmit={handleSubmit}>
-
+          <form className=" mb-8" onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[550px] overflow-y-auto">
 
 
           {/* Sunshade Field */}
@@ -278,7 +278,7 @@ const OutdoorForm = () => {
             <hr className="mt-9" />
           </div>
 
-         
+
           {/* Free Positions Field */}
           <div>
             <label className='block font-semibold mb-2'>How many free positions available for new cabinets installation?</label>
@@ -313,8 +313,8 @@ const OutdoorForm = () => {
             </div>
           ))}
 
- {/* Space for New Cables */}
- <div>
+          {/* Space for New Cables */}
+          <div>
             <label className='block font-semibold mb-2'>Is there available space on existing cable tray for new cables?</label>
             <div className='flex gap-4'>
               {['Yes', 'No'].map((option) => (
@@ -360,7 +360,7 @@ const OutdoorForm = () => {
               name='freeHolesInBusBars'
               value={formData.freeHolesInBusBars}
               onChange={handleChange}
-              className='form-input' 
+              className='form-input'
             >
               <option value=''>Select</option>
               {[1, 2, 3].map((num) => (
@@ -401,6 +401,7 @@ const OutdoorForm = () => {
             </div>
             <hr className="my-4" />
           </div>
+          </div>
           <div className="md:col-span-2 flex justify-center">
             <button
               type="submit"
@@ -412,10 +413,10 @@ const OutdoorForm = () => {
 
         </form>
       </div>
-      
+
       {/* Image Uploader */}
-      <ImageUploader 
-        images={getPositionImages()} 
+      <ImageUploader
+        images={getPositionImages()}
         onImageUpload={handleImageUpload}
         uploadedImages={uploadedImages}
       />

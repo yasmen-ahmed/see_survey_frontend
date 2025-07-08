@@ -33,9 +33,9 @@ const PageContainer = () => {
             </button>
           ))}
         </div>
-        <div className="site-info">
-          <span>Site ID: {surveyData.siteId}</span>
-          <span>Project: {surveyData.project}</span>
+        <div className="site-info px-20">
+          <span>{surveyData.siteId}</span>
+          <span>,{surveyData.project}</span>
         </div>
       </div>
 
@@ -106,7 +106,7 @@ const PageContainer = () => {
           box-shadow: var(--shadow-sm);
           width: 100%;
           overflow: auto;
-          margin-top: calc(var(--header-height) + var(--spacing-xl));
+          margin-top: calc(var(--header-height));
         }
       `}</style>
     </div>

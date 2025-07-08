@@ -30,11 +30,11 @@ function SiteAccessForm() {
     { label: 'Site entrance', name: 'site_entrance' },
     { label: 'Building Stairs / Lift', name: 'building_stairs_lift' },
     { label: 'Roof entrance', name: 'roof_entrance' },
-    { label: 'Base station Shelter / Room', name: 'base_station_shelter_room' },
-    { label: 'Site Name on shelter/room', name: 'site_name_on_shelter_room' },
-    { label: 'Crane Access to the Street', name: 'crane_access_to_the_street' },
+    { label: 'Base station Shelter / Room', name: 'base_station_shelter' },
+    { label: 'Site Name on shelter/room', name: 'site_name_shelter' },    
+    { label: 'Crane Access to the Street', name: 'crane_access_street' },
     { label: 'Crane Location', name: 'crane_location' },
-    { label: 'Site Environment View', name: 'site_environment_view' },
+    { label: 'Site Environment View', name: 'site_environment' },
   ];
   
   
@@ -133,7 +133,7 @@ function SiteAccessForm() {
   return (
     <div className="max-h-screen flex  items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6  max-h-[550px] overflow-y-auto">
           <div>
             <label className="block font-medium mb-1">Site Access Permission Required</label>
             <div className="flex gap-4">

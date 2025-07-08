@@ -108,7 +108,7 @@ function SitevistinfoForm() {
   return (
   <div className="max-h-screen flex  items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-        <form className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8" onSubmit={handleSubmit}>
+        <form className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 " onSubmit={handleSubmit}>
 
           {/* Survey Date */}
           <div className="flex flex-col">

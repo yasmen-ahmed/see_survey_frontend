@@ -79,7 +79,7 @@ const SiteLocationForm = () => {
     { label: 'Building Stairs / Lift', name: 'building_stairs_lift' },
     { label: 'Roof entrance', name: 'roof_entrance' },
     { label: 'Base station Shelter / Room', name: 'base_station_shelter' },
-    { label: 'Site Name on shelter/room', name: 'site_name_shelter' },
+    { label: 'Site Name on shelter/room', name: 'site_name_shelter' },    
     { label: 'Crane Access to the Street', name: 'crane_access_street' },
     { label: 'Crane Location', name: 'crane_location' },
     { label: 'Site Environment View', name: 'site_environment' },
@@ -109,8 +109,8 @@ const SiteLocationForm = () => {
 
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-        <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" onSubmit={handleSubmit}>
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%] max-h-[650px] overflow-y-auto ">
+        <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 " onSubmit={handleSubmit}>
           {/* Text Fields */}
           <div className="grid grid-cols-1 gap-2">
             <label className="font-semibold mb-1">Site-Id</label>

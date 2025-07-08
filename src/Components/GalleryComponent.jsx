@@ -75,7 +75,7 @@ const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
   };
 
   return (
-    <div className="bg-white p-4 rounded-xl shadow-md w-[20%] overflow-y-auto max-h-screen">
+    <div className="bg-white p-4 rounded-xl shadow-md w-[20%] overflow-y-auto max-h-[650px]">
       <h2 className="text-xl font-semibold mb-4">Images</h2>
       <div className="space-y-4">
         {images.map((image) => (

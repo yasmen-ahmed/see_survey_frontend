@@ -203,10 +203,11 @@ const AcInformationForm = () => {
 
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-        <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" onSubmit={handleSubmit}>
-          {/* Power Source Selection */}
-          <div className="col-span-2">
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%] ">
+        <form className=" mb-8" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[550px] overflow-y-auto">
+    {/* Power Source Selection */}
+    <div className="col-span-2">
             <label className="font-semibold mb-1">Select Power Source</label>
             <div className="grid grid-cols-4 gap-2">
               <label>
@@ -345,6 +346,8 @@ const AcInformationForm = () => {
             </div>
           )}
 
+          </div>
+      
           <div className="md:col-span-2 flex justify-center">
             <button
               type="submit"
