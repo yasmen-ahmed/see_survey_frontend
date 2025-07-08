@@ -7,6 +7,7 @@ import ImageUploader from "../../GalleryComponent";
 
 const AntennaStructureForm = () => {
   const { sessionId } = useParams();
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const [formData, setFormData] = useState({
     hasSketch: "No",
@@ -35,6 +36,19 @@ const AntennaStructureForm = () => {
     // { label: 'Cables route from tower top 1/2', name: 'cables_route_photo_from_tower_top_1' },
     // { label: 'Cables route from tower top 2/2', name: 'cables_route_photo_from_tower_top_2' }
   ];
+
+  // Add beforeunload event listener
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/antenna-structure/${sessionId}`)
@@ -80,6 +94,7 @@ const AntennaStructureForm = () => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    setHasUnsavedChanges(true);
   
     if (name === "towerType") {
       let updatedTowerTypes = [...formData.towerType];
@@ -109,6 +124,7 @@ const AntennaStructureForm = () => {
   // Handle image uploads from ImageUploader component
   const handleImageUpload = (imageCategory, files) => {
     console.log(`Images uploaded for ${imageCategory}:`, files);
+    setHasUnsavedChanges(true);
     setUploadedImages(prev => ({
       ...prev,
       [imageCategory]: files
@@ -150,6 +166,7 @@ const AntennaStructureForm = () => {
         { headers: { 'Content-Type': 'multipart/form-data' } }
       );
 
+      setHasUnsavedChanges(false);
       showSuccess('Antenna structure data and images submitted successfully!');
     } catch (err) {
       console.error('Submission error:', err);
@@ -162,6 +179,21 @@ const AntennaStructureForm = () => {
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+      {/* Unsaved Changes Warning */}
+      {hasUnsavedChanges && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  ⚠️ You have unsaved changes
+                </p>
+                <p className="text-sm">
+                  Don't forget to save your changes before leaving this page.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Sketch Availability */}

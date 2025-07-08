@@ -15,6 +15,20 @@ const GPSAntennaTab = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedImages, setUploadedImages] = useState({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Add beforeunload event listener
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // Define image fields
   const imageFields = [
@@ -80,6 +94,7 @@ const GPSAntennaTab = () => {
       ...prev,
       [field]: value,
     }));
+    setHasUnsavedChanges(true);
   };
 
   const handleImageUpload = (imageName, files) => {
@@ -87,6 +102,7 @@ const GPSAntennaTab = () => {
       ...prev,
       [imageName]: files
     }));
+    setHasUnsavedChanges(true);
   };
 
   const handleSubmit = async (e) => {
@@ -151,6 +167,7 @@ const GPSAntennaTab = () => {
         setUploadedImages(newImages);
       }
 
+      setHasUnsavedChanges(false);
       showSuccess('GPS antenna data saved successfully');
     } catch (err) {
       console.error('Error saving GPS antenna data:', err);
@@ -175,6 +192,21 @@ const GPSAntennaTab = () => {
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+        {/* Unsaved Changes Warning */}
+        {hasUnsavedChanges && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  ⚠️ You have unsaved changes
+                </p>
+                <p className="text-sm">
+                  Don't forget to save your changes before leaving this page.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* 1. Location Radio Buttons */}
           <div>

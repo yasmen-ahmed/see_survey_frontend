@@ -8,6 +8,7 @@ const NewSectorPlanningTab = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
   const dropdownOptions = ['1', '2', '3', '4', '5', 'Not applicable'];
   
@@ -19,6 +20,19 @@ const NewSectorPlanningTab = () => {
     existingAntennasSwapped: 0,
     newFpfhInstalled: 0
   });
+
+  // Add beforeunload event listener
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // Load existing data when component mounts
   useEffect(() => {
@@ -70,6 +84,8 @@ const NewSectorPlanningTab = () => {
       [field]: value
     }));
 
+    setHasUnsavedChanges(true);
+
     // Clear error for this field
     if (errors[field]) {
       const newErrors = { ...errors };
@@ -117,6 +133,7 @@ const NewSectorPlanningTab = () => {
         apiData
       );
       
+      setHasUnsavedChanges(false);
       showSuccess('New radio installations data submitted successfully!');
       console.log("Response:", response.data);
       setErrors({});
@@ -131,7 +148,21 @@ const NewSectorPlanningTab = () => {
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-   
+          {/* Unsaved Changes Warning */}
+          {hasUnsavedChanges && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  ⚠️ You have unsaved changes
+                </p>
+                <p className="text-sm">
+                  Don't forget to save your changes before leaving this page.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
           <form onSubmit={handleSubmit} className="space-y-4">
             {errors.submit && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">

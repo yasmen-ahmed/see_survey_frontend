@@ -22,6 +22,20 @@ export const useFpfhForm = (sessionId) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedImages, setUploadedImages] = useState({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Add beforeunload event listener
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // Load existing data when component mounts
   useEffect(() => {
@@ -122,6 +136,7 @@ export const useFpfhForm = (sessionId) => {
     });
 
     setFpfhForms(newFpfhForms);
+    setHasUnsavedChanges(true);
 
     // Clean up images for removed FPFHs
     setUploadedImages(prev => {
@@ -171,6 +186,8 @@ export const useFpfhForm = (sessionId) => {
       return updated;
     });
 
+    setHasUnsavedChanges(true);
+
     // Clear error for this field
     const errorKey = `${fpfhIndex}.${field}`;
     if (errors[errorKey]) {
@@ -200,13 +217,25 @@ export const useFpfhForm = (sessionId) => {
         newErrors[`${index}.dcCableLength`] = 'Please enter DC cable length';
       }
       if (!fpfh.earthBusExists) {
-        newErrors[`${index}.earthBusExists`] = 'Please select earth bus bar option';
+        newErrors[`${index}.earthBusExists`] = 'Please select if earth bus exists';
       }
 
-      // Validate required images
-      const requiredImageKey = `new_fpfh_${index + 1}_proposed_location`;
-      if (!uploadedImages[requiredImageKey]?.length) {
-        newErrors[requiredImageKey] = 'Please upload proposed location photo';
+      // Conditional validations
+      if (fpfh.proposedLocation === 'On tower') {
+        if (!fpfh.baseHeight) {
+          newErrors[`${index}.baseHeight`] = 'Please enter base height';
+        }
+        if (!fpfh.towerLeg) {
+          newErrors[`${index}.towerLeg`] = 'Please select tower leg';
+        }
+      }
+
+      if (fpfh.dcPowerSource === 'from the existing rectifier cabinet' && !fpfh.dcDistribution) {
+        newErrors[`${index}.dcDistribution`] = 'Please select DC distribution';
+      }
+
+      if (fpfh.earthBusExists === 'Yes' && !fpfh.earthCableLength) {
+        newErrors[`${index}.earthCableLength`] = 'Please enter earth cable length';
       }
     });
 
@@ -215,48 +244,48 @@ export const useFpfhForm = (sessionId) => {
   };
 
   const handleSubmit = async (e) => {
+    if (e) {
+      e.preventDefault();
+    }
 
+    if (!validateForm()) {
+      return;
+    }
 
     setIsSubmitting(true);
-    console.log('Starting form submission...');
 
     try {
       const formData = new FormData();
-      
-      // Add the form data
-      const submitData = {
+
+      // Prepare FPFH data
+      const fpfhData = fpfhForms.slice(0, fpfhCount).map(fpfh => ({
+        fpfh_installation_type: fpfh.installationType,
+        fpfh_location: fpfh.proposedLocation,
+        fpfh_base_height: fpfh.baseHeight,
+        fpfh_tower_leg: fpfh.towerLeg,
+        fpfh_dc_power_source: fpfh.dcPowerSource,
+        dc_distribution_source: fpfh.dcDistribution,
+        ethernet_cable_length: fpfh.ethernetLength,
+        dc_power_cable_length: fpfh.dcCableLength,
+        earth_bus_bar_exists: fpfh.earthBusExists,
+        earth_cable_length: fpfh.earthCableLength,
+      }));
+
+      formData.append('data', JSON.stringify({
         new_fpfh_installed: fpfhCount,
-        fpfhs: fpfhForms.slice(0, fpfhCount).map((fpfh, index) => ({
-          fpfh_index: index + 1,
-          fpfh_installation_type: fpfh.installationType || '',
-          fpfh_location: fpfh.proposedLocation || '',
-          fpfh_base_height: fpfh.baseHeight ? parseFloat(fpfh.baseHeight) : null,
-          fpfh_tower_leg: fpfh.towerLeg || null,
-          fpfh_dc_power_source: fpfh.dcPowerSource || '',
-          dc_distribution_source: fpfh.dcDistribution || '',
-          ethernet_cable_length: fpfh.ethernetLength ? parseFloat(fpfh.ethernetLength) : null,
-          dc_power_cable_length: fpfh.dcCableLength ? parseFloat(fpfh.dcCableLength) : null,
-          earth_bus_bar_exists: fpfh.earthBusExists || '',
-          earth_cable_length: fpfh.earthCableLength ? parseFloat(fpfh.earthCableLength) : null,
-        }))
-      };
+        fpfhs: fpfhData
+      }));
 
-      console.log('Form data prepared:', submitData);
-      formData.append('data', JSON.stringify(submitData));
-
-      // Append all images
-      Object.entries(uploadedImages).forEach(([key, files]) => {
-        if (files && files.length > 0) {
-          const file = files[0];
+      // Append images
+      Object.entries(uploadedImages).forEach(([category, files]) => {
+        files.forEach(file => {
           if (file instanceof File) {
-            console.log('Appending file:', key, file.name);
-            formData.append(key, file);
+            formData.append(category, file);
           }
-        }
+        });
       });
 
-      console.log('Making API request...');
-      const response = await axios.put(
+      await axios.put(
         `${import.meta.env.VITE_API_URL}/api/new-fpfh/${sessionId}`,
         formData,
         {
@@ -265,90 +294,12 @@ export const useFpfhForm = (sessionId) => {
           }
         }
       );
-      console.log('API response received:', response.data);
 
-      if (response.data.results) {
-        // Update the form data with the response
-        const newFpfhForms = Array(6).fill().map((_, index) => {
-          if (index < response.data.results.length) {
-            const fpfhData = response.data.results[index].data;
-            return {
-              installationType: fpfhData.fpfh_installation_type || '',
-              proposedLocation: fpfhData.fpfh_location || '',
-              baseHeight: fpfhData.fpfh_base_height || '',
-              towerLeg: fpfhData.fpfh_tower_leg || '',
-              dcPowerSource: fpfhData.fpfh_dc_power_source || '',
-              dcDistribution: fpfhData.dc_distribution_source || '',
-              ethernetLength: fpfhData.ethernet_cable_length || '',
-              dcCableLength: fpfhData.dc_power_cable_length || '',
-              earthBusExists: fpfhData.earth_bus_bar_exists || '',
-              earthCableLength: fpfhData.earth_cable_length || '',
-              images: fpfhData.images?.reduce((acc, img) => {
-                const fpfhNumber = img.fpfh_index || 1; // Default to 1 if not specified
-                let imageKey;
-
-                // Log the raw image data
-                console.log('Raw image data:', img);
-
-                // Match exactly with the backend category structure
-                if (img.category == `new_fpfh_${fpfhNumber}_proposed_location`) {
-                  imageKey = `new_fpfh_${fpfhNumber}_proposed_location`;
-                } else {
-                  imageKey = `new_fpfh_${fpfhNumber}_proposed_location_optional_photo`;
-                }
-
-                // Log the assigned key and URL
-                console.log('Image processing:', {
-                  category: img.category,
-                  assignedKey: imageKey,
-                  fileUrl: img.file_url
-                });
-
-                // Initialize array if needed
-                acc[imageKey] = acc[imageKey] || [];
-                
-                // Add the image with consistent URL structure
-                acc[imageKey].push({
-                  id: img.id,
-                  url: `${import.meta.env.VITE_API_URL}/${img.file_url}`,
-                  file_url: img.file_url,
-                  category: img.category // Keep the original category
-                });
-
-                return acc;
-              }, {})
-            };
-          }
-          return { ...initialFpfhForm };
-        });
-        
-        setFpfhForms(newFpfhForms);
-
-        // Update uploaded images state
-        const newUploadedImages = {};
-        response.data.results.forEach((result, index) => {
-          if (result.data.images) {
-            result.data.images.forEach(img => {
-              const fpfhNumber = index + 1;
-              const imageKey = img.category === 'new_fpfh_proposed_location' 
-                ? `new_fpfh_${fpfhNumber}_proposed_location`
-                : `new_fpfh_${fpfhNumber}_proposed_location_optional_photo`;
-              
-              newUploadedImages[imageKey] = newUploadedImages[imageKey] || [];
-              newUploadedImages[imageKey].push({
-                id: img.id,
-                file_url: img.file_url
-              });
-            });
-          }
-        });
-        setUploadedImages(newUploadedImages);
-      }
-
-      showSuccess('FPFHs saved successfully');
+      setHasUnsavedChanges(false);
+      showSuccess('New FPFHs data saved successfully');
     } catch (err) {
-      console.error('Error saving FPFHs:', err);
-      showError('Error saving FPFHs');
+      console.error('Error saving new FPFHs data:', err);
+      showError('Error saving new FPFHs data');
     } finally {
       setIsSubmitting(false);
     }
@@ -365,5 +316,6 @@ export const useFpfhForm = (sessionId) => {
     handleFpfhCountChange,
     handleChange,
     handleSubmit,
+    hasUnsavedChanges
   };
 }; 

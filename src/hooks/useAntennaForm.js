@@ -30,6 +30,20 @@ export const useAntennaForm = (sessionId) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadedImages, setUploadedImages] = useState({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Add beforeunload event listener
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // Load existing data when component mounts
   useEffect(() => {
@@ -119,6 +133,7 @@ export const useAntennaForm = (sessionId) => {
 
     setAntennaCount(newCount);
     setAntennaForms(newAntennaForms);
+    setHasUnsavedChanges(true);
   };
 
   const handleChange = (antennaIndex, field, value) => {
@@ -138,6 +153,8 @@ export const useAntennaForm = (sessionId) => {
       updated[antennaIndex] = antenna;
       return updated;
     });
+
+    setHasUnsavedChanges(true);
 
     // Clear error for this field
     const errorKey = `${antennaIndex}.${field}`;
@@ -238,10 +255,11 @@ export const useAntennaForm = (sessionId) => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) {
+      e.preventDefault();
+    }
 
     if (!validateForm()) {
-      showError('Please fill in all required fields');
       return;
     }
 
@@ -249,41 +267,43 @@ export const useAntennaForm = (sessionId) => {
 
     try {
       const formData = new FormData();
-      
-      // Add antenna data as JSON string
-      const submitData = {
+
+      // Prepare antenna data
+      const antennaData = antennaForms.slice(0, antennaCount).map(antenna => ({
+        operator: antenna.operator,
+        base_height_from_tower: antenna.baseHeight,
+        tower_leg_location: antenna.towerLeg,
+        sector_number: antenna.sectorNumber,
+        new_or_swap: antenna.newOrSwap,
+        antenna_technology: antenna.technologies,
+        azimuth_angle_shift: antenna.azimuth,
+        angular_l1_dimension: antenna.angularL1Dimension,
+        angular_l2_dimension: antenna.angularL2Dimension,
+        tubular_cross_section: antenna.tubularCrossSection,
+        tower_leg_section: antenna.towerSection,
+        side_arm_type: antenna.sideArmOption,
+        side_arm_length: antenna.sideArmLength,
+        side_arm_cross_section: antenna.sideArmCrossSection,
+        side_arm_offset: antenna.sideArmOffset,
+        earth_bus_bar_exists: antenna.earthBusExists,
+        earth_cable_length: antenna.earthCableLength,
+      }));
+
+      formData.append('data', JSON.stringify({
         new_antennas_planned: antennaCount,
-        antennas: antennaForms.slice(0, antennaCount).map((antenna, index) => ({
-          antenna_index: index + 1,
-          sector_number: antenna.sectorNumber || null,
-          new_or_swap: antenna.newOrSwap || null,
-          antenna_technology: antenna.technologies || [],
-          azimuth_angle_shift: antenna.azimuth ? parseFloat(antenna.azimuth).toFixed(3) : null,
-          base_height_from_tower: antenna.baseHeight ? parseFloat(antenna.baseHeight).toFixed(3) : null,
-          tower_leg_location: antenna.towerLeg || null,
-          tower_leg_section: antenna.towerSection || null,
-          angular_l1_dimension: antenna.angularL1Dimension ? parseFloat(antenna.angularL1Dimension).toFixed(2) : null,
-          angular_l2_dimension: antenna.angularL2Dimension ? parseFloat(antenna.angularL2Dimension).toFixed(2) : null,
-          tubular_cross_section: antenna.tubularCrossSection ? parseFloat(antenna.tubularCrossSection).toFixed(2) : null,
-          side_arm_type: antenna.sideArmOption || null,
-          side_arm_length: antenna.sideArmLength ? parseFloat(antenna.sideArmLength).toFixed(3) : null,
-          side_arm_cross_section: antenna.sideArmCrossSection ? parseFloat(antenna.sideArmCrossSection).toFixed(2) : null,
-          side_arm_offset: antenna.sideArmOffset ? parseFloat(antenna.sideArmOffset).toFixed(2) : null,
-          earth_bus_bar_exists: antenna.earthBusExists || null,
-          earth_cable_length: antenna.earthCableLength ? parseFloat(antenna.earthCableLength).toFixed(2) : null,
-        }))
-      };
+        antennas: antennaData
+      }));
 
-      formData.append('data', JSON.stringify(submitData));
-
-      // Add new images
+      // Append images
       Object.entries(uploadedImages).forEach(([category, files]) => {
-        if (Array.isArray(files) && files.length > 0 && files[0] instanceof File) {
-          formData.append(category, files[0]);
-        }
+        files.forEach(file => {
+          if (file instanceof File) {
+            formData.append(category, file);
+          }
+        });
       });
 
-      const response = await axios.put(
+      await axios.put(
         `${import.meta.env.VITE_API_URL}/api/new-antennas/${sessionId}`,
         formData,
         {
@@ -293,27 +313,11 @@ export const useAntennaForm = (sessionId) => {
         }
       );
 
-      // Update images with response data
-      if (response.data.results) {
-        const updatedImages = {};
-        response.data.results.forEach(result => {
-          if (result.status === 'success' && result.data.images) {
-            result.data.images.forEach(image => {
-              updatedImages[image.category] = [{
-                file_url: `/${image.path}`,
-                id: image.id
-              }];
-            });
-          }
-        });
-        setUploadedImages(updatedImages);
-      }
-
-      console.log("New antennas response:", response.data);
-      showSuccess('Antennas updated successfully');
+      setHasUnsavedChanges(false);
+      showSuccess('New antennas data saved successfully');
     } catch (err) {
-      console.error("Error submitting new antennas:", err);
-      showError(err.response?.data?.error || 'Error updating antennas');
+      console.error('Error saving new antennas data:', err);
+      showError('Error saving new antennas data');
     } finally {
       setIsSubmitting(false);
     }
@@ -325,10 +329,11 @@ export const useAntennaForm = (sessionId) => {
     errors,
     isLoading,
     isSubmitting,
+    uploadedImages,
+    setUploadedImages,
     handleAntennaCountChange,
     handleChange,
     handleSubmit,
-    uploadedImages,
-    setUploadedImages
+    hasUnsavedChanges
   };
 }; 

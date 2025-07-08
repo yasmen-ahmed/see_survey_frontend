@@ -13,7 +13,8 @@ const DynamicFormTable = ({
   isSubmitting = false,
   maxHeight = '600px',
   showSubmitButton = true,
-  submitButtonText = 'Save and Continue'
+  submitButtonText = 'Save and Continue',
+  hasUnsavedChanges = false
 }) => {
   // Ensure entities is always an array
   const safeEntities = Array.isArray(entities) ? entities : [];
@@ -155,6 +156,22 @@ const DynamicFormTable = ({
         </div>
       )}
 
+      {/* Unsaved Changes Warning */}
+      {hasUnsavedChanges && (
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+          <div className="flex items-center">
+            <div className="ml-3">
+              <p className="text-sm font-medium">
+                ⚠️ You have unsaved changes
+              </p>
+              <p className="text-sm">
+                Don't forget to save your changes before leaving this page.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {errors.submit && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {errors.submit}
@@ -198,9 +215,9 @@ const DynamicFormTable = ({
                   <td className={getHeaderClass(question)}>
                     {question.label}
                   </td>
-                  {safeEntities.slice(0, Math.max(1, entityCount)).map((_, entityIndex) => (
-                    <td key={entityIndex} className="border px-2 py-2">
-                      {renderField(question, entityIndex)}
+                  {Array.from({ length: Math.max(1, entityCount) }, (_, i) => (
+                    <td key={i} className="border px-4 py-2">
+                      {renderField(question, i)}
                     </td>
                   ))}
                 </tr>
@@ -210,15 +227,16 @@ const DynamicFormTable = ({
         </table>
       </div>
 
+      {/* Submit Button */}
       {showSubmitButton && (
-        <div className="mt-6 flex justify-center">
+        <div className="mt-4 flex justify-end">
           <button
             type="submit"
             disabled={isSubmitting}
-            className={`px-6 py-3 text-white rounded font-semibold ${
+            className={`px-6 py-2 rounded-lg text-white font-medium ${
               isSubmitting
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-blue-500 hover:bg-blue-700'
+                ? 'bg-blue-300 cursor-not-allowed'
+                : 'bg-blue-500 hover:bg-blue-600'
             }`}
           >
             {isSubmitting ? 'Saving...' : submitButtonText}

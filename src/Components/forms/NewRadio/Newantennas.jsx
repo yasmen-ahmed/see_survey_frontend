@@ -15,7 +15,8 @@ const NewAntennaForm = () => {
     handleChange,
     handleSubmit,
     uploadedImages,
-    setUploadedImages
+    setUploadedImages,
+    hasUnsavedChanges
   } = useAntennaForm(sessionId);
 
   // Generate image fields for each antenna
@@ -68,6 +69,7 @@ const NewAntennaForm = () => {
             isSubmitting={isSubmitting}
             maxHeight="800px"
             submitButtonText="Save and Continue"
+            hasUnsavedChanges={hasUnsavedChanges}
           />
         </div>
 
@@ -82,4 +84,4 @@ const NewAntennaForm = () => {
   );
 };
 
-      export default NewAntennaForm;
+export default NewAntennaForm;

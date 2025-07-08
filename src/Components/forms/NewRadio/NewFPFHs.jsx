@@ -18,6 +18,7 @@ const NewFPFHForm = () => {
     handleFpfhCountChange,
     handleChange,
     handleSubmit,
+    hasUnsavedChanges
   } = useFpfhForm(sessionId);
 
   // Generate image fields for each FPFH - memoized to prevent infinite loop
@@ -80,6 +81,7 @@ const NewFPFHForm = () => {
             isSubmitting={isSubmitting}
             maxHeight="calc(100vh - 150px)"
             submitButtonText="Save and Continue"
+            hasUnsavedChanges={hasUnsavedChanges}
           />
         </div>
 

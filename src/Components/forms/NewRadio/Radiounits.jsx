@@ -18,6 +18,7 @@ const RadioUnitsForm = () => {
     handleRadioUnitsCountChange,
     handleChange,
     handleSubmit,
+    hasUnsavedChanges
   } = useRadioUnitsForm(sessionId);
 
   // Generate image fields for each radio unit - memoized to prevent infinite loop
@@ -89,6 +90,7 @@ const RadioUnitsForm = () => {
         isSubmitting={isSubmitting}
         maxHeight="800px"
         submitButtonText="Save and Continue"
+        hasUnsavedChanges={hasUnsavedChanges}
       />
       </div>
       <ImageUploader
