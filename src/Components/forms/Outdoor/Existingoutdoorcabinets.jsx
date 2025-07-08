@@ -335,18 +335,23 @@ const OutdoorCabinetsForm = () => {
       // Add cabinet count
       submitFormData.append('numberOfCabinets', parseInt(formData.numberOfCabinets));
 
-      // Add cabinet data as individual form fields
-      formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).forEach((cabinet, index) => {
-        Object.entries(cabinet).forEach(([key, value]) => {
-          if (key !== 'images') {
-            if (Array.isArray(value)) {
-              submitFormData.append(`cabinets[${index}][${key}]`, JSON.stringify(value));
-            } else {
-              submitFormData.append(`cabinets[${index}][${key}]`, value || '');
-            }
-          }
-        });
+      // Convert form data to JSON string
+      const cabinetData = formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map(cabinet => {
+        // Create a copy of the cabinet data
+        const cabinetCopy = { ...cabinet };
+        // Ensure arrays are properly handled
+        cabinetCopy.type = Array.isArray(cabinet.type) ? cabinet.type : [];
+        cabinetCopy.hardware = Array.isArray(cabinet.hardware) ? cabinet.hardware : [];
+        // Remove images as they're handled separately
+        delete cabinetCopy.images;
+        return cabinetCopy;
       });
+
+      // Add cabinet data as a single JSON string
+      submitFormData.append('data', JSON.stringify({
+        numberOfCabinets: parseInt(formData.numberOfCabinets),
+        cabinets: cabinetData
+      }));
 
       // Get all possible image fields
       const allImageFields = getAllImages();

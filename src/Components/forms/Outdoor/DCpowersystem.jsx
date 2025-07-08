@@ -7,6 +7,7 @@ import ImageUploader from '../../GalleryComponent';
 const DCPowerInformationForm = () => {
   const { sessionId } = useParams();
   const [numberOfCabinets, setNumberOfCabinets] = useState(0);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [formData, setFormData] = useState({
     dc_rectifiers: {
       existing_dc_rectifiers_location: '',
@@ -27,6 +28,19 @@ const DCPowerInformationForm = () => {
       new_battery_string_installation_location: []
     }
   });
+
+  // Add useEffect for window beforeunload event
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   const [uploadedImages, setUploadedImages] = useState({});
 
@@ -156,25 +170,8 @@ const DCPowerInformationForm = () => {
       });
   }, [sessionId]);
 
-  // Handle image uploads from ImageUploader component
-  const handleImageUpload = (imageCategory, files) => {
-    console.log(`Images uploaded for ${imageCategory}:`, files);
-    setUploadedImages(prev => ({
-      ...prev,
-      [imageCategory]: files
-    }));
-  };
-
-  // Generate cabinet options based on numberOfCabinets
-  const generateCabinetOptions = () => {
-    const options = [];
-    for (let i = 1; i <= numberOfCabinets; i++) {
-      options.push(`Existing cabinet #${i}`);
-    }
-    return options;
-  };
-
   const handleChange = (section, name, value) => {
+    setHasUnsavedChanges(true);
     console.log(`Changing ${section}.${name} to:`, value);
     setFormData((prev) => ({
       ...prev,
@@ -186,6 +183,7 @@ const DCPowerInformationForm = () => {
   };
 
   const handleCheckboxChange = (value) => {
+    setHasUnsavedChanges(true);
     console.log(`Toggling battery installation location:`, value);
     setFormData((prev) => {
       const currentLocations = prev.batteries.new_battery_string_installation_location || [];
@@ -203,6 +201,24 @@ const DCPowerInformationForm = () => {
     });
   };
 
+  const handleImageUpload = (imageCategory, files) => {
+    setHasUnsavedChanges(true);
+    console.log(`Images uploaded for ${imageCategory}:`, files);
+    setUploadedImages(prev => ({
+      ...prev,
+      [imageCategory]: files
+    }));
+  };
+
+  // Generate cabinet options based on numberOfCabinets
+  const generateCabinetOptions = () => {
+    const options = [];
+    for (let i = 1; i <= numberOfCabinets; i++) {
+      options.push(`Existing cabinet #${i}`);
+    }
+    return options;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -210,19 +226,35 @@ const DCPowerInformationForm = () => {
       // Create FormData for multipart submission
       const submitFormData = new FormData();
 
-      // Add form data
-      submitFormData.append('dc_rectifiers', JSON.stringify(formData.dc_rectifiers));
-      submitFormData.append('batteries', JSON.stringify(formData.batteries));
+      // Add form data - ensure all values are properly stringified
+      const dc_rectifiers = {
+        ...formData.dc_rectifiers,
+        rectifier_module_capacity: parseFloat(formData.dc_rectifiers.rectifier_module_capacity) || 0,
+        total_capacity_existing_dc_power_system: parseFloat(formData.dc_rectifiers.total_capacity_existing_dc_power_system) || 0,
+        how_many_existing_dc_rectifier_modules: parseInt(formData.dc_rectifiers.how_many_existing_dc_rectifier_modules) || 0,
+        how_many_free_slot_available_rectifier: parseInt(formData.dc_rectifiers.how_many_free_slot_available_rectifier) || 0
+      };
+
+      const batteries = {
+        ...formData.batteries,
+        how_many_existing_battery_string: parseInt(formData.batteries.how_many_existing_battery_string) || 0,
+        total_battery_capacity: parseFloat(formData.batteries.total_battery_capacity) || 0,
+        how_many_free_slot_available_battery: parseInt(formData.batteries.how_many_free_slot_available_battery) || 0,
+        new_battery_string_installation_location: formData.batteries.new_battery_string_installation_location || []
+      };
+
+      submitFormData.append('dc_rectifiers', JSON.stringify(dc_rectifiers));
+      submitFormData.append('batteries', JSON.stringify(batteries));
 
       // Add images
       Object.entries(uploadedImages).forEach(([category, files]) => {
         if (files && files.length > 0) {
-          // Handle both regular and indexed categories
-          files.forEach((file, index) => {
-            if (file instanceof File) {
-              submitFormData.append(category, file);
-            }
-          });
+          const file = files[0];
+          if (file instanceof File) {
+            submitFormData.append(category, file);
+          }
+        } else {
+          submitFormData.append(category, '');
         }
       });
 
@@ -284,6 +316,7 @@ const DCPowerInformationForm = () => {
         }
       }
       
+      setHasUnsavedChanges(false);
       showSuccess('DC Power System data and images submitted successfully!');
     } catch (err) {
       console.error("Error submitting DC Power System data:", err);
@@ -300,6 +333,21 @@ const DCPowerInformationForm = () => {
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+        {/* Unsaved Changes Warning */}
+        {hasUnsavedChanges && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  ⚠️ You have unsaved changes
+                </p>
+                <p className="text-sm">
+                  Don't forget to save your changes before leaving this page.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         <form onSubmit={handleSubmit}>
           <h2 className='text-2xl font-bold text-blue-700 mb-4'>DC Rectifiers</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 bg-gray-100 p-4 rounded-lg">

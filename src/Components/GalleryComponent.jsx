@@ -4,6 +4,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
   const [imagePreviews, setImagePreviews] = useState({});
+  const [dragOver, setDragOver] = useState({});
 
   useEffect(() => {
     const newPreviews = {};
@@ -51,18 +52,28 @@ const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
   const handleImageChange = (e, imageName) => {
     const file = e.target.files[0];
     if (file) {
-      // Create a preview immediately for the new file
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreviews(prev => ({
-          ...prev,
-          [imageName]: reader.result
-        }));
-      };
-      reader.readAsDataURL(file);
-      
-      onImageUpload(imageName, [file]);
+      processFile(file, imageName);
     }
+  };
+
+  const processFile = (file, imageName) => {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file');
+      return;
+    }
+
+    // Create a preview immediately for the new file
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreviews(prev => ({
+        ...prev,
+        [imageName]: reader.result
+      }));
+    };
+    reader.readAsDataURL(file);
+    
+    onImageUpload(imageName, [file]);
   };
 
   const handleDelete = (imageName) => {
@@ -72,6 +83,29 @@ const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
       delete newPreviews[imageName];
       return newPreviews;
     });
+  };
+
+  const handleDragOver = (e, imageName) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(prev => ({ ...prev, [imageName]: true }));
+  };
+
+  const handleDragLeave = (e, imageName) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(prev => ({ ...prev, [imageName]: false }));
+  };
+
+  const handleDrop = (e, imageName) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(prev => ({ ...prev, [imageName]: false }));
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      processFile(files[0], imageName);
+    }
   };
 
   return (
@@ -93,7 +127,7 @@ const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
                   className="w-full h-32 object-cover rounded-lg mb-2"
                   onError={(e) => {
                     console.error('Image load error:', e);
-                    e.target.src = 'placeholder.jpg'; // You can add a placeholder image
+                    e.target.src = 'placeholder.jpg';
                   }}
                 />
                 <button
@@ -105,13 +139,26 @@ const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
                 </button>
               </div>
             ) : (
-              <div className="flex items-center justify-center w-full">
-                <label className="w-full flex flex-col items-center justify-center h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+              <div 
+                className="flex items-center justify-center w-full"
+                onDragOver={(e) => handleDragOver(e, image.name)}
+                onDragLeave={(e) => handleDragLeave(e, image.name)}
+                onDrop={(e) => handleDrop(e, image.name)}
+              >
+                <label 
+                  className={`w-full flex flex-col items-center justify-center h-32 border-2 ${
+                    dragOver[image.name] 
+                      ? 'border-blue-500 bg-blue-50' 
+                      : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+                  } border-dashed rounded-lg cursor-pointer transition-colors duration-200`}
+                >
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <svg className="w-8 h-8 mb-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                    <svg className={`w-8 h-8 mb-4 ${dragOver[image.name] ? 'text-blue-500' : 'text-gray-500'}`} aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
                       <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
                     </svg>
-                    <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span></p>
+                    <p className="mb-2 text-sm text-gray-500">
+                      <span className="font-semibold">Click to upload</span> or drag and drop
+                    </p>
                   </div>
                   <input
                     type="file"

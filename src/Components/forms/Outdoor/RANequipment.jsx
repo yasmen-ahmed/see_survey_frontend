@@ -6,6 +6,7 @@ import { useParams } from 'react-router-dom';
 const RANBaseBandForm = () => {
   const { sessionId } = useParams();
   const [numberOfCabinets, setNumberOfCabinets] = useState(0);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [formData, setFormData] = useState({
     existing_location: '',
     existing_vendor: '',
@@ -14,6 +15,19 @@ const RANBaseBandForm = () => {
     length_of_transmission_cable: ''
   });
 
+  // Add useEffect for window beforeunload event
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/ran-equipment/${sessionId}`)
       .then(res => {
@@ -21,10 +35,7 @@ const RANBaseBandForm = () => {
         console.log("Fetched data:", data);
 
         if (data) {
-          // Set number of cabinets from API response
           setNumberOfCabinets(data.numberOfCabinets || 0);
-          
-          // Set form data from ranEquipment object
           const ranData = data.ranEquipment || {};
           console.log(ranData);
           setFormData({
@@ -55,10 +66,12 @@ const RANBaseBandForm = () => {
   };
 
   const handleChange = (name, value) => {
+    setHasUnsavedChanges(true);
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleCheckboxChange = (name, value) => {
+    setHasUnsavedChanges(true);
     setFormData((prev) => ({
       ...prev,
       [name]: prev[name].includes(value)
@@ -82,6 +95,7 @@ const RANBaseBandForm = () => {
 
     try {
       const response = await axios.put(`${import.meta.env.VITE_API_URL}/api/ran-equipment/${sessionId}`, payload);
+      setHasUnsavedChanges(false);
       showSuccess('RAN equipment data submitted successfully!');
       console.log("Response:", response.data);
     } catch (err) {
@@ -96,9 +110,22 @@ const RANBaseBandForm = () => {
   return (
     <div className="max-h-screen flex  items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+        {/* Unsaved Changes Warning */}
+        {hasUnsavedChanges && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  ⚠️ You have unsaved changes
+                </p>
+                <p className="text-sm">
+                  Don't forget to save your changes before leaving this page.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         
-      
-
         <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" onSubmit={handleSubmit}>
 
           <div className='mb-4'>

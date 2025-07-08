@@ -6,6 +6,7 @@ import ImageUploader from "../../GalleryComponent";
 
 const OutdoorForm = () => {
   const { sessionId } = useParams();
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [formData, setFormData] = useState({
     sunshade: '',
     freePositions: '',
@@ -17,6 +18,19 @@ const OutdoorForm = () => {
     freeHolesInBusBars: '',
     hasSketch: Boolean,
   });
+
+  // Add useEffect for window beforeunload event
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   const [uploadedImages, setUploadedImages] = useState({});
 
@@ -68,6 +82,7 @@ const OutdoorForm = () => {
 
   // Handle image uploads from ImageUploader component
   const handleImageUpload = (imageCategory, files) => {
+    setHasUnsavedChanges(true);
     console.log(`Images uploaded for ${imageCategory}:`, files);
     setUploadedImages(prev => ({
       ...prev,
@@ -115,11 +130,11 @@ const OutdoorForm = () => {
   }, [sessionId]);
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setHasUnsavedChanges(true);
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -242,6 +257,7 @@ const OutdoorForm = () => {
         }
       }
 
+      setHasUnsavedChanges(false);
       showSuccess('Outdoor General Layout data and images submitted successfully!');
     } catch (err) {
       console.error("Error submitting outdoor general layout data:", err);
@@ -253,6 +269,21 @@ const OutdoorForm = () => {
   return (
     <div className="max-h-screen flex  items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+        {/* Unsaved Changes Warning */}
+        {hasUnsavedChanges && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  ⚠️ You have unsaved changes
+                </p>
+                <p className="text-sm">
+                  Don't forget to save your changes before leaving this page.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
           <form className=" mb-8" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[550px] overflow-y-auto">
 

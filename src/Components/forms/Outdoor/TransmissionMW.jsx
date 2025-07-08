@@ -8,6 +8,7 @@ const TransmissionInformationForm = () => {
   const { sessionId } = useParams();
   const [numberOfCabinets, setNumberOfCabinets] = useState(0);
   const [uploadedImages, setUploadedImages] = useState({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [formData, setFormData] = useState({
     type_of_transmission: '',
     existing_transmission_base_band_location: '',
@@ -73,6 +74,7 @@ const TransmissionInformationForm = () => {
 
   // Handle image uploads
   const handleImageUpload = (imageCategory, files) => {
+    setHasUnsavedChanges(true); // Add this line at the start of the function
     console.log(`Images uploaded for ${imageCategory}:`, files);
     setUploadedImages(prev => ({
       ...prev,
@@ -135,6 +137,7 @@ const TransmissionInformationForm = () => {
   };
 
   const handleChange = (name, value) => {
+    setHasUnsavedChanges(true);
     console.log(`Changing ${name} to:`, value);
     setFormData((prev) => {
       const newFormData = { ...prev, [name]: value };
@@ -175,6 +178,7 @@ const TransmissionInformationForm = () => {
   };
 
   const handleMWLinkChange = (linkIndex, fieldName, value) => {
+    setHasUnsavedChanges(true); // Add this line at the start of the function
     setFormData(prev => {
       const newFormData = { ...prev };
       const numLinks = parseInt(prev.how_many_mw_link_exist) || 1;
@@ -310,8 +314,23 @@ const TransmissionInformationForm = () => {
       const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/transmission-mw/${sessionId}`);
       const latestData = getResponse.data.data || getResponse.data;
 
-     
-      
+      // Remove auto-filled flags from all links
+      if (latestData.mw_links) {
+        setFormData(prev => ({
+          ...prev,
+          mw_links: prev.mw_links.map(link => {
+            const cleanedLink = { ...link };
+            // Remove all auto-filled flags
+            Object.keys(cleanedLink).forEach(key => {
+              if (key.endsWith('AutoFilled')) {
+                delete cleanedLink[key];
+              }
+            });
+            return cleanedLink;
+          })
+        }));
+      }
+      setHasUnsavedChanges(false);
       showSuccess('MW transmission data and images submitted successfully!');
     } catch (err) {
       console.error("Error submitting data:", err);
@@ -323,10 +342,36 @@ const TransmissionInformationForm = () => {
   const cabinetOptions = generateCabinetOptions();
   const mwVendors = ['Nokia', 'Ericsson', 'Huawei', 'ZTE', 'NEC', 'Other'];
   const backhaulingTypes = ['Ethernet', 'Fiber'];
+ // Add useEffect for window beforeunload event
+ useEffect(() => {
+  const handleBeforeUnload = (e) => {
+    if (hasUnsavedChanges) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  };
 
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+}, [hasUnsavedChanges]);
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%] max-h-[650px] overflow-y-auto">
+            {/* Unsaved Changes Warning */}
+            {hasUnsavedChanges && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  ⚠️ You have unsaved changes
+                </p>
+                <p className="text-sm">
+                  Don't forget to save your changes before leaving this page.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className='overflow-auto max-h-[850px]'>
 
@@ -592,7 +637,7 @@ const TransmissionInformationForm = () => {
                               type="text"
                               value={link.card_type_model}
                               onChange={(e) => handleMWLinkChange(linkIndex, 'card_type_model', e.target.value)}
-                              className="w-full p-2 border rounded text-sm"
+                              className={`w-full p-2 border rounded text-sm ${isFieldAutoFilled(linkIndex, 'card_type_model') ? colorFillAuto : ''}`}
                               placeholder="Enter card type/model..."
                             />
                           </td>
@@ -610,7 +655,7 @@ const TransmissionInformationForm = () => {
                               type="text"
                               value={link.destination_site_id}
                               onChange={(e) => handleMWLinkChange(linkIndex, 'destination_site_id', e.target.value)}
-                              className="w-full p-2 border rounded text-sm"
+                              className={`w-full p-2 border rounded text-sm ${isFieldAutoFilled(linkIndex, 'destination_site_id') ? colorFillAuto : ''}`}
                               placeholder="Enter destination site ID..."
                             />
                           </td>
