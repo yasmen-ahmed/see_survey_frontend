@@ -46,17 +46,8 @@ const SurveyCardList = () => {
     }
   };
   function generateReport(sessionId) {
-    fetch(`/api/report/${sessionId}`)
-        .then(response => response.blob())
-        .then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Session_${sessionId}.xlsx`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-        });
+    window.open(`http://10.129.10.227:3000/api/export/site/${sessionId}`, '_blank');
+    console.log('Generating report for session:', sessionId);
   };
 
   const updateSurveyStatus = async (surveyId, newStatus) => {
@@ -164,7 +155,7 @@ const SurveyCardList = () => {
               <td className="px-6 py-4">
                 <button
                   onClick={() => generateReport(survey.session_id)}
-                  className="bg-green-600 text-black px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
                 >
                   Generate
                 </button>
