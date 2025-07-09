@@ -7,7 +7,7 @@ import ImageUploader from "../../GalleryComponent";
 const RadioAntenasForm = () => {
   const { sessionId } = useParams();
   const [formData, setFormData] = useState({
-    numberOfAntennas: '',
+    numberOfAntennas: 1,
     antennas: Array(15).fill(null).map((_, index) => ({
       id: index + 1,
       operator: '',
