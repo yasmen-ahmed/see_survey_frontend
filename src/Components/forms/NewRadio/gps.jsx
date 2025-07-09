@@ -90,10 +90,15 @@ const GPSAntennaTab = () => {
   }, [sessionId]);
 
   const handleChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    console.log(`Changing ${field} to:`, value);
+    setFormData(prevData => {
+      const newData = {
+        ...prevData,
+        [field]: value,
+      };
+      console.log('Updated form data:', newData);
+      return newData;
+    });
     setHasUnsavedChanges(true);
   };
 
@@ -110,17 +115,52 @@ const GPSAntennaTab = () => {
     setIsSubmitting(true);
 
     try {
-      const formDataToSend = new FormData();
+      // Get the latest form data
+      const currentFormData = {
+        location: formData.location,
+        height: formData.height,
+        cableLength: formData.cableLength,
+      };
       
-      // Add the form data
+      console.log('Current form data before submission:', currentFormData);
+
+      // Validate required fields
+      if (!currentFormData.location) {
+        showError('Please select a GPS antenna location');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!currentFormData.height) {
+        showError('Please enter GPS antenna height');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!currentFormData.cableLength) {
+        showError('Please enter cable length');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Create FormData instance
+      const formDataToSend = new FormData();
+
+      // Prepare the data object with the current form values
       const submitData = {
-        gps_antenna_location: formData.location || '',
-        gps_antenna_height: formData.height ? parseFloat(formData.height) : null,
-        gps_cable_length: formData.cableLength ? parseFloat(formData.cableLength) : null,
+        gps_antenna_location: currentFormData.location,
+        gps_antenna_height: parseFloat(currentFormData.height),
+        gps_cable_length: parseFloat(currentFormData.cableLength),
       };
 
-      console.log('Form data prepared:', submitData);
+      console.log('Data being submitted:', submitData);
       formDataToSend.append('data', JSON.stringify(submitData));
+
+      // Log FormData contents
+      console.log('FormData entries:');
+      for (let pair of formDataToSend.entries()) {
+        console.log(pair[0], ':', pair[1]);
+      }
 
       // Append all images
       Object.entries(uploadedImages).forEach(([key, files]) => {
@@ -143,35 +183,53 @@ const GPSAntennaTab = () => {
           }
         }
       );
-      console.log('API response received:', response.data);
 
-      if (response.data.data) {
-        // Update form data
-        const gpsData = response.data.data;
-        setFormData({
-          location: gpsData.gps_antenna_location || '',
-          height: gpsData.gps_antenna_height || '',
-          cableLength: gpsData.gps_cable_length || '',
-        });
+      console.log('PUT response:', response.data);
 
-        // Update images state
-        const newImages = {};
-        if (gpsData.images) {
-          gpsData.images.forEach(img => {
+      if (response.data && response.data.data) {
+        const responseData = response.data.data;
+        console.log('Response data:', responseData);
+
+        // Verify the response data matches what we sent
+        if (responseData.gps_antenna_location !== submitData.gps_antenna_location ||
+            responseData.gps_antenna_height !== submitData.gps_antenna_height ||
+            responseData.gps_cable_length !== submitData.gps_cable_length) {
+          console.warn('Response data differs from submitted data:', {
+            submitted: submitData,
+            received: responseData
+          });
+        }
+
+        // Update form with the response data
+        setFormData(prevData => ({
+          ...prevData,
+          location: responseData.gps_antenna_location,
+          height: responseData.gps_antenna_height?.toString() || '',
+          cableLength: responseData.gps_cable_length?.toString() || '',
+        }));
+
+        // Update images
+        if (responseData.images && Array.isArray(responseData.images)) {
+          const newImages = {};
+          responseData.images.forEach(img => {
             newImages[img.category] = [{
               id: img.id,
               file_url: img.file_url
             }];
           });
+          setUploadedImages(newImages);
         }
-        setUploadedImages(newImages);
-      }
 
-      setHasUnsavedChanges(false);
-      showSuccess('GPS antenna data saved successfully');
+        setHasUnsavedChanges(false);
+        showSuccess('GPS antenna data saved successfully');
+      } else {
+        console.error('Invalid response format:', response.data);
+        showError('Received invalid data format from server');
+      }
     } catch (err) {
       console.error('Error saving GPS antenna data:', err);
-      showError('Error saving GPS antenna data');
+      const errorMessage = err.response?.data?.message || 'Error saving GPS antenna data';
+      showError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

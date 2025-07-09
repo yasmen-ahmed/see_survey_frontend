@@ -102,6 +102,7 @@ const HealthAndSafetyTab1 = () => {
   const [formData, setFormData] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Load existing data
   useEffect(() => {
@@ -137,6 +138,7 @@ const HealthAndSafetyTab1 = () => {
   }, [sessionId]);
 
   const handleChange = (field, value) => {
+    setHasUnsavedChanges(true);
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -152,7 +154,7 @@ const HealthAndSafetyTab1 = () => {
       console.log("Submitting health & safety data:", payload);
 
       await axios.put(`${import.meta.env.VITE_API_URL}/api/health-safety-site-access/${sessionId}`, payload);
-
+      setHasUnsavedChanges(false);
       showSuccess('Health & Safety data submitted successfully!');
     } catch (err) {
       console.error("Error submitting health & safety data:", err);
@@ -192,7 +194,22 @@ const HealthAndSafetyTab1 = () => {
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Unsaved Changes Warning */}
+          {hasUnsavedChanges && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  ⚠️ You have unsaved changes
+                </p>
+                <p className="text-sm">
+                  Don't forget to save your changes before leaving this page.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+          <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             {questions.map(renderField)}
           </div>

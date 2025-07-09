@@ -135,7 +135,7 @@ const RadioAntenasForm = () => {
     const activeAntennas = formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 0);
     
     return {
-      antenna_count: parseInt(formData.numberOfAntennas) || 0,
+      antenna_count: parseInt(formData.numberOfAntennas) || 1,
       antennas: activeAntennas.map((antenna, index) => {
         const antennaData = {
           antenna_number: index + 1,
