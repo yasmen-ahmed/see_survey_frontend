@@ -73,7 +73,7 @@ const MwAntennasForm = () => {
             height: antenna.height || "",
             diameter: antenna.diameter || "",
             azimuth: antenna.azimuth || "",
-            includeInPlan: antenna.includeInPlan || "",
+            // includeInPlan: antenna.includeInPlan || "",
           }));
 
           setFormData({
@@ -122,17 +122,24 @@ const MwAntennasForm = () => {
 
     setFormData({ antennaCount: e.target.value, antennas });
     setHasUnsavedChanges(true);
-    setError("");
   };
 
-  const handleAntennaChange = (index, field, value) => {
+  const handleAntennaChange = (changedIndex, field, value) => {
     const updated = [...formData.antennas];
     
-    // If this is the first antenna (index 0), auto-fill other antennas
-    if (index === 0) {
-      const numAntennas = parseInt(formData.antennaCount) || 1;
-      for (let i = 1; i < numAntennas; i++) {
-        if (!updated[i][field]) {
+    // Update the changed antenna first
+    updated[changedIndex] = {
+      ...updated[changedIndex],
+      [field]: value,
+      [`${field}AutoFilled`]: false // The changed field is not auto-filled
+    };
+
+    // Auto-fill empty fields in other antennas
+    const numAntennas = parseInt(formData.antennaCount) || 1;
+    for (let i = 0; i < numAntennas; i++) {
+      if (i !== changedIndex) { // Skip the antenna that was manually changed
+        // Only auto-fill if the field is empty or was previously auto-filled
+        if (!updated[i][field] || updated[i][`${field}AutoFilled`]) {
           updated[i] = {
             ...updated[i],
             [field]: value,
@@ -141,12 +148,6 @@ const MwAntennasForm = () => {
         }
       }
     }
-    
-    updated[index] = {
-      ...updated[index],
-      [field]: value,
-      [`${field}AutoFilled`]: false
-    };
     
     setFormData({ ...formData, antennas: updated });
     setHasUnsavedChanges(true);
@@ -170,14 +171,14 @@ const MwAntennasForm = () => {
     try {
       // Validate that all fields are filled
       const isValid = formData.antennas.every(
-        (ant) => ant.height && ant.diameter && ant.azimuth && ant.includeInPlan
+        (ant) => ant.height && ant.diameter && ant.azimuth 
       );
 
-      if (!isValid) {
-        setError("Please fill all fields for each MW antenna.");
-        setIsSubmitting(false);
-        return;
-      }
+      // if (!isValid) {
+      //   setError("Please fill all fields for each MW antenna.");
+      //   setIsSubmitting(false);
+      //   return;
+      // }
 
       // Create FormData for multipart submission
       const submitFormData = new FormData();
@@ -191,7 +192,7 @@ const MwAntennasForm = () => {
         submitFormData.append(`mwAntennasData[mw_antennas][${index}][height]`, parseFloat(antenna.height) || 0);
         submitFormData.append(`mwAntennasData[mw_antennas][${index}][diameter]`, parseFloat(antenna.diameter) || 0);
         submitFormData.append(`mwAntennasData[mw_antennas][${index}][azimuth]`, parseFloat(antenna.azimuth) || 0);
-        submitFormData.append(`mwAntennasData[mw_antennas][${index}][includeInPlan]`, antenna.includeInPlan);
+        // submitFormData.append(`mwAntennasData[mw_antennas][${index}][includeInPlan]`, antenna.includeInPlan);
       });
 
       // Get all possible image fields
@@ -253,7 +254,7 @@ const MwAntennasForm = () => {
           height: antenna.height || "",
           diameter: antenna.diameter || "",
           azimuth: antenna.azimuth || "",
-          includeInPlan: antenna.includeInPlan || "",
+          // includeInPlan: antenna.includeInPlan || "",
         }));
 
         setFormData({
@@ -304,7 +305,8 @@ const MwAntennasForm = () => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
-
+  const bgColorFillAuto="bg-[#c6efce]"
+  const colorFillAuto='text-[#006100]'
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
@@ -385,8 +387,10 @@ const MwAntennasForm = () => {
                             step="0.1"
                             value={antenna.height}
                             onChange={(e) => handleAntennaChange(antennaIndex, 'height', e.target.value)}
-                            className={`form-input ${
-                              antenna.heightAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                            className={`w-full p-2 border rounded text-sm transition-colors duration-200 ${
+                              antenna.heightAutoFilled 
+                                ? `${bgColorFillAuto} ${colorFillAuto}` 
+                                : 'border-gray-300 focus:border-blue-500'
                             }`}
                             placeholder="Enter height..."
                             required
@@ -407,8 +411,10 @@ const MwAntennasForm = () => {
                             step="0.1"
                             value={antenna.diameter}
                             onChange={(e) => handleAntennaChange(antennaIndex, 'diameter', e.target.value)}
-                            className={`w-full p-2 border rounded text-sm ${
-                              antenna.diameterAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                            className={`w-full p-2 border rounded text-sm transition-colors duration-200 ${
+                              antenna.diameterAutoFilled 
+                                ? `${bgColorFillAuto} ${colorFillAuto}` 
+                                : 'border-gray-300 focus:border-blue-500'
                             }`}
                             placeholder="Enter diameter..."
                             required
@@ -431,8 +437,10 @@ const MwAntennasForm = () => {
                             max="360"
                             value={antenna.azimuth}
                             onChange={(e) => handleAntennaChange(antennaIndex, 'azimuth', e.target.value)}
-                            className={`w-full p-2 border rounded text-sm ${
-                              antenna.azimuthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                            className={`w-full p-2 border rounded text-sm transition-colors duration-200 ${
+                              antenna.azimuthAutoFilled 
+                                ? `${bgColorFillAuto} ${colorFillAuto}`  
+                                : 'border-gray-300 focus:border-blue-500'
                             }`}
                             placeholder="Enter azimuth..."
                             required
