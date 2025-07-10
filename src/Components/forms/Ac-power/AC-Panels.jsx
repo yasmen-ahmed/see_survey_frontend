@@ -18,7 +18,7 @@ const ACPanelForm = () => {
   });
 
   const [uploadedImages, setUploadedImages] = useState({});
-
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   // Configuration for the dynamic table rows
   const tableRows = [
     {
@@ -140,6 +140,7 @@ const ACPanelForm = () => {
   }, [sessionId]);
 
   const handleChange = (e) => {
+    setHasUnsavedChanges(true);
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -148,6 +149,7 @@ const ACPanelForm = () => {
   };
 
   const handleImageUpload = (imageCategory, files) => {
+    setHasUnsavedChanges(true);
     console.log(`Images uploaded for ${imageCategory}:`, files);
     setUploadedImages(prev => ({
       ...prev,
@@ -169,7 +171,7 @@ const ACPanelForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setHasUnsavedChanges(true);
     const formDataToSend = new FormData();
 
     // Build the payload to match the expected API structure
@@ -251,6 +253,7 @@ const ACPanelForm = () => {
         }
       }
 
+      setHasUnsavedChanges(false);
       showSuccess('AC Panel data submitted successfully!');
     } catch (err) {
       console.error("Error:", err);
@@ -261,7 +264,23 @@ const ACPanelForm = () => {
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+        {/* Unsaved Changes Warning */}
+        {hasUnsavedChanges && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  ⚠️ You have unsaved changes       
+                </p>
+                <p className="text-sm">
+                  Don't forget to save your changes before leaving this page.
+                </p>
+              </div>
+            </div>  
+          </div>
+        )}
         <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" onSubmit={handleSubmit}>
+          
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Length of Power Cable (m)</label>
             <input

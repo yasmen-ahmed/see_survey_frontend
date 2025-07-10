@@ -8,6 +8,7 @@ import useImageManager from "../../../hooks/useImageManager";
 function SitevistinfoForm() {
   const { sessionId, siteId } = useParams(); 
   const { uploadedImages, handleImageUpload, saveImages, loading } = useImageManager(sessionId);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [formData, setFormData] = useState({
     session_id:  "",
     surveyor_name: "",
@@ -53,6 +54,7 @@ function SitevistinfoForm() {
 
   // Handle input change for form fields
   const handleInputChange = (e) => {
+    setHasUnsavedChanges(true);
     const { name, value, type, files } = e.target;
     if (type === "file") {
       setFormData((prev) => ({
@@ -65,7 +67,8 @@ function SitevistinfoForm() {
         [name]: value,
       }));
     }
-  };
+    
+  };  
   
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -95,8 +98,8 @@ function SitevistinfoForm() {
        if (!imagesSaved) {
          throw new Error('Failed to save images');
        }
+       setHasUnsavedChanges(false);
        
-    
       showSuccess('Data submitted successfully!');
       console.log(response)
     } catch (err) {
@@ -108,6 +111,21 @@ function SitevistinfoForm() {
   return (
   <div className="max-h-screen flex  items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+        {/* Unsaved Changes Warning */}
+        {hasUnsavedChanges && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  ⚠️ You have unsaved changes
+                </p>
+                <p className="text-sm">
+                  Don't forget to save your changes before leaving this page.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         <form className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 " onSubmit={handleSubmit}>
 
           {/* Survey Date */}

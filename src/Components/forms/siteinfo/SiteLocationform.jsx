@@ -8,6 +8,8 @@ import useImageManager from "../../../hooks/useImageManager";
 const SiteLocationForm = () => {
   const { sessionId, siteId } = useParams();
   const { uploadedImages, handleImageUpload, saveImages, loading } = useImageManager(sessionId);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
 
   const [formData, setFormData] = useState({
     siteId: siteId || "",
@@ -66,7 +68,7 @@ const SiteLocationForm = () => {
       if (!imagesSaved) {
         throw new Error('Failed to save images');
       }
-      
+      setHasUnsavedChanges(false);
       showSuccess('Data and images submitted successfully!');
     } catch (err) {
       console.error("Error:", err);
@@ -87,6 +89,7 @@ const SiteLocationForm = () => {
 
   // Handle input change for form fields
   const handleInputChange = (e) => {
+    setHasUnsavedChanges(true);
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -110,6 +113,21 @@ const SiteLocationForm = () => {
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%] max-h-[650px] overflow-y-auto ">
+        {/* Unsaved Changes Warning */}
+        {hasUnsavedChanges && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  ⚠️ You have unsaved changes 
+                </p>
+                <p className="text-sm">
+                  Don't forget to save your changes before leaving this page.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 " onSubmit={handleSubmit}>
           {/* Text Fields */}
           <div className="grid grid-cols-1 gap-2">

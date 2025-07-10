@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 const SiteLocationForm = React.lazy(() => import("../forms/siteinfo/SiteLocationform.jsx"));
 const SiteVisitInfoForm = React.lazy(() => import("../forms/siteinfo/Site-vistinfoForm.jsx"));
 const SiteInformationForm = React.lazy(() => import("../forms/siteinfo/SiteInformation.jsx"));
@@ -28,11 +28,9 @@ const hs=React.lazy(()=>import("../forms/H&S/health&safetysiteaccess.jsx"))
 const bts=React.lazy(()=>import("../forms/H&S/Health&safetyBTSAntennaaccess.jsx"))
 const gps=React.lazy(()=>import("../forms/NewRadio/gps.jsx"))
 const radioinstallation=React.lazy(()=>import("../forms/NewRadio/Newradioinstallations.jsx"))
+const NewMW = React.lazy(() => import("../forms/NewRadio/NewMWForm"));
 
-
-const newLocal = "h-s";
-//const MwAntennas=React.lazy(()=>import())
-export const tabsConfig ={
+export const tabsConfig = {
   "site-info": [
     { label: "Site Location", key: "site-location", component: SiteLocationForm },
     { label: "Site Visit Info", key: "site-visit", component: SiteVisitInfoForm },
@@ -50,37 +48,31 @@ export const tabsConfig ={
     {label:"RAN",key:"ran",component:Ran},
     {label:"Transmission/MW",key:"tm",component:Transmission},
     {label:"Dc Power System",key:"dc",component:Dc}
-
   ],
   "new-radio":[
     {label:"New radio installations",key:"radio-installation",component:radioinstallation},
-     {label:"New antennas",key:"new-antennas",component:NewAntenna},
-     {label:"New FPFHs",key:"new-fphs",component:new_FPFH},
-     {label:"New radio units",key:"new-radio-units",component:newradio},
-     {label:"GPS",key:"gps",component:gps},
+    {label:"New antennas",key:"new-antennas",component:NewAntenna},
+    {label:"New FPFHs",key:"new-fphs",component:new_FPFH},
+    {label:"New radio units",key:"new-radio-units",component:newradio},
+    {label:"GPS",key:"gps",component:gps},
+    {label:"New MW",key:"new-mw",component:NewMW}
   ],
-  
   "existing-radio":[
     {label:"Antenna Structure Form",key:"antennas-strut",component:AntennaStructure},
     {label:"MW Antenna",key:"mw-antennas",component:MwAntennas},
     {label:"External DC PDUs",key:"dc-pdu",component:DcDistribution},
     {label:"Radio Antennas",key:"radio-antenaas",component:RadioAntennas},
     {label:"Radio Units",key:"radio-units",component:RadioUNIT}
-
-
   ],
- "outdoor": [
+  "outdoor": [
     {label:"Outdoor general layout info", key:"general-lyout", component:layout},
     {label:"Existing outdoor cabinets", key:"exisitng-outdoor", component:existingoutdoor},
     {label:"RAN equipment", key:"ran", component:ran},
     {label:"Transmission / MW (O)", key:"mw", component:mw},
     {label:"DC power system (O)", key:"dc", component:dc}
-],
-"H&S": [
+  ],
+  "H&S": [
     {label:"Health & Safety site access", key:"h&s", component:hs},
     {label:"Health & Safety BTS / Antenna access", key:"bts", component:bts}
-    
-]
-
-
+  ]
 };

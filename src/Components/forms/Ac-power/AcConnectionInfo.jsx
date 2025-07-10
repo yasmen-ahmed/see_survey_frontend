@@ -11,6 +11,7 @@ const AcInformationForm = () => {
   const [dieselGenerators, setDieselGenerators] = useState([{ capacity: '', status: '' }, { capacity: '', status: '' }]);
   const [solarCapacity, setSolarCapacity] = useState('');
   const [uploadedImages, setUploadedImages] = useState({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/ac-connection-info/${sessionId}`)
@@ -159,6 +160,7 @@ const AcInformationForm = () => {
         setUploadedImages(processedImages);
       }
 
+      setHasUnsavedChanges(false);
       showSuccess('Data submitted successfully!');
       console.log("Response:", response.data);
     } catch (err) {
@@ -169,6 +171,7 @@ const AcInformationForm = () => {
   };
 
   const handlePowerSourceChange = (source) => {
+    setHasUnsavedChanges(true);
     setPowerSources((prev) => {
       if (prev.includes(source)) {
         if (source === 'diesel_generator') {
@@ -185,11 +188,13 @@ const AcInformationForm = () => {
   };
 
   const handleDieselCountChange = (count) => {
+    setHasUnsavedChanges(true);
     setDieselCount(count);
     setDieselGenerators(Array.from({ length: count }, () => ({ capacity: '', status: '' })));
   };
 
   const handleGeneratorChange = (index, field, value) => {
+    setHasUnsavedChanges(true);
     const newGenerators = [...dieselGenerators];
     newGenerators[index][field] = value;
     setDieselGenerators(newGenerators);
@@ -204,6 +209,21 @@ const AcInformationForm = () => {
   return (
     <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%] ">
+        {/* Unsaved Changes Warning */}
+        {hasUnsavedChanges && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  ⚠️ You have unsaved changes   
+                </p>
+                <p className="text-sm">
+                  Don't forget to save your changes before leaving this page.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         <form className=" mb-8" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[550px] overflow-y-auto">
     {/* Power Source Selection */}

@@ -8,6 +8,7 @@ function SiteInformationForm() {
   
 const { sessionId, siteId } = useParams();   
 const { uploadedImages, handleImageUpload, saveImages, loading } = useImageManager(sessionId);
+const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
 const [formData, setFormData] = useState({
     site_located_at: "",
@@ -50,6 +51,7 @@ const [formData, setFormData] = useState({
   }, [sessionId, siteId]);
 
   const handleChange = (e) => {
+    setHasUnsavedChanges(true);
     const { name, value, type, checked } = e.target;
     if (type === "checkbox") {
       if (["other_telecom_operator_exist_onsite","planned_scope", "location_of_existing_telecom_racks_cabinets", "location_of_planned_new_telecom_racks_cabinets", "existing_technology"].includes(name)) {
@@ -114,6 +116,7 @@ const [formData, setFormData] = useState({
      if (!imagesSaved) {
        throw new Error('Failed to save images');
      }
+     setHasUnsavedChanges(false);
       showSuccess('Data submitted successfully!');
       console.log(response.data)
     } catch (err) {
@@ -125,6 +128,21 @@ const [formData, setFormData] = useState({
   return (
     <div className="max-h-screen flex  items-start space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+        {/* Unsaved Changes Warning */}
+        {hasUnsavedChanges && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  ⚠️ You have unsaved changes     
+                </p>
+                <p className="text-sm">
+                  Don't forget to save your changes before leaving this page.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}  
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
     
           <div>
