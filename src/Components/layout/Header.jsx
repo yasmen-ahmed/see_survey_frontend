@@ -37,7 +37,7 @@ const Header = () => {
         />
       </div>
       <div className="flex justify-center items-center gap-2">
-        <h1 className="text-xl font-extrabold">SEE Survey v1.3</h1>
+        <h1 className="text-xl font-extrabold">SEE Survey v1.4</h1>
         {/* <div className="flex items-center justify-center">
           <span className=" font-bold text-black-500">Alfa v2</span>
         </div> */}
