@@ -46,17 +46,8 @@ const SurveyCardList = () => {
     }
   };
   function generateReport(sessionId) {
-    fetch(`/api/report/${sessionId}`)
-        .then(response => response.blob())
-        .then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Session_${sessionId}.xlsx`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-        });
+    window.open(`http://10.129.10.227:3000/api/export/site/${sessionId}`, '_blank');
+    console.log('Generating report for session:', sessionId);
   };
 
   const updateSurveyStatus = async (surveyId, newStatus) => {
