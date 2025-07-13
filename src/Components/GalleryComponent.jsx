@@ -25,17 +25,16 @@ const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
           // Handle different URL formats
           let imageUrl;
           
-          // Check if this is a radio unit, GPS, or FPFH image
-          if (category.includes('new_radio_unit_') || 
-              category.includes('new_gps_') || 
-              category.includes('new_fpfh_')) {
-            // For radio units, GPS, and FPFH, use the url property
-            imageUrl = file.url || `${API_BASE_URL}/${file.file_url}`;
+          if (file.url) {
+            // If the URL is already complete
+            imageUrl = file.url;
           } else {
-            // For other components, use the existing logic
-             imageUrl = file.file_url.startsWith('http') 
-            ? file.file_url 
-            : `${API_BASE_URL}${file.file_url}`;
+            // For file_url, ensure it has the correct format
+            let fileUrl = file.file_url;
+            if (!fileUrl.startsWith('http') && !fileUrl.startsWith('/')) {
+              fileUrl = `/${fileUrl}`;
+            }
+            imageUrl = `${API_BASE_URL}${fileUrl}`;
           }
           
           // Store the preview URL
@@ -63,6 +62,13 @@ const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
       return;
     }
 
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+    if (file.size > maxSize) {
+      alert('File size must be less than 10MB');
+      return;
+    }
+
     // Create a preview immediately for the new file
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -72,8 +78,12 @@ const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
       }));
     };
     reader.readAsDataURL(file);
+
+    // Create a new FormData object for each file
+    const formData = new FormData();
+    formData.append(imageName, file);
     
-    onImageUpload(imageName, [file]);
+    onImageUpload(imageName, [file], formData);
   };
 
   const handleDelete = (imageName) => {
@@ -127,6 +137,7 @@ const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
                   className="w-full h-32 object-cover rounded-lg mb-2"
                   onError={(e) => {
                     console.error('Image load error:', e);
+                    console.log('Failed URL:', e.target.src);
                     e.target.src = 'placeholder.jpg';
                   }}
                 />

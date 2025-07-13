@@ -316,29 +316,34 @@ const RadioAntenasForm = () => {
     setHasUnsavedChanges(true);
   };
 
-  const handleCheckboxChange = (antennaIndex, fieldName, checked) => {
+  const handleCheckboxChange = (antennaIndex, fieldName, value, checked) => {
     setFormData(prev => {
       const newFormData = { ...prev };
-      
-      if (antennaIndex === 0) {
+      const currentAntenna = { ...newFormData.antennas[antennaIndex] };
+
+      // Handle any array-type field
+      let arr = Array.isArray(currentAntenna[fieldName]) ? [...currentAntenna[fieldName]] : [];
+      if (checked) {
+        if (!arr.includes(value)) arr.push(value);
+      } else {
+        arr = arr.filter(t => t !== value);
+      }
+      currentAntenna[fieldName] = arr;
+      currentAntenna[`${fieldName}AutoFilled`] = false;
+
+      // Auto-fill for technology only
+      if (fieldName === 'technology' && antennaIndex === 0) {
         const numAntennas = parseInt(prev.numberOfAntennas) || 1;
         for (let i = 1; i < numAntennas; i++) {
-          if (!newFormData.antennas[i][fieldName]) {
             newFormData.antennas[i] = {
               ...newFormData.antennas[i],
-              [fieldName]: checked,
-              [`${fieldName}AutoFilled`]: true
+            technology: arr,
+            technologyAutoFilled: true
             };
-          }
         }
       }
       
-      newFormData.antennas[antennaIndex] = {
-        ...newFormData.antennas[antennaIndex],
-        [fieldName]: checked,
-        [`${fieldName}AutoFilled`]: false
-      };
-      
+      newFormData.antennas[antennaIndex] = currentAntenna;
       return newFormData;
     });
     setHasUnsavedChanges(true);
@@ -700,7 +705,7 @@ const RadioAntenasForm = () => {
                             <input
                               type="checkbox"
                               checked={antenna.technology.includes(tech)}
-                              onChange={(e) => handleCheckboxChange(antennaIndex, 'technology', e.target.checked)}
+                              onChange={(e) => handleCheckboxChange(antennaIndex, 'technology', tech, e.target.checked)}
                               className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                             />
                             <span className={antenna.technologyAutoFilled ? 'text-[#006100]' : ''}>
@@ -896,11 +901,12 @@ const RadioAntenasForm = () => {
                         <select
                         value={antenna.nokiaModuleName}
                         onChange={(e) => handleChange(antennaIndex, 'nokiaModuleName', e.target.value)}
-                        className={`w-full p-2 border rounded text-sm ${
+                        className={`w-full p-2 border rounded text-sm ${antenna.vendor !== 'Nokia' ? 'bg-[#e5e7eb] ' : ''} ${
                           antenna.nokiaModuleNameAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
                         }`}
+                        disabled={antenna.vendor !== 'Nokia'}
                       >
-                        <option value="">-- Select --</option>
+                        <option value=""> {antenna.vendor !== 'Nokia' ? 'N/A' : '-- Select --'}</option> 
                         <option value="A">A</option>
                         <option value="B">B</option>
                         <option value="C">C</option>
@@ -927,7 +933,7 @@ const RadioAntenasForm = () => {
                                 checked={antenna.nokiaFiberCount === option}
                                 onChange={(e) => handleChange(antennaIndex, 'nokiaFiberCount', e.target.value)}
                                 className="w-4 h-4"
-                                
+                                disabled={antenna.vendor !== 'Nokia'}
                               />
                               
                                 {option}
@@ -952,7 +958,8 @@ const RadioAntenasForm = () => {
                           className={`w-full p-2 border rounded text-sm ${
                             antenna.nokiaFiberLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
                           }`}
-                          placeholder="0000"
+                          placeholder={antenna.vendor !== 'Nokia' ? 'N/A' : '0000'}
+                          disabled={antenna.vendor !== 'Nokia'}
                         />
                       </td>
                     ))}
@@ -1058,8 +1065,9 @@ const RadioAntenasForm = () => {
                             <input
                               type="checkbox"
                               checked={antenna.otherPortType.includes(port)}
-                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherPortType', e.target.checked)}
+                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherPortType', port, e.target.checked)}
                               className="w-4 h-4"
+                              disabled={antenna.vendor == 'Nokia' && antenna.vendor}
                             />
                             {port}
                           </label>
@@ -1081,8 +1089,9 @@ const RadioAntenasForm = () => {
                             <input
                               type="checkbox"
                               checked={antenna.otherBands.includes(band)}
-                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherBands', e.target.checked)}
+                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherBands', band, e.target.checked)}
                               className="w-4 h-4"
+                              disabled={antenna.vendor == 'Nokia' && antenna.vendor}
                             />
                             {band}
                           </label>
@@ -1105,7 +1114,8 @@ const RadioAntenasForm = () => {
                           className={`w-full p-2 border rounded text-sm ${
                             antenna.otherPortCountAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
                           }`}
-                          placeholder="0000"
+                          placeholder={antenna.vendor == 'Nokia' && antenna.vendor ? 'N/A' : '0000'}
+                          disabled={antenna.vendor == 'Nokia' && antenna.vendor}
                         />
                       </td>
                     ))}
@@ -1124,7 +1134,8 @@ const RadioAntenasForm = () => {
                           className={`w-full p-2 border rounded text-sm ${
                             antenna.otherFreePortsAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
                           }`}
-                          placeholder="0000"
+                          placeholder={antenna.vendor == 'Nokia' && antenna.vendor ? 'N/A' : '0000'}
+                          disabled={antenna.vendor == 'Nokia' && antenna.vendor}
                         />
                       </td>
                     ))}
@@ -1142,8 +1153,9 @@ const RadioAntenasForm = () => {
                             <input
                               type="checkbox"
                               checked={antenna.otherFreeBands.includes(freeBand)}
-                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherFreeBands', e.target.checked)}
+                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherFreeBands', freeBand, e.target.checked)}
                               className="w-4 h-4"
+                              disabled={antenna.vendor == 'Nokia' && antenna.vendor}
                             />
                             {freeBand}
                           </label>
@@ -1169,6 +1181,7 @@ const RadioAntenasForm = () => {
                                 checked={antenna.otherRadioUnits === option}
                                 onChange={(e) => handleChange(antennaIndex, 'otherRadioUnits', e.target.value)}
                                 className="w-4 h-4"
+                                disabled={antenna.vendor == 'Nokia' && antenna.vendor}
                                
                               />
                              

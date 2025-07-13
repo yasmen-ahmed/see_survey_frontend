@@ -12,15 +12,27 @@ const useImageManager = (sessionId) => {
         const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/site-images/${sessionId}`);
         const images = response.data.data;
         
-        // Always provide a full file_url (prepend API base if needed)
+        // Process images and ensure proper URL formatting
         const processedImages = images.reduce((acc, img) => {
           if (img.file_url) {
-            const fullUrl = img.file_url.startsWith('http')
-              ? img.file_url
-              : `${import.meta.env.VITE_API_URL}${img.file_url}`;
+            // Handle different URL formats
+            let fullUrl = img.file_url;
+            
+            // If URL doesn't start with http or /, add /
+            if (!fullUrl.startsWith('http') && !fullUrl.startsWith('/')) {
+              fullUrl = `/${fullUrl}`;
+            }
+            
+            // If URL is relative, prepend API base URL
+            if (!fullUrl.startsWith('http')) {
+              fullUrl = `${import.meta.env.VITE_API_URL}${fullUrl}`;
+            }
+
+            // Store the image data
             acc[img.image_category] = [{
               id: img.id,
               file_url: fullUrl,
+              url: fullUrl, // Add url property for compatibility
               name: img.original_filename,
               image_category: img.image_category
             }];
@@ -28,6 +40,7 @@ const useImageManager = (sessionId) => {
           return acc;
         }, {});
 
+        console.log('Processed images:', processedImages); // Debug log
         setUploadedImages(processedImages);
       } catch (error) {
         console.error('Error fetching images:', error);

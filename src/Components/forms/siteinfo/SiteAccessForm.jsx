@@ -177,6 +177,7 @@ function SiteAccessForm() {
                 No
               </label>
             </div>
+            <hr className="mt-2"/>
           </div>
 
           <div>
@@ -196,6 +197,8 @@ function SiteAccessForm() {
                 </label>
               ))}
             </div>
+            <hr className="mt-2"/>
+
           </div>
 
 
@@ -207,8 +210,10 @@ function SiteAccessForm() {
               name="contact_person_name"
               value={formData.contact_person_name}
               onChange={handleChange}
-              className="w-1/2 p-3 border rounded-md"
+              className="form-input"
             />
+                        <hr className="mt-2"/>
+
           </div>
 
           <div>
@@ -218,8 +223,9 @@ function SiteAccessForm() {
               name="contact_tel_number"
               value={formData.contact_tel_number}
               onChange={handleChange}
-              className="w-full p-3 border rounded-md"
+              className="form-input"
             />
+            <hr className="mt-2"/>
           </div>
 
           
@@ -231,8 +237,9 @@ function SiteAccessForm() {
               name="contact_person_name_for_site_key"
               value={formData.contact_person_name_for_site_key}
               onChange={handleChange}
-              className="w-full p-3 border rounded-md"
+              className="form-input"
             />
+            <hr className="mt-2"/>
           </div>
 
           <div>
@@ -242,8 +249,9 @@ function SiteAccessForm() {
               name="contact_tel_number_for_site_key"
               value={formData.contact_tel_number_for_site_key}
               onChange={handleChange}
-              className="w-full p-3 border rounded-md"
+              className="form-input"
             />
+            <hr className="mt-2"/>
           </div>
 
           <div>
@@ -263,6 +271,7 @@ function SiteAccessForm() {
                 </label>
               ))}
             </div>
+            <hr className="mt-2"/>
           </div>
 
 
@@ -303,6 +312,7 @@ function SiteAccessForm() {
                 Other
               </label>
             </div>
+            <hr className="mt-2"/>
           </div>
 
 
@@ -356,6 +366,7 @@ function SiteAccessForm() {
                 Other
               </label>
             </div>
+            <hr className="mt-2"/>
           </div>
 
 
@@ -396,10 +407,11 @@ function SiteAccessForm() {
                 Other
               </label>
             </div>
+            <hr className="mt-2"/>
           </div>
 
           <div>
-            <fieldset className="mb-4">
+            <fieldset className="">
               <legend className="block font-medium mb-2">Keys Type</legend>
               <div className="flex flex-wrap gap-4">
                 {["Site or Building gate", "Shelter door", "Rooftop door", "Cabinet", "Other"].map((slot) => (
@@ -410,13 +422,14 @@ function SiteAccessForm() {
                       value={slot}
                       checked={formData.keys_type.includes(slot)}
                       onChange={handleChange}
-                      className="accent-blue-600"
+                      className=""
                     />
                     <span>{slot}</span>
                   </label>
                 ))}
               </div>
             </fieldset>
+            <hr className="mt-2"/>
           </div>
 
           <div>
@@ -430,12 +443,13 @@ function SiteAccessForm() {
                     value={slot}
                     checked={formData.material_accessibility_to_site.includes(slot)}
                     onChange={handleChange}
-                    className="accent-blue-600"
+                    className=""
                   />
                   <span>{slot}</span>
                 </label>
               ))}
             </div>
+            <hr className="mt-2"/>
           </div>
 
 
@@ -446,8 +460,9 @@ function SiteAccessForm() {
               name="stair_lift_height"
               value={formData.stair_lift_height}
               onChange={handleChange}
-              className="w-full p-3 border rounded-md"
+              className="form-input"
             />
+            <hr className="mt-2"/>
           </div>
 
           <div>
@@ -457,8 +472,9 @@ function SiteAccessForm() {
               name="stair_lift_width"
               value={formData.stair_lift_width}
               onChange={handleChange}
-              className="w-full p-3 border rounded-md"
+              className="form-input"
             />
+            <hr className="mt-2"/>
           </div>
 
 
@@ -469,8 +485,9 @@ function SiteAccessForm() {
               name="stair_lift_depth"
               value={formData.stair_lift_depth}
               onChange={handleChange}
-              className="w-full p-3 border rounded-md"
+                className="form-input"
             />
+            <hr className="mt-2"/>
           </div>
 
 

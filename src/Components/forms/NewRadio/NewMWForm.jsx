@@ -1,7 +1,25 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { mwQuestions } from '../../../config/mwQuestions';
 import ImageUploader from '../../GalleryComponent';
+import { getNewMWData, saveNewMWData } from '../../../services/newMwService';
+import { showSuccess, showError } from "../../../utils/notifications";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL; // fallback if needed
+
+function clearAutoFilledFlags(formData) {
+  const newFormData = {};
+  Object.entries(formData).forEach(([mwKey, fields]) => {
+    const cleanedFields = {};
+    Object.entries(fields).forEach(([fieldKey, value]) => {
+      if (!fieldKey.endsWith('AutoFilled')) {
+        cleanedFields[fieldKey] = value;
+      }
+    });
+    newFormData[mwKey] = cleanedFields;
+  });
+  return newFormData;
+}
 
 
 const NewMWForm = () => {
@@ -10,6 +28,8 @@ const NewMWForm = () => {
   const [formData, setFormData] = useState({});
   const [uploadedImages, setUploadedImages] = useState({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const bgColorFillAuto = "bg-[#c6efce]";
   const colorFillAuto = 'text-[#006100]';
@@ -18,18 +38,21 @@ const NewMWForm = () => {
     return [
       {
         id: `mw_${index}_front`,
+        name: `mw_${index}_front`,
         label: `New MW #${index} Front View`,
         category: 'new_mw',
         required: true
       },
       {
         id: `mw_${index}_idulocation_optional`,
+        name: `mw_${index}_idulocation_optional`,
         label: `New MU IDU  #${index} Proposed Location optional photo`,
         category: 'new_mw',
         required: false
       },
       {
         id: `mw_${index}_odu_proposed`,
+        name: `mw_${index}_odu_proposed`,
         label: `New MU ODU #${index} proposed `,
         category: 'new_mw',
         required: false
@@ -37,6 +60,7 @@ const NewMWForm = () => {
       ,
       {
         id: `mw_${index}_odu_location_optional`,
+        name: `mw_${index}_odu_location_optional`,
         label: `New MU ODU #${index} Proposed Location optional photo `,
         category: 'new_mw',
         required: false
@@ -54,11 +78,12 @@ const NewMWForm = () => {
     return images;
   }, [mwCount]);
 
-  const handleImageUpload = (newImages) => {
+  const handleImageUpload = (imageName, files) => {
     setUploadedImages(prev => ({
       ...prev,
-      ...newImages
+      [imageName]: files
     }));
+    setHasUnsavedChanges(true);
   };
 
   const handleCountChange = (e) => {
@@ -119,41 +144,126 @@ const NewMWForm = () => {
     });
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    // Validate form data
+  const validateForm = () => {
     let isValid = true;
     const errors = [];
 
-    // Check each MW configuration
     for (let i = 1; i <= mwCount; i++) {
       const mwData = formData[`mw${i}`] || {};
-      
-      // Check required fields
       mwQuestions.forEach(question => {
         if (question.required && !mwData[question.id]) {
           isValid = false;
           errors.push(`MW ${i}: ${question.label} is required`);
         }
-        
-        // Check "Other" field if selected
         if (question.allowOther && mwData[question.id] === 'Other' && !mwData[`${question.id}Other`]) {
           isValid = false;
           errors.push(`MW ${i}: Please specify other ${question.label}`);
         }
       });
     }
-    setHasUnsavedChanges(false);
 
     if (!isValid) {
       alert(errors.join('\n'));
-      return;
     }
-
-    console.log('Form Data:', formData);
-    // Add your submission logic here
+    return isValid;
   };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    setIsSaving(true);
+
+    try {
+      // Build payload
+      const mwArray = [];
+      for (let i = 1; i <= mwCount; i++) {
+        mwArray.push({
+          mw_index: i,
+          fields: formData[`mw${i}`] || {}
+        });
+      }
+
+      const payload = new FormData();
+      payload.append('fields', JSON.stringify(mwArray));
+
+      // Append images (only new File objects)
+      Object.entries(uploadedImages).forEach(([category, files]) => {
+        if (Array.isArray(files) && files.length > 0) {
+          const file = files[0];
+          if (file instanceof File) {
+            payload.append(category, file);
+          }
+        }
+      });
+
+      const response = await saveNewMWData(sessionId, payload);
+
+      if (response.success) {
+        showSuccess('Antenna configuration data and images submitted successfully!');
+        setHasUnsavedChanges(false);
+        const cleanedFormData = clearAutoFilledFlags(formData);
+        setFormData(cleanedFormData);
+         // Remove autofill highlights
+        loadExistingData();
+      } else {
+        alert(response.error || 'Failed to save');
+      }
+    } catch (err) {
+      console.error(err);
+      showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Fetch existing data on mount
+  const loadExistingData = async () => {
+    setIsLoading(true);
+    try {
+      const res = await getNewMWData(sessionId);
+      if (res.success && Array.isArray(res.data)) {
+        const fetchedImages = {};
+        const fetchedFormData = {};
+
+        res.data.forEach(item => {
+          const { mw_index, fields, images } = item;
+          if (fields) {
+            fetchedFormData[`mw${mw_index}`] = Object.fromEntries(
+              Object.entries(fields).filter(([key]) => !key.endsWith('AutoFilled'))
+            );
+            
+          }
+          if (Array.isArray(images)) {
+            images.forEach(img => {
+              fetchedImages[img.image_category] = [
+                {
+                  file_url: img.file_url,
+                  url: img.url // absolute URL added by backend helper
+                }
+              ];
+            });
+          }
+        });
+
+        // Determine count
+        const maxIndex = Math.max(1, ...res.data.map(d => d.mw_index || 1));
+        setMwCount(maxIndex);
+        setFormData(fetchedFormData);
+        setUploadedImages(fetchedImages);
+      }
+    } catch (err) {
+      console.error('Failed to load MW data', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadExistingData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const renderInput = (question, value, onChange, mwIndex) => {
     switch (question.type) {
@@ -326,8 +436,9 @@ const NewMWForm = () => {
             <button
               type="submit"
               className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              disabled={isSaving}
             >
-              Save Configuration
+              {isSaving ? 'Saving...' : 'Save Configuration'}
             </button>
           </div>
         </form>

@@ -189,7 +189,7 @@ const DcDistributionForm = () => {
         feedCabinet: "",
         feedDistribution: "",
         cbFuse: "",
-        cableLength: "",
+        dc_cable_length: "",
         cableCrossSection: "",
         hasFreeCbs: "",
         cbDetails: Array.from({ length: 3 }, () => ({ rating: "", connected_module: "" })),
@@ -443,7 +443,7 @@ const DcDistributionForm = () => {
                 ? mapDistributionTypeFromApi(pdu.dc_feed_distribution_type) 
                 : "",
               cbFuse: pdu.feeding_dc_cbs || "",
-              cableLength: pdu.cable_length?.toString() || "",
+              dc_cable_length: pdu.dc_cable_length?.toString() || "",
               cableCrossSection: pdu.dc_cable_cross_section || "",
               hasFreeCbs: pdu.has_free_cbs_fuses || "",
               cbDetails: Array.isArray(pdu.cb_fuse_ratings)
@@ -568,7 +568,7 @@ const DcDistributionForm = () => {
             dc_feed_cabinet: pdu.feedCabinet || null,
             dc_feed_distribution_type: pdu.feedDistribution ? pdu.feedDistribution.toLowerCase() : null,
             feeding_dc_cbs: pdu.cbFuse || null,
-            dc_cable_length: parseFloat(pdu.cableLength) || null,
+            dc_cable_length: parseFloat(pdu.dc_cable_length) || null,
             dc_cable_cross_section: parseFloat(pdu.cableCrossSection) || null,
             has_free_cbs_fuses: pdu.hasFreeCbs || null,
             cb_fuse_ratings: pdu.cbDetails ? pdu.cbDetails.filter(r => r.rating && r.connected_module).map(r => ({
@@ -938,13 +938,8 @@ const DcDistributionForm = () => {
                               className={`w-full p-2 border rounded text-sm ${isFieldAutoFilled(pduIndex, 'cbFuse') ? colorFillAuto : ''}`}
                               disabled={isLoading || !canShowOptions}
                             >
-                              <option value="">
-                                {isLoading 
-                                  ? "Loading options..." 
-                                  : !canShowOptions 
-                                    ? "Select cabinet & distribution first"
-                                    : "-- Select --"
-                                }
+                              <option value="" >
+                              {pdu.cbFuse || "-- Select --"}
                               </option>
                               
                               {hasOptions && cbOptionsForPdu.map((option) => (
@@ -962,11 +957,7 @@ const DcDistributionForm = () => {
                               )}
                             </select>
                             
-                            {isLoading && (
-                              <div className="text-xs text-blue-600 mt-1">
-                                Fetching CB options...
-                              </div>
-                            )}
+                            
                           </td>
                         );
                       })}
@@ -978,12 +969,12 @@ const DcDistributionForm = () => {
                         Length of DC power cable (m)
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'cableLength') ? bgColorFillAuto : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'dc_cable_length') ? bgColorFillAuto : ''}`}>
                           <input
                             type="number"
-                            className={`w-full p-2 border rounded text-sm ${isFieldAutoFilled(pduIndex, 'cableLength') ? colorFillAuto : ''}`}
-                            value={pdu.cableLength}
-                            onChange={(e) => updatePdu(pduIndex, "cableLength", e.target.value)}
+                            className={`w-full p-2 border rounded text-sm ${isFieldAutoFilled(pduIndex, 'dc_cable_length') ? colorFillAuto : ''}`}
+                            value={pdu.dc_cable_length}
+                            onChange={(e) => updatePdu(pduIndex, "dc_cable_length", e.target.value)}
                             placeholder="Enter length..."
                           />
                         </td>

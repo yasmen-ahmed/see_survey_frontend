@@ -13,28 +13,37 @@ const SurveyCardList = () => {
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/surveys`)
       .then((res) => {
-      // Defensive: ensure surveys is always an array
-      if (Array.isArray(res.data)) {
-        setSurveys(res.data);
-      } else if (res.data && Array.isArray(res.data.surveys)) {
-        setSurveys(res.data.surveys);
-      } else {
-        setSurveys([]);
-      }
-    })
+        let fetchedSurveys = [];
+  
+        if (Array.isArray(res.data)) {
+          fetchedSurveys = res.data;
+        } else if (res.data && Array.isArray(res.data.surveys)) {
+          fetchedSurveys = res.data.surveys;
+        }
+  
+        // Sort by session_id here
+        fetchedSurveys.sort((a, b) => {
+          const aId = a.session_id?.toString().toLowerCase() ?? '';
+          const bId = b.session_id?.toString().toLowerCase() ?? '';
+          return aId.localeCompare(bId);
+        });
+  
+        setSurveys(fetchedSurveys);
+      })
       .catch((err) => {
         console.error('Error fetching surveys:', err);
         setError('Failed to fetch surveys.');
       })
       .finally(() => setLoading(false));
   }, []);
+  
 
   const handleStatusChange = async (surveyId, newStatus) => {
     try {
       await updateSurveyStatus(surveyId, newStatus);
-      setSurveys(prevSurveys => 
-        prevSurveys.map(survey => 
-          survey.session_id === surveyId 
+      setSurveys(prevSurveys =>
+        prevSurveys.map(survey =>
+          survey.session_id === surveyId
             ? { ...survey, TSSR_Status: newStatus }
             : survey
         )
@@ -52,17 +61,17 @@ const SurveyCardList = () => {
 
   const updateSurveyStatus = async (surveyId, newStatus) => {
     const token = localStorage.getItem('token');
-    
+
     console.log('Updating survey status:', { surveyId, newStatus });
-    
+
     // Try different API endpoint format - might need just session_id
     const apiUrl = `${import.meta.env.VITE_API_URL}/api/surveys/${surveyId}/status`;
     console.log('API URL:', apiUrl);
     console.log('Token exists:', !!token);
-    
+
     const requestBody = { TSSR_Status: newStatus };
     console.log('Request body:', requestBody);
-    
+
     const response = await fetch(apiUrl, {
       method: 'PUT',
       headers: {
@@ -74,13 +83,13 @@ const SurveyCardList = () => {
 
     console.log('Response status:', response.status);
     console.log('Response ok:', response.ok);
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       console.log('Error response:', errorText);
       throw new Error(`Failed to update status: ${response.status} - ${errorText}`);
     }
-    
+
     const responseData = await response.json().catch(() => ({}));
     console.log('Success response:', responseData);
     return responseData;
@@ -152,14 +161,19 @@ const SurveyCardList = () => {
                   Continue
                 </button>
               </td>
-              <td className="px-6 py-4">
-                <button
-                  onClick={() => generateReport(survey.session_id)}
-                  className="bg-green-600 text-black px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                >
-                  Generate
-                </button>
-              </td>
+              {
+                survey.TSSR_Status === 'submitted' && (
+
+                  <td className="px-6 py-4">
+                    <button
+                      onClick={() => generateReport(survey.session_id)}
+                      className="bg-green-600 text-black px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                    >
+                      Generate
+                    </button>
+                  </td>
+                )
+              }
             </tr>
           ))}
         </tbody>
