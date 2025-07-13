@@ -188,17 +188,32 @@ const NewMWForm = () => {
       const payload = new FormData();
       payload.append('fields', JSON.stringify(mwArray));
 
+      console.log('MW Array being sent:', mwArray);
+      console.log('Uploaded images:', uploadedImages);
+
       // Append images (only new File objects)
       Object.entries(uploadedImages).forEach(([category, files]) => {
         if (Array.isArray(files) && files.length > 0) {
           const file = files[0];
           if (file instanceof File) {
+            console.log(`Appending file for ${category}:`, file.name);
             payload.append(category, file);
           }
         }
       });
 
+      // Log FormData entries for debugging
+      console.log('FormData entries:');
+      for (let pair of payload.entries()) {
+        if (pair[1] instanceof File) {
+          console.log(pair[0] + ': [FILE] ' + pair[1].name);
+        } else {
+          console.log(pair[0] + ': ' + pair[1]);
+        }
+      }
+
       const response = await saveNewMWData(sessionId, payload);
+      console.log('Response from saveNewMWData:', response);
 
       if (response.success) {
         showSuccess('Antenna configuration data and images submitted successfully!');
