@@ -2,44 +2,21 @@ import axios from 'axios';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const countries = ['Pakistan', 'United States', 'Germany', 'India'];
-const ctsMap = {
-  Pakistan: ['Karachi', 'Lahore'],
-  'United States': ['New York', 'Los Angeles'],
-  Germany: ['Berlin', 'Munich'],
-  India: ['Mumbai', 'Delhi'],
-};
-const projectsMap = {
-  Karachi: ['Project Kar1', 'Project Kar2'],
-  Lahore: ['Project Lah1'],
-  'New York': ['Project NY1'],
-  'Los Angeles': ['Project LA1'],
-  Berlin: ['Project Ber1'],
-  Munich: ['Project Mun1'],
-  Mumbai: ['Project Mum1'],
-  Delhi: ['Project Del1'],
-};
-const companiesMap = {
-  'Project Kar1': ['Company A', 'Company B'],
-  'Project Kar2': ['Company C'],
-  'Project Lah1': ['Company D'],
-  'Project NY1': ['Company E'],
-  'Project LA1': ['Company F'],
-  'Project Ber1': ['Company G'],
-  'Project Mun1': ['Company H'],
-  'Project Mum1': ['Company I'],
-  'Project Del1': ['Company J'],
-};
-
 function Createform() {
   const navigate = useNavigate();
 
+  // State for hierarchical data
+  const [mus, setMus] = useState([]);
+  const [countries, setCountries] = useState([]);
+  const [cts, setCts] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [companies, setCompanies] = useState([]);
+
+  // State for selected values
+  const [selectedMU, setSelectedMU] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('');
-  const [cities, setCities] = useState([]);
-  const [selectedCity, setSelectedCity] = useState('');
-  const [projects, setProjectsList] = useState([]);
+  const [selectedCT, setSelectedCT] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
-  const [companies, setCompaniesList] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState('');
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState('');
@@ -48,45 +25,121 @@ function Createform() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Load MUs on component mount
   useEffect(() => {
-    axios.get(`${import.meta.env.VITE_API_URL}/api/users`)
-      .then((res) => setUsers(res.data))
-      .catch((err) => {
-        console.error('Error fetching users:', err);
+    const fetchMUs = async () => {
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/hierarchical-data/mus`);
+        setMus(response.data);
+      } catch (error) {
+        console.error('Error fetching MUs:', error);
+        setError('Failed to fetch MUs.');
+      }
+    };
+
+    const fetchUsers = async () => {
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/users`);
+        setUsers(response.data);
+      } catch (error) {
+        console.error('Error fetching users:', error);
         setError('Failed to fetch users.');
-      });
+      }
+    };
+
+    fetchMUs();
+    fetchUsers();
   }, []);
 
+  // Fetch countries when MU changes
+  useEffect(() => {
+    if (selectedMU) {
+      const fetchCountries = async () => {
+        try {
+          const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/hierarchical-data/countries/${selectedMU}`);
+          setCountries(response.data);
+        } catch (error) {
+          console.error('Error fetching countries:', error);
+          setError('Failed to fetch countries.');
+        }
+      };
+      fetchCountries();
+    } else {
+      setCountries([]);
+    }
+    // Reset dependent fields
+    setSelectedCountry('');
+    setSelectedCT('');
+    setSelectedProject('');
+    setSelectedCompany('');
+    setCts([]);
+    setProjects([]);
+    setCompanies([]);
+  }, [selectedMU]);
+
+  // Fetch CTs when country changes
   useEffect(() => {
     if (selectedCountry) {
-      setCities(ctsMap[selectedCountry] || []);
+      const fetchCTs = async () => {
+        try {
+          const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/hierarchical-data/cts/${selectedCountry}`);
+          setCts(response.data);
+        } catch (error) {
+          console.error('Error fetching CTs:', error);
+          setError('Failed to fetch CTs.');
+        }
+      };
+      fetchCTs();
     } else {
-      setCities([]);
+      setCts([]);
     }
-    setSelectedCity('');
-    setProjectsList([]);
+    // Reset dependent fields
+    setSelectedCT('');
     setSelectedProject('');
-    setCompaniesList([]);
     setSelectedCompany('');
+    setProjects([]);
+    setCompanies([]);
   }, [selectedCountry]);
 
+  // Fetch projects when CT changes
   useEffect(() => {
-    if (selectedCity) {
-      setProjectsList(projectsMap[selectedCity] || []);
+    if (selectedCT) {
+      const fetchProjects = async () => {
+        try {
+          const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/hierarchical-data/projects/${selectedCT}`);
+          setProjects(response.data);
+        } catch (error) {
+          console.error('Error fetching projects:', error);
+          setError('Failed to fetch projects.');
+        }
+      };
+      fetchProjects();
     } else {
-      setProjectsList([]);
+      setProjects([]);
     }
+    // Reset dependent fields
     setSelectedProject('');
-    setCompaniesList([]);
     setSelectedCompany('');
-  }, [selectedCity]);
+    setCompanies([]);
+  }, [selectedCT]);
 
+  // Fetch companies when project changes
   useEffect(() => {
     if (selectedProject) {
-      setCompaniesList(companiesMap[selectedProject] || []);
+      const fetchCompanies = async () => {
+        try {
+          const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/hierarchical-data/companies/${selectedProject}`);
+          setCompanies(response.data);
+        } catch (error) {
+          console.error('Error fetching companies:', error);
+          setError('Failed to fetch companies.');
+        }
+      };
+      fetchCompanies();
     } else {
-      setCompaniesList([]);
+      setCompanies([]);
     }
+    // Reset dependent field
     setSelectedCompany('');
   }, [selectedProject]);
 
@@ -98,11 +151,12 @@ function Createform() {
 
     const formData = {
       site_id: selectedSiteID,
-      country: selectedCountry,
+      mu_id: parseInt(selectedMU),
+      country_id: parseInt(selectedCountry),
+      ct_id: parseInt(selectedCT),
+      project_id: parseInt(selectedProject),
+      company_id: parseInt(selectedCompany),
       user_id: parseInt(selectedUser),
-      ct: selectedCity,
-      project: selectedProject,
-      company: selectedCompany,
     };
 
     try {
@@ -126,8 +180,6 @@ function Createform() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (response.status === 200 || response.status === 201) {
-      
-      
         setSuccess('Survey created successfully!');
         navigate('/landingpage');
       } else {
@@ -156,6 +208,23 @@ function Createform() {
         {success && <div className="text-green-500 mb-4">{success}</div>}
         {loading && <div className="text-blue-500 mb-4">Submitting... Please wait.</div>}
 
+        {/* MU */}
+        <div className="mb-4">
+          <label htmlFor="mu" className="block text-gray-700 mb-2">Market Unit (MU):</label>
+          <select
+            id="mu"
+            value={selectedMU}
+            onChange={(e) => setSelectedMU(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-4 py-2"
+            required
+          >
+            <option value="">-- Select MU --</option>
+            {mus.map((mu) => (
+              <option key={mu.id} value={mu.id}>{mu.name} ({mu.code})</option>
+            ))}
+          </select>
+        </div>
+
         {/* Country */}
         <div className="mb-4">
           <label htmlFor="country" className="block text-gray-700 mb-2">Country:</label>
@@ -165,27 +234,29 @@ function Createform() {
             onChange={(e) => setSelectedCountry(e.target.value)}
             className="w-full border border-gray-300 rounded-lg px-4 py-2"
             required
+            disabled={!selectedMU}
           >
             <option value="">-- Select Country --</option>
             {countries.map((country) => (
-              <option key={country} value={country}>{country}</option>
+              <option key={country.id} value={country.id}>{country.name} ({country.code})</option>
             ))}
           </select>
         </div>
 
         {/* CT */}
         <div className="mb-4">
-          <label htmlFor="city" className="block text-gray-700 mb-2">CT:</label>
+          <label htmlFor="ct" className="block text-gray-700 mb-2">CT (City/Territory):</label>
           <select
-            id="city"
-            value={selectedCity}
-            onChange={(e) => setSelectedCity(e.target.value)}
+            id="ct"
+            value={selectedCT}
+            onChange={(e) => setSelectedCT(e.target.value)}
             className="w-full border border-gray-300 rounded-lg px-4 py-2"
             required
+            disabled={!selectedCountry}
           >
             <option value="">-- Select CT --</option>
-            {cities.map((ct) => (
-              <option key={ct} value={ct}>{ct}</option>
+            {cts.map((ct) => (
+              <option key={ct.id} value={ct.id}>{ct.name} ({ct.code})</option>
             ))}
           </select>
         </div>
@@ -199,10 +270,11 @@ function Createform() {
             onChange={(e) => setSelectedProject(e.target.value)}
             className="w-full border border-gray-300 rounded-lg px-4 py-2"
             required
+            disabled={!selectedCT}
           >
             <option value="">-- Select Project --</option>
-            {projects.map((proj) => (
-              <option key={proj} value={proj}>{proj}</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>{project.name} ({project.code})</option>
             ))}
           </select>
         </div>
@@ -216,10 +288,11 @@ function Createform() {
             onChange={(e) => setSelectedCompany(e.target.value)}
             className="w-full border border-gray-300 rounded-lg px-4 py-2"
             required
+            disabled={!selectedProject}
           >
             <option value="">-- Select Company --</option>
-            {companies.map((comp) => (
-              <option key={comp} value={comp}>{comp}</option>
+            {companies.map((company) => (
+              <option key={company.id} value={company.id}>{company.name} ({company.code})</option>
             ))}
           </select>
         </div>
