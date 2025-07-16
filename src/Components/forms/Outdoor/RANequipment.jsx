@@ -7,6 +7,7 @@ const RANBaseBandForm = () => {
   const { sessionId } = useParams();
   const [numberOfCabinets, setNumberOfCabinets] = useState(0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [loadingApi,setLoadingApi] =useState(false)
   const [formData, setFormData] = useState({
     existing_location: '',
     existing_vendor: '',
@@ -82,7 +83,7 @@ const RANBaseBandForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setLoadingApi(true)
     // Build the payload to match the expected API structure
     const payload = {
       existing_location: formData.existing_location,
@@ -102,6 +103,8 @@ const RANBaseBandForm = () => {
       console.error("Error:", err);
       console.error("Error response:", err.response?.data);
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+    } finally {
+      setLoadingApi(false)
     }
   };
 
@@ -218,7 +221,7 @@ const RANBaseBandForm = () => {
               type="submit"
               className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700"
             >
-              Save and Continue
+              {loadingApi ? "loading...": "Save"}  
             </button>
           </div>
         </form>

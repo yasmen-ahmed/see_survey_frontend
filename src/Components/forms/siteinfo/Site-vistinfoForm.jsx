@@ -9,6 +9,7 @@ function SitevistinfoForm() {
   const { sessionId, siteId } = useParams(); 
   const { uploadedImages, handleImageUpload, saveImages, loading } = useImageManager(sessionId);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [loadingApi,setLoadingApi] =useState(false)
   const [formData, setFormData] = useState({
     session_id:  "",
     surveyor_name: "",
@@ -33,6 +34,7 @@ function SitevistinfoForm() {
   
 
   useEffect(() => {
+    setLoadingApi(true)
     axios.get(`${import.meta.env.VITE_API_URL}/api/site-visit-info/${sessionId}`)
       .then(res => {
         const data = res.data[0];
@@ -48,6 +50,7 @@ function SitevistinfoForm() {
           survey_date: data.survey_date ? new Date(data.survey_date).toISOString().slice(0,10) : ""
         }); 
         console.log(formData)
+        setLoadingApi(false)
       })
       .catch(err => console.error("Error loading survey details:", err));
   }, [sessionId, siteId]);
@@ -72,6 +75,7 @@ function SitevistinfoForm() {
   
   // Handle form submission
   const handleSubmit = async (e) => {
+    setLoadingApi(true)
     e.preventDefault();
 
     // Prepare the payload excluding images for now
@@ -105,8 +109,14 @@ function SitevistinfoForm() {
     } catch (err) {
       console.error("Error:", err);
       showError('Error submitting data. Please try again.');
+    } finally {
+      setLoadingApi(false)
     }
   };
+
+  if (loading ) {
+    return <div>Loading...</div>;
+  }
 
   return (
   <div className="max-h-screen flex  items-start space-x-2 justify-start bg-gray-100 p-2">
@@ -245,7 +255,7 @@ function SitevistinfoForm() {
           {/* Submit Button */}
           <div className="md:col-span-2 flex justify-center">
             <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
-              Save and Continue
+              {loadingApi ? "loading...": "Save"}  
             </button>
           </div>
         </form>

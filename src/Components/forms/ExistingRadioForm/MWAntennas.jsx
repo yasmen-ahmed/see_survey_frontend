@@ -14,7 +14,7 @@ const MwAntennasForm = () => {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
+  const [loadingApi,setLoadingApi] =useState(false)
   // Generate image fields for a single antenna
   const getAntennaImages = (antennaNumber) => [ 
     { label: `MW  #${antennaNumber} photo`, name: `mw_${antennaNumber}_photo` },     
@@ -165,6 +165,7 @@ const MwAntennasForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoadingApi(true)
     setIsSubmitting(true);
     const prevFormData = { ...formData };
 
@@ -290,6 +291,7 @@ const MwAntennasForm = () => {
       setFormData(prevFormData);
     } finally {
       setIsSubmitting(false);
+      setLoadingApi(false)
     }
   };
 
@@ -491,21 +493,14 @@ const MwAntennasForm = () => {
           <div className="mt-6 flex justify-center gap-4">
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={loadingApi}
               className={`px-6 py-3 text-white rounded font-medium ${
-                isSubmitting 
+                loadingApi 
                   ? 'bg-gray-400 cursor-not-allowed' 
                   : 'bg-blue-600 hover:bg-blue-700'
               }`}
             >
-              {isSubmitting ? (
-                <div className="flex items-center">
-                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                  Saving Images & Data...
-                </div>
-              ) : (
-                'Save and Continue'
-              )}
+              {loadingApi ? "loading...": "Save"}  
             </button>
           </div>
         </form>

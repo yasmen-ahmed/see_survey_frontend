@@ -7,6 +7,7 @@ import ImageUploader from "../../GalleryComponent";
 const OutdoorForm = () => {
   const { sessionId } = useParams();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [loadingApi,setLoadingApi] =useState(false)
   const [formData, setFormData] = useState({
     sunshade: '',
     freePositions: '',
@@ -138,7 +139,7 @@ const OutdoorForm = () => {
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setLoadingApi(true)
     try {
       // Create FormData for multipart submission
       const submitFormData = new FormData();
@@ -263,6 +264,8 @@ const OutdoorForm = () => {
       console.error("Error submitting outdoor general layout data:", err);
       console.error("Error response:", err.response?.data);
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+    } finally {
+      setLoadingApi(false)
     }
   };
 
@@ -438,7 +441,7 @@ const OutdoorForm = () => {
               type="submit"
               className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700"
             >
-              Save and Continue
+              {loadingApi ? "loading...": "Save"}  
             </button>
           </div>
 

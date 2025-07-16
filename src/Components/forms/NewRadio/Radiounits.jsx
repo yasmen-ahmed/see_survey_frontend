@@ -89,7 +89,7 @@ const RadioUnitsForm = () => {
         onEntityCountChange={handleRadioUnitsCountChange}
         isSubmitting={isSubmitting}
         maxHeight="800px"
-        submitButtonText="Save and Continue"
+        submitButtonText="Save"
         hasUnsavedChanges={hasUnsavedChanges}
       />
       </div>

@@ -80,7 +80,7 @@ const NewFPFHForm = () => {
             onEntityCountChange={handleFpfhCountChange}
             isSubmitting={isSubmitting}
             maxHeight="calc(100vh - 150px)"
-            submitButtonText="Save and Continue"
+            submitButtonText="Save "
             hasUnsavedChanges={hasUnsavedChanges}
           />
         </div>

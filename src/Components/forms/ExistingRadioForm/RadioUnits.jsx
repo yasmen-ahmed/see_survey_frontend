@@ -599,6 +599,15 @@ const RadioUnitsForm = () => {
             [field]: value,
             [`${field}AutoFilled`]: true
           };
+          
+          // If auto-filling DC power source to a cabinet, fetch DC options for this unit too
+          if (field === 'dcPowerSource' && value && value.startsWith('Cabinet ')) {
+            const cabinetNumber = value.split(' ')[1];
+            fetchDcOptions(i, cabinetNumber);
+            
+            // Clear the DC CB/Fuse selection when cabinet changes
+            newRadioUnits[i].dcCbFuse = '';
+          }
         }
       }
     }
@@ -1551,10 +1560,10 @@ const RadioUnitsForm = () => {
               {isSubmitting ? (
                 <div className="flex items-center">
                   <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                  Saving Images & Data...
+                 loading...
                 </div>
               ) : (
-                'Save and Continue'
+                'Save'
               )}
             </button>
           </div>

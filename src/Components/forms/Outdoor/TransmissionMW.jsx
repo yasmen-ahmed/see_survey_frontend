@@ -9,7 +9,8 @@ const TransmissionInformationForm = () => {
   const [numberOfCabinets, setNumberOfCabinets] = useState(0);
   const [uploadedImages, setUploadedImages] = useState({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [formData, setFormData] = useState({
+  const [loadingApi,setLoadingApi] =useState(false)
+    const [formData, setFormData] = useState({
     type_of_transmission: '',
     existing_transmission_base_band_location: '',
     existing_transmission_equipment_vendor: '',
@@ -233,7 +234,7 @@ const TransmissionInformationForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setLoadingApi(true)
     try {
       // Create FormData for multipart submission
       const formDataToSend = new FormData();
@@ -336,6 +337,8 @@ const TransmissionInformationForm = () => {
       console.error("Error submitting data:", err);
       console.error("Error response:", err.response?.data);
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+    } finally {
+      setLoadingApi(false)
     }
   };
 
@@ -735,12 +738,12 @@ const TransmissionInformationForm = () => {
               </div>
             )}
           </div>
-          <div className="mt-6 flex justify-center">
+          <div className="mt-6 flex justify-center">  
             <button
               type="submit"
               className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700 font-semibold"
             >
-              Save and Continue
+              {loadingApi ? "loading...": "Save"}     
             </button>
           </div>
         </form>

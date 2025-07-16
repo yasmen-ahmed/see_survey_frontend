@@ -9,6 +9,7 @@ function SiteInformationForm() {
 const { sessionId, siteId } = useParams();   
 const { uploadedImages, handleImageUpload, saveImages, loading } = useImageManager(sessionId);
 const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+const [loadingApi,setLoadingApi] =useState(false) 
 
 const [formData, setFormData] = useState({
     site_located_at: "",
@@ -26,6 +27,7 @@ const [formData, setFormData] = useState({
   });
 
     useEffect(() => {
+      setLoadingApi(true)
     axios.get(`${import.meta.env.VITE_API_URL}/api/site-area-info/${sessionId}`)
       .then(res => {
         const data = res.data;
@@ -46,6 +48,7 @@ const [formData, setFormData] = useState({
          
         }); 
         console.log(formData)
+        setLoadingApi(false)
       })
       .catch(err => console.error("Error loading survey details:", err));
   }, [sessionId, siteId]);
@@ -88,7 +91,7 @@ const [formData, setFormData] = useState({
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setLoadingApi(true)
  
 
     const payload = {
@@ -122,6 +125,8 @@ const [formData, setFormData] = useState({
     } catch (err) {
       console.error("Error:", err);
       showError('Error submitting data. Please try again.');
+    } finally {
+      setLoadingApi(false)
     }
   };
 
@@ -577,7 +582,7 @@ const [formData, setFormData] = useState({
         <button type="submit"
           onClick={handleSubmit}
           className="px-8 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">
-          Save and Continue
+          {loadingApi ? "loading...": "Save"}  
         </button>
       </div>
     </div>

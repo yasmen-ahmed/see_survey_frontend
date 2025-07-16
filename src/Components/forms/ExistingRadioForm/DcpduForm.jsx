@@ -22,7 +22,7 @@ const DcDistributionForm = () => {
   // Add state to track form changes
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [initialFormState, setInitialFormState] = useState(null);
-
+  const [loadingApi,setLoadingApi] =useState(false)         
   // Function to get current form state
   const getCurrentFormState = useCallback(() => {
     return {
@@ -541,7 +541,7 @@ const DcDistributionForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setLoadingApi(true)
     try {
       // Basic validation
       if (!dcPduExist) {
@@ -674,6 +674,8 @@ const DcDistributionForm = () => {
       console.error("Error submitting External DC Distribution data:", err);
       console.error("Full error response:", err.response?.data);
       showError(`Error submitting data: ${err.response?.data?.error || 'Please try again.'}`);
+    } finally {
+      setLoadingApi(false)
     }
   };
 
@@ -1058,7 +1060,7 @@ const DcDistributionForm = () => {
               type="submit"
               className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700 font-semibold"
             >
-              Save and Continue
+              {loadingApi ? "loading...": "Save"}     
             </button>
           </div>
    

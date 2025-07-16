@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import SurveyCardList from "../Components/LandingPageComponents/SurveyCardList.jsx";
 import Createform from "../Components/LandingPageComponents/Createform.jsx";
 import Header from "../Components/layout/Header.jsx";
@@ -6,7 +6,8 @@ import Header from "../Components/layout/Header.jsx";
 
 const LandingPage = () => {
   const [showSurveyOptions, setShowSurveyOptions] = useState(false);
-  const [activeView, setActiveView] = useState(""); // "single", "multiple", "view"
+  const [activeView, setActiveView] = useState("view"); // Default to "view" to show survey list
+
 
   const handleCreateClick = () => {
     setShowSurveyOptions(!showSurveyOptions);

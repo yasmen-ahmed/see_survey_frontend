@@ -9,6 +9,7 @@ function SiteAccessForm() {
   const { sessionId, siteId } = useParams(); 
   const { uploadedImages, handleImageUpload, saveImages, loading } = useImageManager(sessionId);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [loadingApi,setLoadingApi] =useState(false)
   const [formData, setFormData] = useState({
     site_access_permission_required: "",
     preferred_time_slot_crane_access: [],
@@ -39,6 +40,7 @@ function SiteAccessForm() {
   
   
   useEffect(() => {
+    setLoadingApi(true)
     axios.get(`${import.meta.env.VITE_API_URL}/api/site-access/${sessionId}`)
       .then(res => {
         const data = res.data;
@@ -61,6 +63,7 @@ function SiteAccessForm() {
           stair_lift_depth: data.stair_lift_depth || 0,
        }); 
         console.log(formData)
+        setLoadingApi(false)
       })
       .catch(err => console.error("Error loading survey details:", err));
   }, [sessionId, siteId]);
@@ -91,7 +94,7 @@ function SiteAccessForm() {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setLoadingApi(true)
  
 
     const payload = {
@@ -128,6 +131,8 @@ function SiteAccessForm() {
     } catch (err) {
       console.error("Error:", err);
       showError('Error submitting data. Please try again.');
+    } finally {
+      setLoadingApi(false)
     }
   };
 
@@ -501,7 +506,7 @@ function SiteAccessForm() {
             onClick={handleSubmit}
             className="px-8 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300"
           >
-            Save and Continue
+            {loadingApi ? "loading...": "Save"}  
           </button>
         </div>
       </div>

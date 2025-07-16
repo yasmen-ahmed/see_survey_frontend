@@ -9,6 +9,7 @@ const SiteLocationForm = () => {
   const { sessionId, siteId } = useParams();
   const { uploadedImages, handleImageUpload, saveImages, loading } = useImageManager(sessionId);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [loadingApi,setLoadingApi] =useState(false)
   
 
   const [formData, setFormData] = useState({
@@ -24,6 +25,7 @@ const SiteLocationForm = () => {
 
   // Fetch survey details for pre-filling when session ID changes
   useEffect(() => {
+    setLoadingApi(true)
     axios.get(`${import.meta.env.VITE_API_URL}/api/sites/${siteId}`)
       .then(res => {
         const data = res.data;
@@ -41,6 +43,7 @@ const SiteLocationForm = () => {
         } else {
           console.error("No data received from API");
         }
+        setLoadingApi(false)
       })
       .catch(err => console.error("Error loading survey details:", err));
   }, [sessionId, siteId]);
@@ -106,7 +109,7 @@ const SiteLocationForm = () => {
 
   const defaultMap = "https://maps.google.com/maps?q=33.6844,73.0479&z=15&output=embed";
 
-  if (loading) {
+  if (loading ) {
     return <div>Loading...</div>;
   }
 
@@ -230,7 +233,7 @@ const SiteLocationForm = () => {
 
           <div className="md:col-span-2 flex justify-center">
             <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
-              Save and Continue
+              {loadingApi ? "loading...": "Save"}  
             </button>
           </div>
         </form>

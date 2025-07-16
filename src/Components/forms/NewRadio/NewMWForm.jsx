@@ -447,13 +447,17 @@ const NewMWForm = () => {
             </table>
           </div>
 
-          <div className="flex justify-end mt-6">
+          <div className="flex justify-center mt-6">
             <button
               type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className={`px-6 py-3 text-white rounded font-semibold ${
+                isSaving
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-blue-500 hover:bg-blue-700' 
+              }`}
               disabled={isSaving}
             >
-              {isSaving ? 'Saving...' : 'Save Configuration'}
+              {isSaving ? 'loading...' : 'Save '}
             </button>
           </div>
         </form>

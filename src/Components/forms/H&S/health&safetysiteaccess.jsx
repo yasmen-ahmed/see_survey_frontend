@@ -217,11 +217,12 @@ const HealthAndSafetyTab1 = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`px-8 py-3 text-white rounded-lg font-semibold transition-colors ${
-                isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+              className={`px-6 py-3 text-white rounded font-semibold ${
+                isSubmitting  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-blue-500 hover:bg-blue-700' 
               }`}
             >
-              {isSubmitting ? 'Saving...' : 'Save and Continue'}
+              {isSubmitting ? 'loading...' : 'Save '}
             </button>
           </div>
         </form>

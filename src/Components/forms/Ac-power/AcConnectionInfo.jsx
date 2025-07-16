@@ -12,7 +12,7 @@ const AcInformationForm = () => {
   const [solarCapacity, setSolarCapacity] = useState('');
   const [uploadedImages, setUploadedImages] = useState({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
+  const [loadingApi,setLoadingApi] =useState(false)
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/ac-connection-info/${sessionId}`)
       .then(res => {
@@ -99,7 +99,8 @@ const AcInformationForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setLoadingApi(true)
+    setHasUnsavedChanges(false);
     const formDataToSend = new FormData();
 
     // Add the main payload as a JSON string
@@ -167,6 +168,8 @@ const AcInformationForm = () => {
       console.error("Error:", err);
       console.error("Error response:", err.response?.data);
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+    } finally {
+      setLoadingApi(false)
     }
   };
 
@@ -373,7 +376,7 @@ const AcInformationForm = () => {
               type="submit"
               className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700"
             >
-              Save and Continue
+              {loadingApi ? "loading...": "Save"}  
             </button>
           </div>
         </form>

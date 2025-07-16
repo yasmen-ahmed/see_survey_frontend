@@ -13,7 +13,7 @@ const DynamicFormTable = ({
   isSubmitting = false,
   maxHeight = '600px',
   showSubmitButton = true,
-  submitButtonText = 'Save and Continue',
+  submitButtonText = 'Save ',
   hasUnsavedChanges = false
 }) => {
   // Ensure entities is always an array
@@ -229,17 +229,17 @@ const DynamicFormTable = ({
 
       {/* Submit Button */}
       {showSubmitButton && (
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex justify-center">
           <button
             type="submit"
             disabled={isSubmitting}
-            className={`px-6 py-2 rounded-lg text-white font-medium ${
+            className={`px-6 py-3 text-white rounded font-semibold ${
               isSubmitting
-                ? 'bg-blue-300 cursor-not-allowed'
-                : 'bg-blue-500 hover:bg-blue-600'
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-blue-500 hover:bg-blue-700'
             }`}
           >
-            {isSubmitting ? 'Saving...' : submitButtonText}
+            {isSubmitting ? 'loading...' : submitButtonText}
           </button>
         </div>
       )}

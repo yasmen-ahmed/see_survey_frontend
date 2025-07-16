@@ -6,6 +6,7 @@ import ImageUploader from "../../GalleryComponent";
 
 const RadioAntenasForm = () => {
   const { sessionId } = useParams();
+  const [loadingApi,setLoadingApi] =useState(false)
   const [formData, setFormData] = useState({
     numberOfAntennas: 1,
     antennas: Array(15).fill(null).map((_, index) => ({
@@ -125,8 +126,8 @@ const RadioAntenasForm = () => {
           });
 
     return {
-      numberOfAntennas: apiData.antenna_count?.toString() || '',
-            antennas: mergedAntennas
+      numberOfAntennas: (apiData.antenna_count && apiData.antenna_count > 0) ? apiData.antenna_count.toString() : '1',
+      antennas: mergedAntennas
     };
   };
 
@@ -364,7 +365,36 @@ const RadioAntenasForm = () => {
       }
       return {
         id: index + 1,
-        // ... default antenna properties
+        operator: '',
+        baseHeight: '',
+        towerLeg: '',
+        sector: '',
+        technology: [],
+        azimuth: '',
+        mechanicalTiltExist: '',
+        mechanicalTilt: '',
+        electricalTilt: '',
+        retConnectivity: '',
+        vendor: '',
+        isNokiaActive: '',
+        nokiaModuleName: '',
+        nokiaFiberCount: '',
+        nokiaFiberLength: '',
+        otherModelNumber: '',
+        otherLength: '',
+        otherWidth: '',
+        otherDepth: '',
+        otherPortType: [],
+        otherBands: [],
+        otherPortCount: '',
+        otherFreePorts: '',
+        otherFreeBands: [],
+        otherRadioUnits: '',
+        sideArmLength: '',
+        sideArmDiameter: '',
+        sideArmOffset: '',
+        earthCableLength: '',
+        includeInPlan: '',
       };
     });
 
@@ -704,7 +734,7 @@ const RadioAntenasForm = () => {
                           <label key={tech} className="flex items-center gap-1 text-sm cursor-pointer">
                             <input
                               type="checkbox"
-                              checked={antenna.technology.includes(tech)}
+                              checked={(antenna.technology || []).includes(tech)}
                               onChange={(e) => handleCheckboxChange(antennaIndex, 'technology', tech, e.target.checked)}
                               className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                             />
@@ -1064,7 +1094,7 @@ const RadioAntenasForm = () => {
                           <label key={port} className="flex items-center gap-1 text-sm">
                             <input
                               type="checkbox"
-                              checked={antenna.otherPortType.includes(port)}
+                              checked={(antenna.otherPortType || []).includes(port)}
                               onChange={(e) => handleCheckboxChange(antennaIndex, 'otherPortType', port, e.target.checked)}
                               className="w-4 h-4"
                               disabled={antenna.vendor == 'Nokia' && antenna.vendor}
@@ -1088,7 +1118,7 @@ const RadioAntenasForm = () => {
                           <label key={band} className="flex items-center gap-1 text-sm">
                             <input
                               type="checkbox"
-                              checked={antenna.otherBands.includes(band)}
+                              checked={(antenna.otherBands || []).includes(band)}
                               onChange={(e) => handleCheckboxChange(antennaIndex, 'otherBands', band, e.target.checked)}
                               className="w-4 h-4"
                               disabled={antenna.vendor == 'Nokia' && antenna.vendor}
@@ -1152,7 +1182,7 @@ const RadioAntenasForm = () => {
                             <label key={freeBand} className="flex items-center gap-1 text-sm">
                             <input
                               type="checkbox"
-                              checked={antenna.otherFreeBands.includes(freeBand)}
+                              checked={(antenna.otherFreeBands || []).includes(freeBand)}
                               onChange={(e) => handleCheckboxChange(antennaIndex, 'otherFreeBands', freeBand, e.target.checked)}
                               className="w-4 h-4"
                               disabled={antenna.vendor == 'Nokia' && antenna.vendor}
@@ -1328,7 +1358,7 @@ const RadioAntenasForm = () => {
                   Saving Images & Data...
                 </div>
               ) : (
-                'Save and Continue'
+                'Save'
               )}
             </button>
           </div>

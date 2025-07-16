@@ -8,6 +8,7 @@ const DCPowerInformationForm = () => {
   const { sessionId } = useParams();
   const [numberOfCabinets, setNumberOfCabinets] = useState(0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [loadingApi,setLoadingApi] =useState(false)
   const [formData, setFormData] = useState({
     dc_rectifiers: {
       existing_dc_rectifiers_location: '',
@@ -19,7 +20,7 @@ const DCPowerInformationForm = () => {
       how_many_free_slot_available_rectifier: ''
     },
     batteries: {
-      existing_batteries_strings_location: '',
+      existing_batteries_strings_location: [],
       existing_batteries_vendor: '',
       existing_batteries_type: '',
       how_many_existing_battery_string: '',
@@ -144,7 +145,7 @@ const DCPowerInformationForm = () => {
               how_many_free_slot_available_rectifier: dcPowerData.dc_rectifiers?.how_many_free_slot_available_rectifier || ''
             },
             batteries: {
-              existing_batteries_strings_location: dcPowerData.batteries?.existing_batteries_strings_location || '',
+              existing_batteries_strings_location: dcPowerData.batteries?.existing_batteries_strings_location || [],
               existing_batteries_vendor: dcPowerData.batteries?.existing_batteries_vendor || '',
               existing_batteries_type: dcPowerData.batteries?.existing_batteries_type || '',
               how_many_existing_battery_string: dcPowerData.batteries?.how_many_existing_battery_string || '',
@@ -201,6 +202,25 @@ const DCPowerInformationForm = () => {
     });
   };
 
+  const handleExistingBatteriesLocationChange = (value) => {
+    setHasUnsavedChanges(true);
+    console.log(`Toggling existing batteries location:`, value);
+    setFormData((prev) => {
+      const currentLocations = prev.batteries.existing_batteries_strings_location || [];
+      const updatedList = currentLocations.includes(value)
+        ? currentLocations.filter((item) => item !== value)
+        : [...currentLocations, value];
+
+      return {
+        ...prev,
+        batteries: {
+          ...prev.batteries,
+          existing_batteries_strings_location: updatedList
+        }
+      };
+    });
+  };
+
   const handleImageUpload = (imageCategory, files) => {
     setHasUnsavedChanges(true);
     console.log(`Images uploaded for ${imageCategory}:`, files);
@@ -221,7 +241,7 @@ const DCPowerInformationForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setLoadingApi(true)
     try {
       // Create FormData for multipart submission
       const submitFormData = new FormData();
@@ -298,7 +318,7 @@ const DCPowerInformationForm = () => {
             how_many_free_slot_available_rectifier: dcPowerData.dc_rectifiers?.how_many_free_slot_available_rectifier || ''
           },
           batteries: {
-            existing_batteries_strings_location: dcPowerData.batteries?.existing_batteries_strings_location || '',
+            existing_batteries_strings_location: dcPowerData.batteries?.existing_batteries_strings_location || [],
             existing_batteries_vendor: dcPowerData.batteries?.existing_batteries_vendor || '',
             existing_batteries_type: dcPowerData.batteries?.existing_batteries_type || '',
             how_many_existing_battery_string: dcPowerData.batteries?.how_many_existing_battery_string || '',
@@ -322,7 +342,9 @@ const DCPowerInformationForm = () => {
       console.error("Error submitting DC Power System data:", err);
       console.error("Error response:", err.response?.data);
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
-    }
+    } finally {
+      setLoadingApi(false)
+      }
   };
 
   const cabinetOptions = generateCabinetOptions();
@@ -450,17 +472,19 @@ const DCPowerInformationForm = () => {
 
             <div>
               <label className='block font-semibold mb-2'>Existing batteries strings are located in?</label>
-              <select
-                className='form-input'
-                value={formData.batteries.existing_batteries_strings_location}
-                onChange={(e) => handleChange('batteries', 'existing_batteries_strings_location', e.target.value)}
-              >
-                <option value=''>Select Location</option>
-                {cabinetOptions.map((cabinet) => (
-                  <option key={cabinet} value={cabinet}>{cabinet}</option>
+              <div className='grid grid-cols-2 gap-2'>
+                {[...cabinetOptions, 'Other'].map(option => (
+                  <label key={option} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={(formData.batteries.existing_batteries_strings_location || []).includes(option)}
+                      onChange={() => handleExistingBatteriesLocationChange(option)}
+                      className="w-4 h-4"
+                    />
+                    {option}
+                  </label>
                 ))}
-                <option value='Other'>Other</option>
-              </select>
+              </div>
             </div>
 
             <div>
@@ -557,7 +581,7 @@ const DCPowerInformationForm = () => {
               type="submit"
               className="px-6 py-3 text-white bg-blue-500 rounded hover:bg-blue-700 font-semibold"
             >
-              Save and Continue
+              {loadingApi ? "loading...": "Save"}  
             </button>
           </div>
         </form>

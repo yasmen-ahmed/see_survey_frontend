@@ -8,7 +8,7 @@ import ImageUploader from "../../GalleryComponent";
 const AntennaStructureForm = () => {
   const { sessionId } = useParams();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
+  const [loadingApi,setLoadingApi] =useState(false)
   const [formData, setFormData] = useState({
     hasSketch: "No",
     towerType: [],
@@ -113,6 +113,18 @@ const AntennaStructureForm = () => {
         buildingHeight: updatedTowerTypes.some((t) => t.includes("RT")) ? prev.buildingHeight : "",
         rtStructureCount: updatedTowerTypes.some((t) => t.includes("RT")) ? prev.rtStructureCount : "",
       }));
+    } else if (name === "rtHeights") {
+      let updatedRtHeights = [...(formData.rtHeights || [])];
+      if (checked) {
+        updatedRtHeights.push(value);
+      } else {
+        updatedRtHeights = updatedRtHeights.filter((h) => h !== value);
+      }
+  
+      setFormData((prev) => ({
+        ...prev,
+        rtHeights: updatedRtHeights,
+      }));
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -134,6 +146,7 @@ const AntennaStructureForm = () => {
   // Unified form submission with form fields + image files
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoadingApi(true)
     setIsSubmitting(true);
 
     try {
@@ -173,6 +186,7 @@ const AntennaStructureForm = () => {
       showError(`Error saving data: ${err.response?.data?.message || err.message}`);
     } finally {
       setIsSubmitting(false);
+      setLoadingApi(false)
     }
   };
 
@@ -274,7 +288,7 @@ const AntennaStructureForm = () => {
                     value={height}
                     checked={formData.rtHeights.includes(height)}
                     onChange={handleChange}
-                  />{" "}
+                  /> 
                   {height}
                 </label>
               ))}
@@ -347,14 +361,7 @@ const AntennaStructureForm = () => {
                   : 'bg-blue-600 hover:bg-blue-700'
               }`}
             >
-              {isSubmitting ? (
-                <div className="flex items-center">
-                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                  Saving Images & Data...
-                </div>
-              ) : (
-                'Save and Continue'
-              )}
+              {loadingApi ? "loading...": "Save"}  
             </button>
           </div>
 

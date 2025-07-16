@@ -9,6 +9,7 @@ const OutdoorCabinetsForm = () => {
   const { sessionId } = useParams();
   const bgColorFillAuto = "bg-[#c6efce]"
   const colorFillAuto = 'text-[#006100]'
+  const [loadingApi,setLoadingApi] =useState(false)
   const [formData, setFormData] = useState({
     numberOfCabinets: '',
     cabinets: Array(10).fill(null).map((_, index) => ({
@@ -327,7 +328,7 @@ const OutdoorCabinetsForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setLoadingApi(true) 
     try {
       // Create FormData for multipart submission
       const submitFormData = new FormData();
@@ -466,6 +467,8 @@ const OutdoorCabinetsForm = () => {
       console.error("Error submitting outdoor cabinets data:", err);
       console.error("Error response:", err.response?.data);
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+    } finally {
+      setLoadingApi(false)
     }
   };
 
@@ -1225,7 +1228,7 @@ const OutdoorCabinetsForm = () => {
               type="submit"
               className="px-6 py-3 text-white bg-blue-500 rounded hover:bg-blue-700 font-semibold"
             >
-              Save and Continue
+              {loadingApi ? "loading...": "Save"}     
             </button>
           </div>
         </form>

@@ -19,6 +19,7 @@ const ACPanelForm = () => {
 
   const [uploadedImages, setUploadedImages] = useState({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [loadingApi,setLoadingApi] =useState(false)
   // Configuration for the dynamic table rows
   const tableRows = [
     {
@@ -171,7 +172,8 @@ const ACPanelForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setHasUnsavedChanges(true);
+    setLoadingApi(true)
+    setHasUnsavedChanges(false);
     const formDataToSend = new FormData();
 
     // Build the payload to match the expected API structure
@@ -258,6 +260,8 @@ const ACPanelForm = () => {
     } catch (err) {
       console.error("Error:", err);
       showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+    } finally {
+      setLoadingApi(false)
     }
   };
 
@@ -407,7 +411,7 @@ const ACPanelForm = () => {
             onClick={handleSubmit}
             className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700"
           >
-            Submit
+            {loadingApi ? "loading...": "Save"}  
           </button>
         </div>
       </div>

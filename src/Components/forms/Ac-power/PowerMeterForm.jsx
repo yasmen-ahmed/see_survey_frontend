@@ -20,6 +20,7 @@ const PowerMeterForm = () => {
 
   const [uploadedImages, setUploadedImages] = useState({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [loadingApi,setLoadingApi] =useState(false)
   // Fetch existing data when component loads
   useEffect(() => {
     if (!sessionId) return;
@@ -107,7 +108,8 @@ const PowerMeterForm = () => {
   
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setHasUnsavedChanges(true);
+    setLoadingApi(true)
+    setHasUnsavedChanges(false);
     const formDataToSend = new FormData();
 
     // Build the payload to match the expected API structure
@@ -193,6 +195,8 @@ const PowerMeterForm = () => {
     } catch (error) {
       console.error("Error submitting power meter data:", error);
       showError(error.response?.data?.error?.message || 'Error submitting data');
+    } finally {
+      setLoadingApi(false)
     }
   };
 
@@ -324,7 +328,7 @@ const PowerMeterForm = () => {
               type="submit"
               className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700"
             >
-              Submit Power Meter Info
+              {loadingApi ? "loading...": "Save"}  
             </button>
           </div>
         </form>

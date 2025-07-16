@@ -336,7 +336,7 @@ const GPSAntennaTab = () => {
                   : 'bg-blue-500 hover:bg-blue-700'
               }`}
             >
-              {isSubmitting ? 'Saving...' : 'Save and Continue'}
+              {isSubmitting ? 'loading...' : 'Save '}
             </button>
           </div>
         </form>
