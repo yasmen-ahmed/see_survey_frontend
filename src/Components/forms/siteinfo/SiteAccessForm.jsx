@@ -4,6 +4,7 @@ import axios from "axios";
 import ImageUploader from "../../GalleryComponent";
 import { showSuccess, showError } from "../../../utils/notifications"; 
 import useImageManager from "../../../hooks/useImageManager";
+import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
 
 function SiteAccessForm() {
   const { sessionId, siteId } = useParams(); 
@@ -91,56 +92,71 @@ function SiteAccessForm() {
     }
   };
 
+  // Function to save data via API (for use with useUnsavedChanges hook)
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
+    
+    try {
+      setLoadingApi(true);
+      const payload = {
+        site_access_permission_required: formData.site_access_permission_required,
+        preferred_time_slot_crane_access: formData.preferred_time_slot_crane_access,
+        contact_person_name: formData.contact_person_name,
+        contact_tel_number: formData.contact_tel_number,
+        available_access_time: formData.available_access_time,
+        access_to_site_by_road: formData.access_to_site_by_road,
+        type_of_gated_fence: formData.type_of_gated_fence,  
+        keys_required: formData.keys_required,
+        contact_person_name_for_site_key: formData.contact_person_name_for_site_key,
+        contact_tel_number_for_site_key: formData.contact_tel_number_for_site_key,
+        keys_type: formData.keys_type,
+        material_accessibility_to_site: formData.material_accessibility_to_site,
+        stair_lift_height: formData.stair_lift_height,
+        stair_lift_width: formData.stair_lift_width,
+        stair_lift_depth: formData.stair_lift_depth,    
+      };
+
+      await axios.put(`${import.meta.env.VITE_API_URL}/api/site-access/${sessionId}`, payload);
+      
+      // Save images
+      const imagesSaved = await saveImages();
+      if (!imagesSaved) {
+        throw new Error('Failed to save images');
+      }
+      
+      setHasUnsavedChanges(false);
+      return true;
+    } catch (err) {
+      console.error("Error saving data:", err);
+      return false;
+    } finally {
+      setLoadingApi(false);
+    }
+  };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
+
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoadingApi(true)
- 
-
-    const payload = {
-      site_access_permission_required: formData.site_access_permission_required,
-      preferred_time_slot_crane_access: formData.preferred_time_slot_crane_access,
-      contact_person_name: formData.contact_person_name,
-      contact_tel_number: formData.contact_tel_number,
-      available_access_time: formData.available_access_time,
-      access_to_site_by_road: formData.access_to_site_by_road,
-    type_of_gated_fence: formData.type_of_gated_fence,  
-      keys_required: formData.keys_required,
-      contact_person_name_for_site_key: formData.contact_person_name_for_site_key,
-      contact_tel_number_for_site_key: formData.contact_tel_number_for_site_key,
-      keys_type: formData.keys_type,
-      material_accessibility_to_site: formData.material_accessibility_to_site,
-      stair_lift_height: formData.stair_lift_height,
-      stair_lift_width: formData.stair_lift_width,
-      stair_lift_depth: formData.stair_lift_depth,    
-     
-    };
-
-    
 
     try {
-      const response=await axios.put(`${import.meta.env.VITE_API_URL}/api/site-access/${sessionId}`,payload);
-       // Save images
-       const imagesSaved = await saveImages();
-       if (!imagesSaved) {
-         throw new Error('Failed to save images');
-       }
-       setHasUnsavedChanges(false);
-      showSuccess('Data submitted successfully!');
-      console.log(response.data)
+      const saved = await saveDataToAPI();
+      if (saved) {
+        showSuccess('Data submitted successfully!');
+      }
     } catch (err) {
       console.error("Error:", err);
       showError('Error submitting data. Please try again.');
-    } finally {
-      setLoadingApi(false)
     }
   };
 
 
   return (
-    <div className="max-h-screen flex  items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-        {/* Unsaved Changes Warning */}
+    <div className="h-full flex items-start space-x-2 justify-start bg-gray-100 p-">
+    <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full overflow-y-auto flex flex-col">
+     {/* Unsaved Changes Warning */}
         {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
             <div className="flex items-center">
@@ -501,10 +517,10 @@ function SiteAccessForm() {
 
         </div>
 
-        <div className="pt-6 text-center">
+        <div className="mt-auto pt-6 flex justify-center">
           <button
             onClick={handleSubmit}
-            className="px-8 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300"
+          className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700"
           >
             {loadingApi ? "loading...": "Save"}  
           </button>

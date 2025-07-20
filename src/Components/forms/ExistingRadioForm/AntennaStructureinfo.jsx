@@ -3,12 +3,13 @@ import axios from "axios";
 import { useParams } from 'react-router-dom';
 import { showSuccess, showError } from '../../../utils/notifications';
 import ImageUploader from "../../GalleryComponent";
-
+import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
 
 const AntennaStructureForm = () => {
   const { sessionId } = useParams();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loadingApi,setLoadingApi] =useState(false)
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [formData, setFormData] = useState({
     hasSketch: "No",
     towerType: [],
@@ -20,6 +21,56 @@ const AntennaStructureForm = () => {
     earthingBusBar: "No",
     freeHoles: "",
   });
+
+  // Function to save data via API
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
+    
+    try {
+      setLoadingApi(true);
+      const formPayload = new FormData();
+
+      // Append all form fields
+      formPayload.append('has_sketch_with_measurements', formData.hasSketch);
+      formPayload.append('tower_type', JSON.stringify(formData.towerType));
+      formPayload.append('gf_antenna_structure_height', formData.gfHeight);
+      formPayload.append('rt_how_many_structures_onsite', formData.rtStructureCount);
+      formPayload.append('rt_existing_heights', JSON.stringify(formData.rtHeights));
+      formPayload.append('rt_building_height', formData.buildingHeight);
+      formPayload.append('lightening_system_installed', formData.lightningSystem);
+      formPayload.append('earthing_bus_bars_exist', formData.earthingBusBar);
+      formPayload.append('how_many_free_holes_bus_bars', formData.freeHoles);
+
+      // Append any newly selected File objects under their category keys
+      Object.entries(uploadedImages).forEach(([category, files]) => {
+        files.forEach(item => {
+          if (item instanceof File) {
+            formPayload.append(category, item);
+          }
+        });
+      });
+
+      // Send everything in a single multipart request
+      await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/antenna-structure/${sessionId}`,
+        formPayload,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      
+      setHasUnsavedChanges(false);
+      showSuccess('Data saved successfully!');
+      return true;
+    } catch (err) {
+      console.error("Error saving data:", err);
+      showError('Error saving data. Please try again.');
+      return false;
+    } finally {
+      setLoadingApi(false);
+    }
+  };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
 
   // State for managing uploaded images
   const [uploadedImages, setUploadedImages] = useState({});
@@ -51,6 +102,7 @@ const AntennaStructureForm = () => {
   }, [hasUnsavedChanges]);
 
   useEffect(() => {
+    setIsInitialLoading(true);
     axios.get(`${import.meta.env.VITE_API_URL}/api/antenna-structure/${sessionId}`)
       .then(res => {
         const payload = res.data.data;
@@ -83,16 +135,25 @@ const AntennaStructureForm = () => {
           }, {});
           setUploadedImages(grouped);
         }
+
+        // Reset unsaved changes flag after loading data
+        setHasUnsavedChanges(false);
+        setIsInitialLoading(false);
       })
       .catch(err => {
         console.error("Error loading antenna structure data:", err);
         if (err.response?.status !== 404) {
           showError('Error loading existing data');
         }
+        // Reset unsaved changes flag even on error
+        setHasUnsavedChanges(false);
+        setIsInitialLoading(false);
       });
   }, [sessionId]);
 
   const handleChange = (e) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     const { name, value, type, checked } = e.target;
     setHasUnsavedChanges(true);
   
@@ -135,6 +196,8 @@ const AntennaStructureForm = () => {
 
   // Handle image uploads from ImageUploader component
   const handleImageUpload = (imageCategory, files) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     console.log(`Images uploaded for ${imageCategory}:`, files);
     setHasUnsavedChanges(true);
     setUploadedImages(prev => ({
@@ -146,53 +209,20 @@ const AntennaStructureForm = () => {
   // Unified form submission with form fields + image files
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoadingApi(true)
-    setIsSubmitting(true);
-
     try {
-      const formPayload = new FormData();
-
-      // Append all form fields
-      formPayload.append('has_sketch_with_measurements', formData.hasSketch);
-      formPayload.append('tower_type', JSON.stringify(formData.towerType));
-      formPayload.append('gf_antenna_structure_height', formData.gfHeight);
-      formPayload.append('rt_how_many_structures_onsite', formData.rtStructureCount);
-      formPayload.append('rt_existing_heights', JSON.stringify(formData.rtHeights));
-      formPayload.append('rt_building_height', formData.buildingHeight);
-      formPayload.append('lightening_system_installed', formData.lightningSystem);
-      formPayload.append('earthing_bus_bars_exist', formData.earthingBusBar);
-      formPayload.append('how_many_free_holes_bus_bars', formData.freeHoles);
-
-      // Append any newly selected File objects under their category keys
-      Object.entries(uploadedImages).forEach(([category, files]) => {
-        files.forEach(item => {
-          if (item instanceof File) {
-            formPayload.append(category, item);
-          }
-        });
-      });
-
-      // Send everything in a single multipart request
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/antenna-structure/${sessionId}`,
-        formPayload,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
-      );
-
-      setHasUnsavedChanges(false);
-      showSuccess('Antenna structure data and images submitted successfully!');
+      const saved = await saveDataToAPI();
+      if (saved) {
+        showSuccess('Antenna structure data and images submitted successfully!');
+      }
     } catch (err) {
       console.error('Submission error:', err);
-      showError(`Error saving data: ${err.response?.data?.message || err.message}`);
-    } finally {
-      setIsSubmitting(false);
-      setLoadingApi(false)
+      showError('Error submitting data. Please try again.');
     }
   };
 
   return (
-    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
+    <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
       {/* Unsaved Changes Warning */}
       {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
@@ -208,7 +238,9 @@ const AntennaStructureForm = () => {
             </div>
           </div>
         )}
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
+          <div className="flex-1 overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Sketch Availability */}
           <div className="flex flex-col">
@@ -288,6 +320,7 @@ const AntennaStructureForm = () => {
                     value={height}
                     checked={formData.rtHeights.includes(height)}
                     onChange={handleChange}
+                    className="mr-1"
                   /> 
                   {height}
                 </label>
@@ -349,18 +382,12 @@ const AntennaStructureForm = () => {
             </select>
             <hr className='mt-2' /> 
               </div>
-
+</div>
+</div>
           {/* Submit Button */}
-          <div className="md:col-span-2 flex justify-center">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className={`px-6 py-3 text-white rounded font-medium ${
-                isSubmitting 
-                  ? 'bg-gray-400 cursor-not-allowed' 
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-            >
+          {/* Save Button at Bottom - Fixed */}
+          <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
+            <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
               {loadingApi ? "loading...": "Save"}  
             </button>
           </div>

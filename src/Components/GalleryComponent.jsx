@@ -119,9 +119,11 @@ const ImageUploader = ({ images, onImageUpload, uploadedImages = {} }) => {
   };
 
   return (
-    <div className="bg-white p-4 rounded-xl shadow-md w-[20%] overflow-y-auto max-h-[650px]">
+    <div className="bg-white p-4 rounded-xl shadow-md w-[20%] h-full overflow-y-auto">
       <h2 className="text-xl font-semibold mb-4">Images</h2>
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4" style={{
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))'
+      }}>
         {images.map((image) => (
           <div key={image.name} className="border rounded-lg p-3">
             <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -3,12 +3,14 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { showSuccess, showError } from '../../../utils/notifications';
 import ImageUploader from '../../GalleryComponent';
+import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
 
 const DCPowerInformationForm = () => {
   const { sessionId } = useParams();
   const [numberOfCabinets, setNumberOfCabinets] = useState(0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loadingApi,setLoadingApi] =useState(false)
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [formData, setFormData] = useState({
     dc_rectifiers: {
       existing_dc_rectifiers_location: '',
@@ -29,6 +31,72 @@ const DCPowerInformationForm = () => {
       new_battery_string_installation_location: []
     }
   });
+
+  // Function to save data via API
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
+    
+    try {
+      setLoadingApi(true);
+      // Create FormData for multipart submission
+      const submitFormData = new FormData();
+
+      // Add form data - ensure all values are properly stringified
+      const dc_rectifiers = {
+        ...formData.dc_rectifiers,
+        rectifier_module_capacity: parseFloat(formData.dc_rectifiers.rectifier_module_capacity) || 0,
+        total_capacity_existing_dc_power_system: parseFloat(formData.dc_rectifiers.total_capacity_existing_dc_power_system) || 0,
+        how_many_existing_dc_rectifier_modules: parseInt(formData.dc_rectifiers.how_many_existing_dc_rectifier_modules) || 0,
+        how_many_free_slot_available_rectifier: parseInt(formData.dc_rectifiers.how_many_free_slot_available_rectifier) || 0
+      };
+
+      const batteries = {
+        ...formData.batteries,
+        how_many_existing_battery_string: parseInt(formData.batteries.how_many_existing_battery_string) || 0,
+        total_battery_capacity: parseFloat(formData.batteries.total_battery_capacity) || 0,
+        how_many_free_slot_available_battery: parseInt(formData.batteries.how_many_free_slot_available_battery) || 0,
+        new_battery_string_installation_location: formData.batteries.new_battery_string_installation_location || []
+      };
+
+      submitFormData.append('dc_rectifiers', JSON.stringify(dc_rectifiers));
+      submitFormData.append('batteries', JSON.stringify(batteries));
+
+      // Add images
+      Object.entries(uploadedImages).forEach(([category, files]) => {
+        if (files && files.length > 0) {
+          const file = files[0];
+          if (file instanceof File) {
+            submitFormData.append(category, file);
+          }
+        } else {
+          submitFormData.append(category, '');
+        }
+      });
+
+      await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/dc-power-system/${sessionId}`,
+        submitFormData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      
+      setHasUnsavedChanges(false);
+      showSuccess('Data saved successfully!');
+      return true;
+    } catch (err) {
+      console.error("Error saving data:", err);
+      showError('Error saving data. Please try again.');
+      return false;
+    } finally {
+      setLoadingApi(false);
+    }
+  };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
 
   // Add useEffect for window beforeunload event
   useEffect(() => {
@@ -120,6 +188,7 @@ const DCPowerInformationForm = () => {
 
   // Fetch existing data when component loads
   useEffect(() => {
+    setIsInitialLoading(true);
     axios.get(`${import.meta.env.VITE_API_URL}/api/dc-power-system/${sessionId}`)
       .then(res => {
         const data = res.data.data || res.data;
@@ -162,16 +231,25 @@ const DCPowerInformationForm = () => {
             setUploadedImages(processedImages);
           }
         }
+
+        // Reset unsaved changes flag after loading data
+        setHasUnsavedChanges(false);
+        setIsInitialLoading(false);
       })
       .catch(err => {
         console.error("Error loading DC Power data:", err);
         if (err.response?.status !== 404) {
           showError('Error loading existing data');
         }
+        // Reset unsaved changes flag even on error
+        setHasUnsavedChanges(false);
+        setIsInitialLoading(false);
       });
   }, [sessionId]);
 
   const handleChange = (section, name, value) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     setHasUnsavedChanges(true);
     console.log(`Changing ${section}.${name} to:`, value);
     setFormData((prev) => ({
@@ -184,6 +262,8 @@ const DCPowerInformationForm = () => {
   };
 
   const handleCheckboxChange = (value) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     setHasUnsavedChanges(true);
     console.log(`Toggling battery installation location:`, value);
     setFormData((prev) => {
@@ -203,6 +283,8 @@ const DCPowerInformationForm = () => {
   };
 
   const handleExistingBatteriesLocationChange = (value) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     setHasUnsavedChanges(true);
     console.log(`Toggling existing batteries location:`, value);
     setFormData((prev) => {
@@ -222,6 +304,8 @@ const DCPowerInformationForm = () => {
   };
 
   const handleImageUpload = (imageCategory, files) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     setHasUnsavedChanges(true);
     console.log(`Images uploaded for ${imageCategory}:`, files);
     setUploadedImages(prev => ({
@@ -241,110 +325,15 @@ const DCPowerInformationForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoadingApi(true)
     try {
-      // Create FormData for multipart submission
-      const submitFormData = new FormData();
-
-      // Add form data - ensure all values are properly stringified
-      const dc_rectifiers = {
-        ...formData.dc_rectifiers,
-        rectifier_module_capacity: parseFloat(formData.dc_rectifiers.rectifier_module_capacity) || 0,
-        total_capacity_existing_dc_power_system: parseFloat(formData.dc_rectifiers.total_capacity_existing_dc_power_system) || 0,
-        how_many_existing_dc_rectifier_modules: parseInt(formData.dc_rectifiers.how_many_existing_dc_rectifier_modules) || 0,
-        how_many_free_slot_available_rectifier: parseInt(formData.dc_rectifiers.how_many_free_slot_available_rectifier) || 0
-      };
-
-      const batteries = {
-        ...formData.batteries,
-        how_many_existing_battery_string: parseInt(formData.batteries.how_many_existing_battery_string) || 0,
-        total_battery_capacity: parseFloat(formData.batteries.total_battery_capacity) || 0,
-        how_many_free_slot_available_battery: parseInt(formData.batteries.how_many_free_slot_available_battery) || 0,
-        new_battery_string_installation_location: formData.batteries.new_battery_string_installation_location || []
-      };
-
-      submitFormData.append('dc_rectifiers', JSON.stringify(dc_rectifiers));
-      submitFormData.append('batteries', JSON.stringify(batteries));
-
-      // Add images
-      Object.entries(uploadedImages).forEach(([category, files]) => {
-        if (files && files.length > 0) {
-          const file = files[0];
-          if (file instanceof File) {
-            submitFormData.append(category, file);
-          }
-        } else {
-          submitFormData.append(category, '');
-        }
-      });
-
-      console.log("Submitting DC Power System data:");
-      // Log FormData contents for debugging
-      for (let pair of submitFormData.entries()) {
-        if (pair[1] instanceof File) {
-          console.log(pair[0] + ': [FILE] ' + pair[1].name);
-        } else {
-          console.log(pair[0] + ': ' + pair[1]);
-        }
+      const saved = await saveDataToAPI();
+      if (saved) {
+        showSuccess('DC Power System data and images submitted successfully!');
       }
-
-      const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/dc-power-system/${sessionId}`,
-        submitFormData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
-
-      console.log("Server response:", response.data);
-      
-      // After successful submission, update the form with the latest data
-      const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/dc-power-system/${sessionId}`);
-      const latestData = getResponse.data.data || getResponse.data;
-
-      if (latestData) {
-        // Update form data
-        const dcPowerData = latestData.dcPowerData || latestData;
-        setFormData({
-          dc_rectifiers: {
-            existing_dc_rectifiers_location: dcPowerData.dc_rectifiers?.existing_dc_rectifiers_location || '',
-            existing_dc_rectifiers_vendor: dcPowerData.dc_rectifiers?.existing_dc_rectifiers_vendor || '',
-            existing_dc_rectifiers_model: dcPowerData.dc_rectifiers?.existing_dc_rectifiers_model || '',
-            how_many_existing_dc_rectifier_modules: dcPowerData.dc_rectifiers?.how_many_existing_dc_rectifier_modules || '',
-            rectifier_module_capacity: dcPowerData.dc_rectifiers?.rectifier_module_capacity || '',
-            total_capacity_existing_dc_power_system: dcPowerData.dc_rectifiers?.total_capacity_existing_dc_power_system || '',
-            how_many_free_slot_available_rectifier: dcPowerData.dc_rectifiers?.how_many_free_slot_available_rectifier || ''
-          },
-          batteries: {
-            existing_batteries_strings_location: dcPowerData.batteries?.existing_batteries_strings_location || [],
-            existing_batteries_vendor: dcPowerData.batteries?.existing_batteries_vendor || '',
-            existing_batteries_type: dcPowerData.batteries?.existing_batteries_type || '',
-            how_many_existing_battery_string: dcPowerData.batteries?.how_many_existing_battery_string || '',
-            total_battery_capacity: dcPowerData.batteries?.total_battery_capacity || '',
-            how_many_free_slot_available_battery: dcPowerData.batteries?.how_many_free_slot_available_battery || '',
-            new_battery_string_installation_location: dcPowerData.batteries?.new_battery_string_installation_location || []
-          }
-        });
-
-        // Process and update images
-        if (latestData.images && Array.isArray(latestData.images)) {
-          const processedImages = processImagesFromResponse(latestData);
-          console.log("Processed images from response:", processedImages);
-          setUploadedImages(processedImages);
-        }
-      }
-      
-      setHasUnsavedChanges(false);
-      showSuccess('DC Power System data and images submitted successfully!');
     } catch (err) {
       console.error("Error submitting DC Power System data:", err);
-      console.error("Error response:", err.response?.data);
-      showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
-    } finally {
-      setLoadingApi(false)
-      }
+      showError('Error submitting data. Please try again.');
+    }
   };
 
   const cabinetOptions = generateCabinetOptions();
@@ -353,9 +342,9 @@ const DCPowerInformationForm = () => {
   const batteryTypes = ['Lead-acid', 'Lithium-ion'];
 
   return (
-    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-        {/* Unsaved Changes Warning */}
+    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
+    <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
+      {/* Unsaved Changes Warning */}
         {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
             <div className="flex items-center">
@@ -370,7 +359,8 @@ const DCPowerInformationForm = () => {
             </div>
           </div>
         )}
-        <form onSubmit={handleSubmit}>
+         <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
+         <div className="flex-1 overflow-y-auto">
           <h2 className='text-2xl font-bold text-blue-700 mb-4'>DC Rectifiers</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 bg-gray-100 p-4 rounded-lg">
 
@@ -575,12 +565,10 @@ const DCPowerInformationForm = () => {
               </div>
             </div>
           </div>
-
-          <div className="mt-6 flex justify-center">
-            <button
-              type="submit"
-              className="px-6 py-3 text-white bg-blue-500 rounded hover:bg-blue-700 font-semibold"
-            >
+</div>
+         {/* Save Button at Bottom - Fixed */}
+         <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
+            <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
               {loadingApi ? "loading...": "Save"}  
             </button>
           </div>

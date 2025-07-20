@@ -299,6 +299,7 @@ export const useRadioUnitsForm = (sessionId) => {
     }
 
     if (!validateForm()) {
+      console.log('Form validation failed');
       return;
     }
 
@@ -336,10 +337,15 @@ export const useRadioUnitsForm = (sessionId) => {
         };
       });
 
-      formData.append('data', JSON.stringify({
+      const dataToSend = {
         new_radio_units_planned: radioUnitsCount,
         radio_units: radioUnitsData
-      }));
+      };
+
+      console.log('Sending radio units data:', dataToSend);
+      console.log('Current radioUnitsForms state:', radioUnitsForms.slice(0, radioUnitsCount));
+
+      formData.append('data', JSON.stringify(dataToSend));
 
       // Append images
       Object.entries(uploadedImages).forEach(([category, files]) => {
@@ -349,6 +355,11 @@ export const useRadioUnitsForm = (sessionId) => {
           }
         });
       });
+
+      console.log('FormData entries:');
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}:`, value instanceof File ? `[File: ${value.name}]` : value);
+      }
 
       await axios.put(
         `${import.meta.env.VITE_API_URL}/api/new-radio-units/${sessionId}`,

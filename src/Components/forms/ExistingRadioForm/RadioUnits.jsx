@@ -4,6 +4,7 @@ import axios from 'axios';
 import { FaRegTrashAlt } from 'react-icons/fa';
 import { showSuccess, showError } from '../../../utils/notifications';
 import ImageUploader from "../../GalleryComponent";
+import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
 
 const nokiaModels = [
   'AAHF', 'AAHC', 'AAHD', 'AAIA', 'AAHB', 'AAHG', 'AAHE', 'AAOA'
@@ -148,6 +149,7 @@ const DynamicTable = ({ data, onChange, unitIndex }) => {
 const RadioUnitsForm = () => {
   const { sessionId } = useParams();
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [relations, setRelations] = useState({
     cabinet_numbers: [],
     dc_cb_fuse_options: []
@@ -404,6 +406,8 @@ const RadioUnitsForm = () => {
 
   // Add handleImageUpload function
   const handleImageUpload = (imageCategory, files) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     console.log(`Images uploaded for ${imageCategory}:`, files);
     
     if (files && files.length > 0) {
@@ -430,10 +434,13 @@ const RadioUnitsForm = () => {
         [imageCategory]: true
       }));
     }
+    
+    setHasUnsavedChanges(true);
   };
 
   // Fetch relations and existing data when component loads
   useEffect(() => {
+    setIsInitialLoading(true);
     const fetchData = async () => {
       try {
         setIsLoading(true);
@@ -480,16 +487,26 @@ const RadioUnitsForm = () => {
               }
             });
           }
+
+          // Reset unsaved changes flag after loading data
+          setHasUnsavedChanges(false);
+          setIsInitialLoading(false);
         } catch (radioUnitsError) {
           if (radioUnitsError.response?.status !== 404) {
             console.error("Error loading radio units data:", radioUnitsError);
             showError('Error loading existing radio units data');
           }
+          // Reset unsaved changes flag even on error
+          setHasUnsavedChanges(false);
+          setIsInitialLoading(false);
         }
         
       } catch (err) {
         console.error("Error loading relations data:", err);
         showError('Error loading form data');
+        // Reset unsaved changes flag even on error
+        setHasUnsavedChanges(false);
+        setIsInitialLoading(false);
       } finally {
         setIsLoading(false);
       }
@@ -501,6 +518,8 @@ const RadioUnitsForm = () => {
   }, [sessionId, mapApiToFormData]);
 
   const handleRadioUnitCountChange = (e) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     const count = parseInt(e.target.value, 10);
     
     // Create new array with the desired length
@@ -588,6 +607,8 @@ const RadioUnitsForm = () => {
   };
 
   const handleChange = (unitIndex, field, value) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     const newRadioUnits = [...formData.radioUnits];
     
     if (unitIndex === 0) {
@@ -639,6 +660,7 @@ const RadioUnitsForm = () => {
   };
 
   const handleTableDataChange = (unitIndex, newData) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
     handleChange(unitIndex, 'nokiaPortConnectivity', newData);
   };
 
@@ -818,22 +840,58 @@ const RadioUnitsForm = () => {
     return allImages;
   };
 
-  // Add useEffect for window beforeunload event
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
+  // Function to save data via API (for use with useUnsavedChanges hook)
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
+    
+    try {
+      const apiData = mapFormToApiData(formData);
+      
+      // Create FormData for multipart submission
+      const submitFormData = new FormData();
+      submitFormData.append('radio_units_data', JSON.stringify(apiData));
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
+      // Handle images - only send fields that have new files or are explicitly removed
+      const allImageFields = getAllImages();
+      
+      allImageFields.forEach(imageField => {
+        const imageFiles = uploadedImages[imageField.name];
+        const isExplicitlyRemoved = removedImages[imageField.name];
+        
+        if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+          const file = imageFiles[0];
+          if (file instanceof File) {
+            submitFormData.append(imageField.name, file);
+          }
+        } else if (isExplicitlyRemoved) {
+          submitFormData.append(imageField.name, '');
+        }
+      });
+
+      await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/radio-units/${sessionId}`, 
+        submitFormData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      
+      setHasUnsavedChanges(false);
+      return true;
+    } catch (err) {
+      console.error("Error saving data:", err);
+      return false;
+    }
+  };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
 
   return (
-    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
         {/* Unsaved Changes Warning */}
         {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
@@ -850,7 +908,10 @@ const RadioUnitsForm = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
+        
+           
+
           <div>
             <label className="block text-lg font-semibold mb-1">
               How many radio units on site?
@@ -875,12 +936,12 @@ const RadioUnitsForm = () => {
           )}
 
   {/* Table Layout */}
-  <div className="overflow-auto max-h-[750px]">
+  <div className="flex-1 overflow-y-auto mt-5">
             <table className="table-auto w-full border-collapse">
               <thead className="bg-blue-500 text-white">
                 <tr>
                   <th
-                    className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-10"
+                    className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-20"
                     style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
                   >
                     Field Description
@@ -1546,27 +1607,14 @@ const RadioUnitsForm = () => {
             </table>
           </div>
 
-
-    <div className="mt-6 flex justify-center">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className={`px-6 py-3 text-white rounded font-medium ${
-                isSubmitting 
-                  ? 'bg-gray-400 cursor-not-allowed' 
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-            >
-              {isSubmitting ? (
-                <div className="flex items-center">
-                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                 loading...
-                </div>
-              ) : (
-                'Save'
-              )}
+   {/* Save Button at Bottom - Fixed */}
+   <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
+            <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
+              {isSubmitting ? "loading...": "Save"}     
             </button>
           </div>
+
+        
       </form>
        
     </div>

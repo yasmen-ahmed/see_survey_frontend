@@ -19,6 +19,18 @@ const PageContainer = () => {
     }
   }, [activeTab, tabs, siteId, pageName, navigate]);
 
+  // Custom navigation function that checks for unsaved changes
+  const handleTabNavigation = async (targetTabKey) => {
+    const targetPath = `/sites/${sessionId}/${siteId}/${pageName}/${targetTabKey}`;
+    
+    // Use safeNavigate if available (for unsaved changes handling)
+    if (window.safeNavigate) {
+      await window.safeNavigate(targetPath);
+    } else {
+      navigate(targetPath);
+    }
+  };
+
   const ActiveComponent = activeTab?.component;
 
   return (
@@ -29,7 +41,7 @@ const PageContainer = () => {
           {tabs.map(tab => (
             <button
               key={tab.key}
-              onClick={() => navigate(`/sites/${sessionId}/${siteId}/${pageName}/${tab.key}`)}
+              onClick={() => handleTabNavigation(tab.key)}
               className={`tab-button ${tab.key === normalizedTabKey ? "active" : ""}`}
             >
               {tab.label}
@@ -54,8 +66,11 @@ const PageContainer = () => {
       <style>
         {`
           .page-container {
-            padding-top: var(--header-height);
-            padding-bottom: var(--spacing-md);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding-top: 0;
+            padding-bottom: 0;
           }
 
           .tab-navigation {
@@ -70,50 +85,62 @@ const PageContainer = () => {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
           }
 
           .tabs-wrapper {
             display: flex;
-            gap: var(--spacing-sm);
+            gap: var(--spacing-sm, 0.5rem);
           }
 
           .tab-button {
-            padding: var(--spacing-sm) var(--spacing-md);
-            border: 1px solid var(--border-color);
-            border-radius: var(--border-radius-md);
+            padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+            border: 1px solid var(--border-color, #dee2e6);
+            border-radius: var(--border-radius-md, 0.375rem);
             font-weight: 600;
-            background-color: var(--background-primary);
+            background-color: var(--background-primary, #ffffff);
             transition: all 0.2s ease;
           }
 
           .tab-button.active {
-            background-color: var(--primary-color);
+            background-color: var(--primary-color, #007bff);
             color: white;
           }
 
           .tab-button:hover:not(.active) {
-            background-color: var(--background-secondary);
+            background-color: var(--background-secondary, #f8f9fa);
           }
 
           .site-info {
             margin-left: auto;
             font-size: 1.25rem;
-            color: var(--text-secondary);
+            color: var(--text-secondary, #6c757d);
             font-weight: 600;
             display: flex;
-            gap: var(--spacing-lg);
+            gap: var(--spacing-lg, 1.5rem);
             padding: 0 20px;
           }
 
           .form-container {
-            border: 1px solid var(--border-color);
-            padding: var(--spacing-md);
-            border-radius: var(--border-radius-md);
-            background-color: var(--background-primary);
-            box-shadow: var(--shadow-sm);
+            flex: 1;
+            border: 1px solid var(--border-color, #dee2e6);
+            padding: var(--spacing-md, 1rem);
+            border-radius: var(--border-radius-md, 0.375rem);
+            background-color: var(--background-primary, #ffffff);
+            box-shadow: var(--shadow-sm, 0 1px 3px 0 rgba(0, 0, 0, 0.1));
             width: 100%;
-            overflow: auto;
-            margin-top: calc(var(--header-height));
+            overflow: hidden;
+            min-height: 0;
+            display: flex;
+            margin-top: calc(var(--header-height) + 70px); 
+            flex-direction: column;
+          }
+
+          .form-container > * {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: row;
           }
         `}
       </style>

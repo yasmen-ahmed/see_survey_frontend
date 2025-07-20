@@ -12,7 +12,7 @@ const AcInformationForm = () => {
   const [solarCapacity, setSolarCapacity] = useState('');
   const [uploadedImages, setUploadedImages] = useState({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [loadingApi,setLoadingApi] =useState(false)
+  const [loadingApi, setLoadingApi] = useState(false)
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/ac-connection-info/${sessionId}`)
       .then(res => {
@@ -210,15 +210,15 @@ const AcInformationForm = () => {
   console.log("Current image data:", images);
 
   return (
-    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%] ">
-        {/* Unsaved Changes Warning */}
+    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
+       {/* Unsaved Changes Warning */}
         {hasUnsavedChanges && (
-          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 flex-shrink-0">
             <div className="flex items-center">
               <div className="ml-3">
                 <p className="text-sm font-medium">
-                  ⚠️ You have unsaved changes   
+                  ⚠️ You have unsaved changes
                 </p>
                 <p className="text-sm">
                   Don't forget to save your changes before leaving this page.
@@ -227,155 +227,159 @@ const AcInformationForm = () => {
             </div>
           </div>
         )}
-        <form className=" mb-8" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[550px] overflow-y-auto">
-    {/* Power Source Selection */}
-    <div className="col-span-2">
-            <label className="font-semibold mb-1">Select Power Source</label>
-            <div className="grid grid-cols-4 gap-2">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={powerSources.includes('commercial_power')}
-                  onChange={() => handlePowerSourceChange('commercial_power')}
+        <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
+          <div className="flex-1 overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Power Source Selection */}
+              <div className="col-span-2">
+                <label className="font-semibold mb-1">Select Power Source</label>
+                <div className="grid grid-cols-4 gap-2">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={powerSources.includes('commercial_power')}
+                      onChange={() => handlePowerSourceChange('commercial_power')}
+                      className="mr-2"
 
-                />
-                Commercial power
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={powerSources.includes('diesel_generator')}
-                  onChange={() => handlePowerSourceChange('diesel_generator')}
-                
-                />
-                Diesel generator
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={powerSources.includes('solar_cell')}
-                  onChange={() => handlePowerSourceChange('solar_cell')}
-                 
-                />
-                Solar cell
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={powerSources.includes('other')}
-                  onChange={() => handlePowerSourceChange('other')}
-                
-                />
-                Other
-              </label>
-            </div>
-          </div>
+                    />
+                    Commercial power
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={powerSources.includes('diesel_generator')}
+                      onChange={() => handlePowerSourceChange('diesel_generator')}
+                      className="mr-2"
 
+                    />
+                    Diesel generator
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={powerSources.includes('solar_cell')}
+                      onChange={() => handlePowerSourceChange('solar_cell')}
+                      className="mr-2"
 
-          {/* AC Source Form */}
-          {powerSources.includes('diesel_generator') && (
-            <div className="md:col-span-2">
-              <h3 className="text-lg font-bold mb-4">Diesel Generator Information</h3>
+                    />
+                    Solar cell
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={powerSources.includes('other')}
+                      onChange={() => handlePowerSourceChange('other')}
+                      className="mr-2"
 
-              <div className="flex flex-col mb-4">
-                <label className="font-semibold mb-2">How Many Diesel Generators?</label>
-                <div className="flex gap-6">
-                  {[1, 2].map((num) => (
-                    <label key={num} className="inline-flex items-center">
-                      <input
-                        type="radio"
-                        name="dieselCount"
-                        value={num}
-                        checked={dieselCount === num}
-                        onChange={() => handleDieselCountChange(num)}
-                        className="mr-2"
-                        required
-                      />
-                      {num}
-                    </label>
-                  ))}
+                    />
+                    Other
+                  </label>
                 </div>
               </div>
 
-              {dieselCount > 0 && (
-                <>
-                  {dieselGenerators.slice(0, dieselCount).map((gen, index) => (
-                    <div
-                      key={index}
-                      className="border p-4 rounded-lg mb-6 bg-gray-50"
-                    >
-                      <h4 className="font-semibold mb-2">Diesel generator #{index + 1} capacity (KVA)</h4>
 
-                      <div className="flex flex-col mb-4">
-                        <label className="font-semibold mb-1">Capacity (KVA)</label>
-                        <input
-                          type="number"
-                          name={`dieselGenerators[${index}].capacity`}
-                          value={gen.capacity}
-                          onChange={(e) =>
-                            handleGeneratorChange(index, 'capacity', e.target.value)
-                          }
-                          className="border p-3 form-input focus:outline-none focus:ring-2 focus:ring-blue-500 "
-                          required
-                        />
-                      </div>
+              {/* AC Source Form */}
+              {powerSources.includes('diesel_generator') && (
+                <div className="md:col-span-2">
+                  <h3 className="text-lg font-bold mb-4">Diesel Generator Information</h3>
 
-                      <div className="flex flex-col">
-                        <label className="font-semibold mb-1">Diesel generator #{index + 1} operational status</label>
-                        <div className="grid grid-cols-4 gap-2">
-
-
-                          {['Active', 'Standby', 'Faulty', 'Not working'].map((status) => (
-                            <label key={status} className="inline-flex items-center">
-                              <input
-                                type="radio"
-                                name={`dieselGenerators[${index}].status`} // Ensure unique name for each generator
-                                value={status} // Set the value to the status
-                                checked={gen.status === status} // Check if the current status is selected
-                                onChange={(e) =>
-                                  handleGeneratorChange(index, 'status', e.target.value)
-                                }
-                                className="mr-2"
-                                required
-                              />
-                              {status}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
+                  <div className="flex flex-col mb-4">
+                    <label className="font-semibold mb-2">How Many Diesel Generators?</label>
+                    <div className="flex gap-6">
+                      {[1, 2].map((num) => (
+                        <label key={num} className="inline-flex items-center">
+                          <input
+                            type="radio"
+                            name="dieselCount"
+                            value={num}
+                            checked={dieselCount === num}
+                            onChange={() => handleDieselCountChange(num)}
+                            className="mr-2"
+                            required
+                          />
+                          {num}
+                        </label>
+                      ))}
                     </div>
-                  ))}
-                </>
+                  </div>
+
+                  {dieselCount > 0 && (
+                    <>
+                      {dieselGenerators.slice(0, dieselCount).map((gen, index) => (
+                        <div
+                          key={index}
+                          className="border p-4 rounded-lg mb-6 bg-gray-50"
+                        >
+                          <h4 className="font-semibold mb-2">Diesel generator #{index + 1} capacity (KVA)</h4>
+
+                          <div className="flex flex-col mb-4">
+                            <label className="font-semibold mb-1">Capacity (KVA)</label>
+                            <input
+                              type="number"
+                              name={`dieselGenerators[${index}].capacity`}
+                              value={gen.capacity}
+                              onChange={(e) =>
+                                handleGeneratorChange(index, 'capacity', e.target.value)
+                              }
+                              className="border p-3 form-input focus:outline-none focus:ring-2 focus:ring-blue-500 "
+                              required
+                            />
+                          </div>
+
+                          <div className="flex flex-col">
+                            <label className="font-semibold mb-1">Diesel generator #{index + 1} operational status</label>
+                            <div className="grid grid-cols-4 gap-2">
+
+
+                              {['Active', 'Standby', 'Faulty', 'Not working'].map((status) => (
+                                <label key={status} className="inline-flex items-center">
+                                  <input
+                                    type="radio"
+                                    name={`dieselGenerators[${index}].status`} // Ensure unique name for each generator
+                                    value={status} // Set the value to the status
+                                    checked={gen.status === status} // Check if the current status is selected
+                                    onChange={(e) =>
+                                      handleGeneratorChange(index, 'status', e.target.value)
+                                    }
+                                    className="mr-2"
+                                    required
+                                  />
+                                  {status}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
               )}
+
+
+              {powerSources.includes('solar_cell') && (
+                <div className="md:col-span-2">
+                  <h3 className="text-lg font-bold mb-4">Solar Cell Information</h3>
+                  <div className="flex flex-col mb-4">
+                    <label className="font-semibold mb-1">Capacity (KVA)</label>
+                    <input
+                      type="number"
+                      name="solarCapacity"
+                      value={solarCapacity}
+                      onChange={(e) => setSolarCapacity(e.target.value)}
+                      className="border p-3 form-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
             </div>
-          )}
-
-
-          {powerSources.includes('solar_cell') && (
-            <div className="md:col-span-2">
-              <h3 className="text-lg font-bold mb-4">Solar Cell Information</h3>
-              <div className="flex flex-col mb-4">
-                <label className="font-semibold mb-1">Capacity (KVA)</label>
-                <input
-                  type="number"
-                  name="solarCapacity"
-                  value={solarCapacity}
-                  onChange={(e) => setSolarCapacity(e.target.value)}
-                  className="border p-3 form-input focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-            </div>
-          )}
-
           </div>
-      
-          <div className="md:col-span-2 flex justify-center">
-            <button
-              type="submit"
-              className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700"
-            >
+
+          {/* Save Button at Bottom - Fixed */}
+          <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
+            <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
               {loadingApi ? "loading...": "Save"}  
             </button>
           </div>

@@ -4,12 +4,15 @@ import axios from 'axios';
 import { showSuccess, showError } from '../../../utils/notifications';
 import ImageUploader from '../../GalleryComponent';
 import DynamicTable from '../../DynamicTable';
+import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
 
 const OutdoorCabinetsForm = () => {
   const { sessionId } = useParams();
   const bgColorFillAuto = "bg-[#c6efce]"
   const colorFillAuto = 'text-[#006100]'
   const [loadingApi,setLoadingApi] =useState(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [formData, setFormData] = useState({
     numberOfCabinets: '',
     cabinets: Array(10).fill(null).map((_, index) => ({
@@ -43,7 +46,79 @@ const OutdoorCabinetsForm = () => {
 
   const [connectedModules, setConnectedModules] = useState([]);
   const [uploadedImages, setUploadedImages] = useState({});
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Function to save data via API
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
+    
+    try {
+      setLoadingApi(true);
+      // Create FormData for multipart submission
+      const submitFormData = new FormData();
+      
+      // Add cabinet count
+      submitFormData.append('numberOfCabinets', parseInt(formData.numberOfCabinets));
+
+      // Convert form data to JSON string
+      const cabinetData = formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map(cabinet => {
+        // Create a copy of the cabinet data
+        const cabinetCopy = { ...cabinet };
+        // Ensure arrays are properly handled
+        cabinetCopy.type = Array.isArray(cabinet.type) ? cabinet.type : [];
+        cabinetCopy.hardware = Array.isArray(cabinet.hardware) ? cabinet.hardware : [];
+        // Remove images as they're handled separately
+        delete cabinetCopy.images;
+        return cabinetCopy;
+      });
+
+      // Add cabinet data as a single JSON string
+      submitFormData.append('data', JSON.stringify({
+        numberOfCabinets: parseInt(formData.numberOfCabinets),
+        cabinets: cabinetData
+      }));
+
+      // Get all possible image fields
+      const allImageFields = getAllImages();
+      
+      // Handle all image fields - including removed ones
+      allImageFields.forEach(imageField => {
+        const imageFiles = uploadedImages[imageField.name];
+        
+        if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+          const file = imageFiles[0];
+          if (file instanceof File) {
+            submitFormData.append(imageField.name, file);
+          }
+        } else {
+          // If image was removed or doesn't exist, send empty string
+          submitFormData.append(imageField.name, '');
+        }
+      });
+
+      await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/outdoor-cabinets/${sessionId}`,
+        submitFormData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      
+      setHasUnsavedChanges(false);
+      showSuccess('Data saved successfully!');
+      return true;
+    } catch (err) {
+      console.error("Error saving data:", err);
+      showError('Error saving data. Please try again.');
+      return false;
+    } finally {
+      setLoadingApi(false);
+    }
+  };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
 
   // Generate image fields for a single cabinet
   const getCabinetImages = (cabinetNumber) => [
@@ -104,6 +179,7 @@ const OutdoorCabinetsForm = () => {
 
   // Fetch existing data when component loads
   useEffect(() => {
+    setIsInitialLoading(true);
     axios.get(`${import.meta.env.VITE_API_URL}/api/outdoor-cabinets/${sessionId}`)
       .then(res => {
         // Handle nested response structure
@@ -169,12 +245,19 @@ const OutdoorCabinetsForm = () => {
             setUploadedImages(processedImages);
           }
         }
+
+        // Reset unsaved changes flag after loading data
+        setHasUnsavedChanges(false);
+        setIsInitialLoading(false);
       })
       .catch(err => {
         console.error("Error loading outdoor cabinets data:", err);
         if (err.response?.status !== 404) {
           showError('Error loading existing data');
         }
+        // Reset unsaved changes flag even on error
+        setHasUnsavedChanges(false);
+        setIsInitialLoading(false);
       });
   }, [sessionId]);
 
@@ -195,6 +278,9 @@ const OutdoorCabinetsForm = () => {
 
   // Handle image uploads from ImageUploader component
   const handleImageUpload = (imageCategory, files) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
+    setHasUnsavedChanges(true);
     console.log(`Images uploaded for ${imageCategory}:`, files);
     setUploadedImages(prev => ({
       ...prev,
@@ -203,6 +289,8 @@ const OutdoorCabinetsForm = () => {
   };
 
   const handleChange = (cabinetIndex, fieldName, value) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     setHasUnsavedChanges(true);
     
     setFormData(prevData => {
@@ -234,6 +322,8 @@ const OutdoorCabinetsForm = () => {
   };
 
   const handleCheckboxChange = (cabinetIndex, fieldName, value, checked) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     setHasUnsavedChanges(true);
     
     setFormData(prevData => {
@@ -289,6 +379,9 @@ const OutdoorCabinetsForm = () => {
 
   // Handle CB ratings table data changes with proper data processing
   const handleCBRatingsChange = useCallback((cabinetIndex, equipmentType, newTableData) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
+    setHasUnsavedChanges(true);
     console.log(`Updating ${equipmentType} CB ratings for cabinet ${cabinetIndex}:`, newTableData);
     
     if (!newTableData || newTableData.length === 0) {
@@ -324,166 +417,20 @@ const OutdoorCabinetsForm = () => {
           : cabinet
       )
     }));
-  }, []);
+  }, [isInitialLoading]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoadingApi(true) 
     try {
-      // Create FormData for multipart submission
-      const submitFormData = new FormData();
-      
-      // Add cabinet count
-      submitFormData.append('numberOfCabinets', parseInt(formData.numberOfCabinets));
-
-      // Convert form data to JSON string
-      const cabinetData = formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map(cabinet => {
-        // Create a copy of the cabinet data
-        const cabinetCopy = { ...cabinet };
-        // Ensure arrays are properly handled
-        cabinetCopy.type = Array.isArray(cabinet.type) ? cabinet.type : [];
-        cabinetCopy.hardware = Array.isArray(cabinet.hardware) ? cabinet.hardware : [];
-        // Remove images as they're handled separately
-        delete cabinetCopy.images;
-        return cabinetCopy;
-      });
-
-      // Add cabinet data as a single JSON string
-      submitFormData.append('data', JSON.stringify({
-        numberOfCabinets: parseInt(formData.numberOfCabinets),
-        cabinets: cabinetData
-      }));
-
-      // Get all possible image fields
-      const allImageFields = getAllImages();
-      
-      console.log("All image fields:", allImageFields);
-      console.log("Uploaded images state:", uploadedImages);
-      
-      // Handle all image fields - including removed ones
-      allImageFields.forEach(imageField => {
-        const imageFiles = uploadedImages[imageField.name];
-        console.log(`Processing image field: ${imageField.name}`, imageFiles);
-        
-        if (Array.isArray(imageFiles) && imageFiles.length > 0) {
-          const file = imageFiles[0];
-          if (file instanceof File) {
-            console.log(`Adding file for ${imageField.name}:`, file.name);
-            submitFormData.append(imageField.name, file);
-          } else {
-            console.log(`Skipping non-File object for ${imageField.name}:`, file);
-          }
-        } else {
-          // If image was removed or doesn't exist, send empty string
-          console.log(`Adding empty string for ${imageField.name}`);
-          submitFormData.append(imageField.name, '');
-        }
-      });
-
-      console.log("Submitting outdoor cabinets data:");
-      // Log FormData contents for debugging
-      for (let pair of submitFormData.entries()) {
-        if (pair[1] instanceof File) {
-          console.log(pair[0] + ': [FILE] ' + pair[1].name);
-        } else {
-          console.log(pair[0] + ': ' + pair[1]);
-        }
+      const saved = await saveDataToAPI();
+      if (saved) {
+        showSuccess('Outdoor cabinets data and images submitted successfully!');
       }
-
-      const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/outdoor-cabinets/${sessionId}`,
-        submitFormData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
-
-      console.log("Server response:", response.data);
-      
-      // After successful submission, fetch the latest data
-      const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/outdoor-cabinets/${sessionId}`);
-      const latestData = getResponse.data.data?.data || getResponse.data.data || getResponse.data;
-
-      if (latestData) {
-        // Merge API data with default structure
-        const mergedCabinets = Array(10).fill(null).map((_, index) => {
-          const apiCabinet = latestData.cabinets?.[index] || {};
-          return {
-            id: index + 1,
-            type: Array.isArray(apiCabinet.type) ? apiCabinet.type : [],
-            vendor: apiCabinet.vendor || '',
-            model: apiCabinet.model || '',
-            antiTheft: apiCabinet.antiTheft || '',
-            coolingType: apiCabinet.coolingType || '',
-            coolingCapacity: apiCabinet.coolingCapacity || '',
-            compartments: apiCabinet.compartments || '',
-            hardware: Array.isArray(apiCabinet.hardware) ? apiCabinet.hardware : [],
-            acPowerFeed: apiCabinet.acPowerFeed || '',
-            cbNumber: apiCabinet.cbNumber || '',
-            powerCableLength: apiCabinet.powerCableLength || '',
-            powerCableCrossSection: apiCabinet.powerCableCrossSection || '',
-            blvd: apiCabinet.blvd || '',
-            blvdFreeCBs: apiCabinet.blvdFreeCBs || '',
-            blvdCBsRatings: Array.isArray(apiCabinet.blvdCBsRatings) ? apiCabinet.blvdCBsRatings : [],
-            llvd: apiCabinet.llvd || '',
-            llvdFreeCBs: apiCabinet.llvdFreeCBs || '',
-            llvdCBsRatings: Array.isArray(apiCabinet.llvdCBsRatings) ? apiCabinet.llvdCBsRatings : [],
-            pdu: apiCabinet.pdu || '',
-            pduFreeCBs: apiCabinet.pduFreeCBs || '',
-            pduCBsRatings: Array.isArray(apiCabinet.pduCBsRatings) ? apiCabinet.pduCBsRatings : [],
-            internalLayout: apiCabinet.internalLayout || '',
-            freeU: apiCabinet.freeU || ''
-          };
-        });
-
-        setFormData({
-          numberOfCabinets: latestData.numberOfCabinets || formData.numberOfCabinets,
-          cabinets: mergedCabinets
-        });
-
-        // Process and update images
-        if (latestData.cabinets && latestData.cabinets.some(cabinet => cabinet.images?.length > 0)) {
-          const processedImages = processImagesFromResponse(latestData.cabinets);
-          console.log("Processed images from response:", processedImages);
-          setUploadedImages(processedImages);
-        } else {
-          console.log("No images found in response, clearing uploaded images");
-          // Don't clear uploaded images completely, keep File objects for newly uploaded images
-          const newUploadedImages = {};
-          Object.entries(uploadedImages).forEach(([key, files]) => {
-            if (Array.isArray(files) && files.length > 0 && files[0] instanceof File) {
-              newUploadedImages[key] = files;
-            }
-          });
-          setUploadedImages(newUploadedImages);
-        }
-      }
-      
-      setHasUnsavedChanges(false); // Reset unsaved changes after successful save
-      showSuccess('Outdoor cabinets data and images submitted successfully!');
     } catch (err) {
       console.error("Error submitting outdoor cabinets data:", err);
-      console.error("Error response:", err.response?.data);
-      showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
-    } finally {
-      setLoadingApi(false)
+      showError('Error submitting data. Please try again.');
     }
   };
-
-  // Add useEffect for window beforeunload event
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
 
   const cabinetTypes = ['RAN', 'MW', 'Power', 'All in one', 'Other'];
   const vendors = ['Nokia', 'Ericsson', 'Huawei', 'ZTE', 'Eltek', 'Vertiv'];
@@ -519,9 +466,9 @@ const OutdoorCabinetsForm = () => {
   };
 
   return (
-    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-        {/* Unsaved Changes Warning */}
+    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
+       {/* Unsaved Changes Warning */}
         {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
             <div className="flex items-center">
@@ -537,7 +484,7 @@ const OutdoorCabinetsForm = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+<form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
 
           {/* Number of Cabinets Selection */}
           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -561,12 +508,12 @@ const OutdoorCabinetsForm = () => {
           </div>
 
           {/* Table Layout */}
-          <div className="overflow-auto max-h-[700px]">
+          <div className="flex-1 overflow-y-auto">
             <table className="table-auto w-full border-collapse">
               <thead className="bg-blue-500 text-white">
                 <tr>
                   <th
-                    className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-10"
+                    className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-20"
                     style={{ width: '200px', minWidth: '200px', maxWidth: '200px' }}
                   >
                     Field Description
@@ -1223,12 +1170,10 @@ const OutdoorCabinetsForm = () => {
             </table>
           </div>
 
-          <div className="mt-6 flex justify-center">
-            <button
-              type="submit"
-              className="px-6 py-3 text-white bg-blue-500 rounded hover:bg-blue-700 font-semibold"
-            >
-              {loadingApi ? "loading...": "Save"}     
+           {/* Save Button at Bottom - Fixed */}
+           <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
+            <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
+              {loadingApi ? "loading...": "Save"}  
             </button>
           </div>
         </form>

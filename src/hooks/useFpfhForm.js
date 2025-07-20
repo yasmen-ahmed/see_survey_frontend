@@ -249,6 +249,7 @@ export const useFpfhForm = (sessionId) => {
     }
 
     if (!validateForm()) {
+      console.log('Form validation failed');
       return;
     }
 
@@ -258,7 +259,8 @@ export const useFpfhForm = (sessionId) => {
       const formData = new FormData();
 
       // Prepare FPFH data
-      const fpfhData = fpfhForms.slice(0, fpfhCount).map(fpfh => ({
+      const fpfhData = fpfhForms.slice(0, fpfhCount).map((fpfh, index) => ({
+        fpfh_index: index + 1,
         fpfh_installation_type: fpfh.installationType,
         fpfh_location: fpfh.proposedLocation,
         fpfh_base_height: fpfh.baseHeight,
@@ -271,10 +273,15 @@ export const useFpfhForm = (sessionId) => {
         earth_cable_length: fpfh.earthCableLength,
       }));
 
-      formData.append('data', JSON.stringify({
+      const dataToSend = {
         new_fpfh_installed: fpfhCount,
         fpfhs: fpfhData
-      }));
+      };
+
+      console.log('Sending FPFH data:', dataToSend);
+      console.log('Current fpfhForms state:', fpfhForms.slice(0, fpfhCount));
+
+      formData.append('data', JSON.stringify(dataToSend));
 
       // Append images
       Object.entries(uploadedImages).forEach(([category, files]) => {
@@ -284,6 +291,11 @@ export const useFpfhForm = (sessionId) => {
           }
         });
       });
+
+      console.log('FormData entries:');
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}:`, value instanceof File ? `[File: ${value.name}]` : value);
+      }
 
       await axios.put(
         `${import.meta.env.VITE_API_URL}/api/new-fpfh/${sessionId}`,

@@ -1,5 +1,5 @@
 // SidebarTabs.jsx
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   House,
   Power,
@@ -13,6 +13,7 @@ import { useParams } from "react-router-dom";
 const SidebarTabs = () => {  
   const { sessionId, siteId } = useParams(); 
   const location = useLocation();
+  const navigate = useNavigate();
   
   const navItems = [
     { 
@@ -64,22 +65,33 @@ const SidebarTabs = () => {
     return location.pathname.includes(`/${section}/`);
   };
 
+  // Handle navigation with unsaved changes check
+  const handleNavigation = async (e, path) => {
+    e.preventDefault();
+    
+    // Use safeNavigate if available (for unsaved changes handling)
+    if (window.safeNavigate) {
+      await window.safeNavigate(path);
+    } else {
+      navigate(path);
+    }
+  };
+
   return (
     <aside className="w-60 bg-white border-r p-4 fixed top-20 left-0 h-[calc(100vh-5rem)] z-30 overflow-y-auto">
       <nav className="space-y-3">
         {navItems.map(({ label, icon, path, section }) => (
-          <NavLink
-            to={path}
+          <a
+            href={path}
             key={label}
-            className={() =>
-              `flex items-center gap-2 px-3 py-2 rounded font-bold cursor-pointer ${
-                isSectionActive(section) ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-              }`
-            }
+            onClick={(e) => handleNavigation(e, path)}
+            className={`flex items-center gap-2 px-3 py-2 rounded font-bold cursor-pointer ${
+              isSectionActive(section) ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+            }`}
           >
             {icon}
             {label}
-          </NavLink>
+          </a>
         ))}
       </nav>
     </aside>

@@ -260,6 +260,7 @@ export const useAntennaForm = (sessionId) => {
     }
 
     if (!validateForm()) {
+      console.log('Form validation failed');
       return;
     }
 
@@ -269,7 +270,8 @@ export const useAntennaForm = (sessionId) => {
       const formData = new FormData();
 
       // Prepare antenna data
-      const antennaData = antennaForms.slice(0, antennaCount).map(antenna => ({
+      const antennaData = antennaForms.slice(0, antennaCount).map((antenna, index) => ({
+        antenna_index: index + 1,
         operator: antenna.operator,
         base_height_from_tower: antenna.baseHeight,
         tower_leg_location: antenna.towerLeg,
@@ -289,10 +291,15 @@ export const useAntennaForm = (sessionId) => {
         earth_cable_length: antenna.earthCableLength,
       }));
 
-      formData.append('data', JSON.stringify({
+      const dataToSend = {
         new_antennas_planned: antennaCount,
         antennas: antennaData
-      }));
+      };
+
+      console.log('Sending antenna data:', dataToSend);
+      console.log('Current antennaForms state:', antennaForms.slice(0, antennaCount));
+
+      formData.append('data', JSON.stringify(dataToSend));
 
       // Append images
       Object.entries(uploadedImages).forEach(([category, files]) => {
@@ -302,6 +309,11 @@ export const useAntennaForm = (sessionId) => {
           }
         });
       });
+
+      console.log('FormData entries:');
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}:`, value instanceof File ? `[File: ${value.name}]` : value);
+      }
 
       await axios.put(
         `${import.meta.env.VITE_API_URL}/api/new-antennas/${sessionId}`,

@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { showSuccess, showError } from '../../../utils/notifications';
 import ImageUploader from '../../GalleryComponent';
+import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
 
 const MwAntennasForm = () => {
   const { sessionId } = useParams();
@@ -15,6 +16,69 @@ const MwAntennasForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loadingApi,setLoadingApi] =useState(false)
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  // Function to save data via API
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
+    
+    try {
+      setLoadingApi(true);
+      // Create FormData for multipart submission
+      const submitFormData = new FormData();
+
+      // Add antenna count
+      submitFormData.append('how_many_mw_antennas_on_tower', parseInt(formData.antennaCount));
+
+      // Add antenna data as individual form fields with antenna_number
+      formData.antennas.forEach((antenna, index) => {
+        submitFormData.append(`mwAntennasData[mw_antennas][${index}][antenna_number]`, antenna.id || (index + 1));
+        submitFormData.append(`mwAntennasData[mw_antennas][${index}][height]`, parseFloat(antenna.height) || 0);
+        submitFormData.append(`mwAntennasData[mw_antennas][${index}][diameter]`, parseFloat(antenna.diameter) || 0);
+        submitFormData.append(`mwAntennasData[mw_antennas][${index}][azimuth]`, parseFloat(antenna.azimuth) || 0);
+      });
+
+      // Get all possible image fields
+      const allImageFields = getAllImages();
+      
+      // Handle all image fields - including removed ones
+      allImageFields.forEach(imageField => {
+        const imageFiles = uploadedImages[imageField.name];
+        
+        if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+          const file = imageFiles[0];
+          if (file instanceof File) {
+            submitFormData.append(imageField.name, file);
+          }
+        } else {
+          // If image was removed or doesn't exist, send empty string
+          submitFormData.append(imageField.name, '');
+        }
+      });
+
+      await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/mw-antennas/${sessionId}`,
+        submitFormData,
+        { 
+          headers: { 'Content-Type': 'multipart/form-data' }
+        }
+      );
+      
+      setHasUnsavedChanges(false);
+      showSuccess('Data saved successfully!');
+      return true;
+    } catch (err) {
+      console.error("Error saving data:", err);
+      showError('Error saving data. Please try again.');
+      return false;
+    } finally {
+      setLoadingApi(false);
+    }
+  };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
+
   // Generate image fields for a single antenna
   const getAntennaImages = (antennaNumber) => [ 
     { label: `MW  #${antennaNumber} photo`, name: `mw_${antennaNumber}_photo` },     
@@ -55,6 +119,7 @@ const MwAntennasForm = () => {
 
   // Fetch existing data when component loads
   useEffect(() => {
+    setIsInitialLoading(true);
     axios.get(`${import.meta.env.VITE_API_URL}/api/mw-antennas/${sessionId}`)
       .then(res => {
         const data = res.data.data || res.data;
@@ -88,16 +153,25 @@ const MwAntennasForm = () => {
             setUploadedImages(processedImages);
           }
         }
+
+        // Reset unsaved changes flag after loading data
+        setHasUnsavedChanges(false);
+        setIsInitialLoading(false);
       })
       .catch(err => {
         console.error("Error loading MW antennas data:", err);
         if (err.response?.status !== 404) {
           showError('Error loading existing data');
         }
+        // Reset unsaved changes flag even on error
+        setHasUnsavedChanges(false);
+        setIsInitialLoading(false);
       });
   }, [sessionId]);
 
   const handleAntennaCountChange = (e) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     const count = parseInt(e.target.value);
     if (!count || count < 1) {
       setFormData({ antennaCount: "", antennas: [] });
@@ -125,6 +199,8 @@ const MwAntennasForm = () => {
   };
 
   const handleAntennaChange = (changedIndex, field, value) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     const updated = [...formData.antennas];
     
     // Update the changed antenna first
@@ -155,6 +231,8 @@ const MwAntennasForm = () => {
 
   // Handle image uploads from ImageUploader component
   const handleImageUpload = (imageCategory, files) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     console.log(`Images uploaded for ${imageCategory}:`, files);
     setUploadedImages(prev => ({
       ...prev,
@@ -165,153 +243,22 @@ const MwAntennasForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoadingApi(true)
-    setIsSubmitting(true);
-    const prevFormData = { ...formData };
-
     try {
-      // Validate that all fields are filled
-      const isValid = formData.antennas.every(
-        (ant) => ant.height && ant.diameter && ant.azimuth 
-      );
-
-      // if (!isValid) {
-      //   setError("Please fill all fields for each MW antenna.");
-      //   setIsSubmitting(false);
-      //   return;
-      // }
-
-      // Create FormData for multipart submission
-      const submitFormData = new FormData();
-
-      // Add antenna count
-      submitFormData.append('how_many_mw_antennas_on_tower', parseInt(formData.antennaCount));
-
-      // Add antenna data as individual form fields with antenna_number
-      formData.antennas.forEach((antenna, index) => {
-        submitFormData.append(`mwAntennasData[mw_antennas][${index}][antenna_number]`, antenna.id || (index + 1));
-        submitFormData.append(`mwAntennasData[mw_antennas][${index}][height]`, parseFloat(antenna.height) || 0);
-        submitFormData.append(`mwAntennasData[mw_antennas][${index}][diameter]`, parseFloat(antenna.diameter) || 0);
-        submitFormData.append(`mwAntennasData[mw_antennas][${index}][azimuth]`, parseFloat(antenna.azimuth) || 0);
-        // submitFormData.append(`mwAntennasData[mw_antennas][${index}][includeInPlan]`, antenna.includeInPlan);
-      });
-
-      // Get all possible image fields
-      const allImageFields = getAllImages();
-      
-      console.log("All image fields:", allImageFields);
-      console.log("Uploaded images state:", uploadedImages);
-      
-      // Handle all image fields - including removed ones
-      allImageFields.forEach(imageField => {
-        const imageFiles = uploadedImages[imageField.name];
-        console.log(`Processing image field: ${imageField.name}`, imageFiles);
-        
-        if (Array.isArray(imageFiles) && imageFiles.length > 0) {
-          const file = imageFiles[0];
-          if (file instanceof File) {
-            console.log(`Adding file for ${imageField.name}:`, file.name);
-            submitFormData.append(imageField.name, file);
-          } else {
-            console.log(`Skipping non-File object for ${imageField.name}:`, file);
-          }
-        } else {
-          // If image was removed or doesn't exist, send empty string
-          console.log(`Adding empty string for ${imageField.name}`);
-          submitFormData.append(imageField.name, '');
-        }
-      });
-
-      console.log("Submitting MW antennas data:");
-      // Log FormData contents for debugging
-      for (let pair of submitFormData.entries()) {
-        if (pair[1] instanceof File) {
-          console.log(pair[0] + ': [FILE] ' + pair[1].name);
-        } else {
-          console.log(pair[0] + ': ' + pair[1]);
-        }
+      const saved = await saveDataToAPI();
+      if (saved) {
+        showSuccess('MW antennas data and images submitted successfully!');
       }
-
-      const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/mw-antennas/${sessionId}`,
-        submitFormData,
-        { 
-          headers: { 'Content-Type': 'multipart/form-data' }
-        }
-      );
-      
-      console.log("Server response:", response.data);
-      
-      // After successful submission, fetch the latest data
-      const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/mw-antennas/${sessionId}`);
-      const latestData = getResponse.data.data;
-
-      if (latestData?.mwAntennasData) {
-        const mwData = latestData.mwAntennasData;
-        
-        // Update form data with latest values
-        const processedAntennas = mwData.mw_antennas.map((antenna) => ({
-          id: antenna.antenna_number,
-          height: antenna.height || "",
-          diameter: antenna.diameter || "",
-          azimuth: antenna.azimuth || "",
-          // includeInPlan: antenna.includeInPlan || "",
-        }));
-
-        setFormData({
-          antennaCount: mwData.how_many_mw_antennas_on_tower.toString(),
-          antennas: processedAntennas
-        });
-
-        // Process and update images
-        if (mwData.mw_antennas.some(ant => ant.images?.length > 0)) {
-          const processedImages = processImagesFromResponse(mwData.mw_antennas);
-          console.log("Processed images from response:", processedImages);
-          setUploadedImages(processedImages);
-        } else {
-          console.log("No images found in response, clearing uploaded images");
-          // Don't clear uploaded images completely, keep File objects for newly uploaded images
-          const newUploadedImages = {};
-          Object.entries(uploadedImages).forEach(([key, files]) => {
-            if (Array.isArray(files) && files.length > 0 && files[0] instanceof File) {
-              newUploadedImages[key] = files;
-            }
-          });
-          setUploadedImages(newUploadedImages);
-        }
-      }
-      
-      setHasUnsavedChanges(false);
-      showSuccess('MW antennas data and images submitted successfully!');
     } catch (err) {
       console.error("Error submitting MW antennas data:", err);
-      console.error("Error response:", err.response?.data);
-      showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
-      // Restore previous form data if submission fails
-      setFormData(prevFormData);
-    } finally {
-      setIsSubmitting(false);
-      setLoadingApi(false)
+      showError('Error submitting data. Please try again.');
     }
   };
 
-  // Add useEffect for window beforeunload event
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
   const bgColorFillAuto="bg-[#c6efce]"
   const colorFillAuto='text-[#006100]'
   return (
-    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
         {/* Unsaved Changes Warning */}
         {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
@@ -328,9 +275,12 @@ const MwAntennasForm = () => {
           </div>
         )}
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
+          <div className="flex-1 overflow-y-auto">
+        
+             
           {/* MW Antenna Count */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
             <div className="flex flex-col">
               <label className="font-semibold mb-2">
                 How many MW antennas on the tower?
@@ -489,17 +439,10 @@ const MwAntennasForm = () => {
               {error}
             </div>
           )}
-
-          <div className="mt-6 flex justify-center gap-4">
-            <button
-              type="submit"
-              disabled={loadingApi}
-              className={`px-6 py-3 text-white rounded font-medium ${
-                loadingApi 
-                  ? 'bg-gray-400 cursor-not-allowed' 
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-            >
+</div>
+          {/* Save Button at Bottom - Fixed */}
+          <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
+            <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
               {loadingApi ? "loading...": "Save"}  
             </button>
           </div>

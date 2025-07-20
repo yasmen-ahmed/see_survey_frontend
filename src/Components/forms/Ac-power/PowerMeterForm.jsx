@@ -4,6 +4,7 @@ import axios from "axios";
 import { showSuccess, showError } from "../../../utils/notifications";
 import ImageUploader from "../../GalleryComponent";
 import { FaRegTrashAlt } from "react-icons/fa";
+import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
 
 const PowerMeterForm = () => {
   const { sessionId } = useParams();
@@ -21,10 +22,83 @@ const PowerMeterForm = () => {
   const [uploadedImages, setUploadedImages] = useState({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loadingApi,setLoadingApi] =useState(false)
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  // Function to save data via API
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
+    
+    try {
+      setLoadingApi(true);
+      const formDataToSend = new FormData();
+
+      // Build the payload to match the expected API structure
+      const payload = {
+        serial_number: formData.serialNumber || '',
+        meter_reading: formData.meterReading ? parseFloat(formData.meterReading) : null,
+        ac_power_source_type: formData.powerSourceType ? normalizeApiValue(formData.powerSourceType) : null
+      };
+
+      // Only add power_cable_config if either length or cross_section has a value
+      if (formData.cableLength || formData.crossSection) {
+        payload.power_cable_config = {
+          length: formData.cableLength ? parseFloat(formData.cableLength) : null,
+          cross_section: formData.crossSection ? parseFloat(formData.crossSection) : null
+        };
+      }
+
+      // Only add main_cb_config if either rating or type has a value
+      if (formData.mainCBRating || formData.cbType) {
+        payload.main_cb_config = {
+          rating: formData.mainCBRating ? parseFloat(formData.mainCBRating) : null,
+          type: formData.cbType ? normalizeApiValue(formData.cbType) : null
+        };
+      }
+
+      // Add data fields to FormData
+      formDataToSend.append('data', JSON.stringify(payload));
+
+      // Add images if they exist
+      images.forEach(imageField => {
+        const imageFiles = uploadedImages[imageField.name];
+        if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+          const file = imageFiles[0];
+          if (file instanceof File) {
+            formDataToSend.append(imageField.name, file);
+          }
+        }
+      });
+
+      await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/power-meter/${sessionId}`,
+        formDataToSend,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      
+      setHasUnsavedChanges(false);
+      showSuccess('Data saved successfully!');
+      return true;
+    } catch (err) {
+      console.error("Error saving data:", err);
+      showError('Error saving data. Please try again.');
+      return false;
+    } finally {
+      setLoadingApi(false);
+    }
+  };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
+
   // Fetch existing data when component loads
   useEffect(() => {
     if (!sessionId) return;
 
+    setIsInitialLoading(true);
     axios.get(`${import.meta.env.VITE_API_URL}/api/power-meter/${sessionId}`)
       .then(res => {
         const data = res.data.data || res.data;
@@ -54,12 +128,19 @@ const PowerMeterForm = () => {
             setUploadedImages(processedImages);
           }
         }
+
+        // Reset unsaved changes flag after loading data
+        setHasUnsavedChanges(false);
+        setIsInitialLoading(false);
       })
       .catch(err => {
         console.error("Error loading power meter data:", err);
         if (err.response?.status !== 404) {
           showError('Error loading existing data');
         }
+        // Reset unsaved changes flag even on error
+        setHasUnsavedChanges(false);
+        setIsInitialLoading(false);
       });
   }, [sessionId]);
 
@@ -83,6 +164,8 @@ const PowerMeterForm = () => {
   };
 
   const handleChange = (e) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     setHasUnsavedChanges(true);
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -92,6 +175,9 @@ const PowerMeterForm = () => {
   };
 
   const handleImageUpload = (imageCategory, files) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
+    setHasUnsavedChanges(true);
     console.log(`Images uploaded for ${imageCategory}:`, files);
     setUploadedImages(prev => ({
       ...prev,
@@ -106,104 +192,25 @@ const PowerMeterForm = () => {
     { label: 'Power meter cable route photo', name: 'power_meter_cable_route_photo' }
   ];
   
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoadingApi(true)
-    setHasUnsavedChanges(false);
-    const formDataToSend = new FormData();
-
-    // Build the payload to match the expected API structure
-    const payload = {
-      serial_number: formData.serialNumber || '',
-      meter_reading: formData.meterReading ? parseFloat(formData.meterReading) : null,
-      ac_power_source_type: formData.powerSourceType ? normalizeApiValue(formData.powerSourceType) : null
-    };
-
-    // Only add power_cable_config if either length or cross_section has a value
-    if (formData.cableLength || formData.crossSection) {
-      payload.power_cable_config = {
-        length: formData.cableLength ? parseFloat(formData.cableLength) : null,
-        cross_section: formData.crossSection ? parseFloat(formData.crossSection) : null
-      };
-    }
-
-    // Only add main_cb_config if either rating or type has a value
-    if (formData.mainCBRating || formData.cbType) {
-      payload.main_cb_config = {
-        rating: formData.mainCBRating ? parseFloat(formData.mainCBRating) : null,
-        type: formData.cbType ? normalizeApiValue(formData.cbType) : null
-      };
-    }
-
-    // Add data fields to FormData
-    formDataToSend.append('data', JSON.stringify(payload));
-
-    // Add images if they exist
-    images.forEach(imageField => {
-      const imageFiles = uploadedImages[imageField.name];
-      if (Array.isArray(imageFiles) && imageFiles.length > 0) {
-        const file = imageFiles[0];
-        if (file instanceof File) {
-          formDataToSend.append(imageField.name, file);
-        }
-      }
-    });
 
     try {
-      const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/power-meter/${sessionId}`,
-        formDataToSend,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        }
-      );
-      
-      // After successful submission, fetch the latest data
-      const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/power-meter/${sessionId}`);
-      const latestData = getResponse.data.data;
-
-      if (latestData) {
-        // Update form data
-        setFormData({
-          serialNumber: latestData.serial_number || "",
-          meterReading: latestData.meter_reading || "",
-          powerSourceType: normalizeRadioValue(latestData.ac_power_source_type) || "",
-          cableLength: latestData.power_cable_config?.length || "",
-          crossSection: latestData.power_cable_config?.cross_section || "",
-          mainCBRating: latestData.main_cb_config?.rating || "",
-          cbType: normalizeRadioValue(latestData.main_cb_config?.type) || ""
-        });
-
-        // Process and update images
-        if (latestData.images && latestData.images.length > 0) {
-          const processedImages = {};
-          latestData.images.forEach(image => {
-            processedImages[image.image_category] = [{
-              id: image.id,
-              file_url: image.file_url,
-              name: image.original_filename
-            }];
-          });
-          setUploadedImages(processedImages);
-        }
+      const saved = await saveDataToAPI();
+      if (saved) {
+        showSuccess('Power meter data submitted successfully!');
       }
-
-      setHasUnsavedChanges(false);
-      showSuccess('Power meter data submitted successfully!');
-    } catch (error) {
-      console.error("Error submitting power meter data:", error);
-      showError(error.response?.data?.error?.message || 'Error submitting data');
-    } finally {
-      setLoadingApi(false)
+    } catch (err) {
+      console.error("Error:", err);
+      showError('Error submitting data. Please try again.');
     }
   };
 
   return (
-    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">  
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-        {/* Unsaved Changes Warning */}
+    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
+    <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col"> 
+   {/* Unsaved Changes Warning */}
         {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
             <div className="flex items-center">
@@ -218,7 +225,9 @@ const PowerMeterForm = () => {
             </div>    
           </div>
         )}
-        <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" onSubmit={handleSubmit}>
+        <form className="flex-1 flex flex-col" onSubmit={handleSubmit}>
+          <div className="flex-1 overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Power Meter Serial Number</label>
             <input
@@ -322,15 +331,20 @@ const PowerMeterForm = () => {
               ))}
             </div>
           </div>
-
-          <div className="md:col-span-2 flex justify-center">
-            <button
-              type="submit"
-              className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700"
-            >
-              {loadingApi ? "loading...": "Save"}  
-            </button>
           </div>
+          </div>
+          <div className="mt-6 flex justify-center">
+          <button
+            type="submit"
+            onClick={handleSubmit}
+            className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700"
+          >
+            {loadingApi ? "loading...": "Save"}  
+          </button>
+       
+          </div>
+
+       
         </form>
       </div>
       <ImageUploader 

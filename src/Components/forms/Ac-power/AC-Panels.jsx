@@ -4,6 +4,7 @@ import axios from "axios";
 import { showSuccess, showError } from "../../../utils/notifications";
 import ImageUploader from "../../GalleryComponent";
 import DynamicTable from "../../DynamicTable";
+import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
 
 const ACPanelForm = () => {
   const { sessionId } = useParams();
@@ -20,6 +21,70 @@ const ACPanelForm = () => {
   const [uploadedImages, setUploadedImages] = useState({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loadingApi,setLoadingApi] =useState(false)
+
+  // Function to save data via API
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
+    
+    try {
+      setLoadingApi(true);
+      const formDataToSend = new FormData();
+
+      // Build the payload to match the expected API structure
+      const payload = {
+        power_cable_config: {
+          length: parseFloat(formData.cableLength) || 0,
+          cross_section: parseFloat(formData.crossSection) || 0
+        },
+        main_cb_config: {
+          rating: parseFloat(formData.mainCBRating) || 0,
+          type: normalizeApiValue(formData.cbType)
+        },
+        cb_fuse_data: Array.isArray(formData.cb_fuse_data) ? formData.cb_fuse_data : [],
+        has_free_cbs: formData.hasFreeCBs,
+        free_cb_spaces: parseInt(formData.free_cb_spaces) || 0
+      };
+
+      // Add data fields to FormData
+      formDataToSend.append('data', JSON.stringify(payload));
+
+      // Add images if they exist
+      images.forEach(imageField => {
+        const imageFiles = uploadedImages[imageField.name];
+        if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+          const file = imageFiles[0];
+          if (file instanceof File) {
+            formDataToSend.append(imageField.name, file);
+          }
+        }
+      });
+
+      await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/ac-panel/${sessionId}`,
+        formDataToSend,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      
+      setHasUnsavedChanges(false);
+      showSuccess('Data saved successfully!');
+      return true;
+    } catch (err) {
+      console.error("Error saving data:", err);
+      showError('Error saving data. Please try again.');
+      return false;
+    } finally {
+      setLoadingApi(false);
+      setHasUnsavedChanges(false);
+    }
+  };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
+
   // Configuration for the dynamic table rows
   const tableRows = [
     {
@@ -38,6 +103,7 @@ const ACPanelForm = () => {
 
   // Handle table data changes
   const handleTableDataChange = useCallback((newTableData) => {
+    setHasUnsavedChanges(true);
     if (!newTableData) {
       setFormData(prev => ({
         ...prev,
@@ -98,7 +164,7 @@ const ACPanelForm = () => {
   // Fetch existing data when component loads
   useEffect(() => {
     if (!sessionId) return;
-
+  
     axios.get(`${import.meta.env.VITE_API_URL}/api/ac-panel/${sessionId}`)
       .then(res => {
         const data = res.data.data || res.data;
@@ -170,105 +236,24 @@ const ACPanelForm = () => {
     { label: 'AC cable Route Photo to cable tray 3/3', name: 'ac_cable_route_photo_3' }
   ];
 
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoadingApi(true)
-    setHasUnsavedChanges(false);
-    const formDataToSend = new FormData();
-
-    // Build the payload to match the expected API structure
-    const payload = {
-      power_cable_config: {
-        length: parseFloat(formData.cableLength) || 0,
-        cross_section: parseFloat(formData.crossSection) || 0
-      },
-      main_cb_config: {
-        rating: parseFloat(formData.mainCBRating) || 0,
-        type: normalizeApiValue(formData.cbType)
-      },
-      cb_fuse_data: Array.isArray(formData.cb_fuse_data) ? formData.cb_fuse_data : [],
-      has_free_cbs: formData.hasFreeCBs,
-      free_cb_spaces: parseInt(formData.free_cb_spaces) || 0
-    };
-
-    // Add data fields to FormData
-    formDataToSend.append('data', JSON.stringify(payload));
-
-    // Add images if they exist
-    images.forEach(imageField => {
-      const imageFiles = uploadedImages[imageField.name];
-      if (Array.isArray(imageFiles) && imageFiles.length > 0) {
-        const file = imageFiles[0];
-        if (file instanceof File) {
-          formDataToSend.append(imageField.name, file);
-        }
-      }
-    });
 
     try {
-      const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/ac-panel/${sessionId}`,
-        formDataToSend,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        }
-      );
-
-      // After successful submission, fetch the latest data
-      const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/ac-panel/${sessionId}`);
-      const latestData = getResponse.data.data;
-
-      if (latestData) {
-        // Update form data
-        setFormData({
-          cableLength: latestData.power_cable_config?.length?.toString() || "",
-          crossSection: latestData.power_cable_config?.cross_section?.toString() || "",
-          mainCBRating: latestData.main_cb_config?.rating?.toString() || "",
-          cbType: normalizeDisplayValue(latestData.main_cb_config?.type) || "",
-          hasFreeCBs: Boolean(latestData.has_free_cbs),
-          free_cb_spaces: latestData.free_cb_spaces?.toString() || "",
-          cb_fuse_data: latestData.cb_fuse_data || []
-        });
-
-        // Process and update images
-        if (latestData.images && latestData.images.length > 0) {
-          const processedImages = {};
-          latestData.images.forEach(image => {
-            processedImages[image.image_category] = [{
-              id: image.id,
-              file_url: image.file_url,
-              name: image.original_filename
-            }];
-          });
-          setUploadedImages(processedImages);
-        } else {
-          // Keep any newly uploaded images that are File objects
-          const newUploadedImages = {};
-          Object.entries(uploadedImages).forEach(([key, files]) => {
-            if (Array.isArray(files) && files.length > 0 && files[0] instanceof File) {
-              newUploadedImages[key] = files;
-            }
-          });
-          setUploadedImages(newUploadedImages);
-        }
+      const saved = await saveDataToAPI();
+      if (saved) {
+        showSuccess('AC Panel data submitted successfully!');
       }
-
-      setHasUnsavedChanges(false);
-      showSuccess('AC Panel data submitted successfully!');
     } catch (err) {
       console.error("Error:", err);
-      showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
-    } finally {
-      setLoadingApi(false)
+      showError('Error submitting data. Please try again.');
     }
   };
 
   return (
-    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-        {/* Unsaved Changes Warning */}
+    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col"> {/* Unsaved Changes Warning */}
         {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
             <div className="flex items-center">
@@ -283,8 +268,9 @@ const ACPanelForm = () => {
             </div>  
           </div>
         )}
-        <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" onSubmit={handleSubmit}>
-          
+        <form className="flex-1 flex flex-col" onSubmit={handleSubmit}>
+          <div className="flex-1 overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Length of Power Cable (m)</label>
             <input
@@ -387,9 +373,8 @@ const ACPanelForm = () => {
               ))}
             </select>
           </div>
-        </form>
-
-        <DynamicTable
+          </div>
+          <DynamicTable
           title="AC panel CBs ratings & connected loads"
           rows={tableRows}
           initialData={getTableData()}
@@ -404,6 +389,10 @@ const ACPanelForm = () => {
           cellClassName="border px-2 py-2"
           labelClassName="border px-4 py-2 font-semibold bg-gray-50"
         />
+          </div>
+        </form>
+
+       
 
         <div className="mt-6 flex justify-center">
           <button

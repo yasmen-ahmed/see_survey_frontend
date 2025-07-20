@@ -4,6 +4,8 @@ import axios from "axios";
 import ImageUploader from "../../GalleryComponent";
 import { showSuccess, showError } from "../../../utils/notifications";
 import useImageManager from "../../../hooks/useImageManager";
+import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
+
 function SiteInformationForm() {
   
 const { sessionId, siteId } = useParams();   
@@ -25,6 +27,48 @@ const [formData, setFormData] = useState({
     location_of_planned_new_telecom_racks_cabinets: [],
     existing_technology: []
   });
+
+  // Function to save data via API (for use with useUnsavedChanges hook)
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
+    
+    try {
+      setLoadingApi(true);
+      const payload = {
+        site_located_at: formData.site_located_at,
+        site_ownership: formData.site_ownership,
+        shared_site: formData.shared_site,
+        other_telecom_operator_exist_onsite: formData.other_telecom_operator_exist_onsite,
+        ac_power_sharing: formData.ac_power_sharing,
+        dc_power_sharing: formData.dc_power_sharing,
+        site_topology: formData.site_topology,
+        site_type: formData.site_type,
+        planned_scope: formData.planned_scope,
+        location_of_existing_telecom_racks_cabinets: formData.location_of_existing_telecom_racks_cabinets ,
+        location_of_planned_new_telecom_racks_cabinets: formData.location_of_planned_new_telecom_racks_cabinets,
+        existing_technology: formData.existing_technology,
+      };
+
+      await axios.put(`${import.meta.env.VITE_API_URL}/api/site-area-info/${sessionId}`, payload);
+      
+      // Save images
+      const imagesSaved = await saveImages();
+      if (!imagesSaved) {
+        throw new Error('Failed to save images');
+      }
+      
+      setHasUnsavedChanges(false);
+      return true;
+    } catch (err) {
+      console.error("Error saving data:", err);
+      return false;
+    } finally {
+      setLoadingApi(false);
+    }
+  };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
 
     useEffect(() => {
       setLoadingApi(true)
@@ -91,49 +135,22 @@ const [formData, setFormData] = useState({
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoadingApi(true)
- 
-
-    const payload = {
-      site_located_at: formData.site_located_at,
-      site_ownership: formData.site_ownership,
-      shared_site: formData.shared_site,
-      other_telecom_operator_exist_onsite: formData.other_telecom_operator_exist_onsite,
-      ac_power_sharing: formData.ac_power_sharing,
-      dc_power_sharing: formData.dc_power_sharing,
-      site_topology: formData.site_topology,
-      site_type: formData.site_type,
-      planned_scope: formData.planned_scope,
-      location_of_existing_telecom_racks_cabinets: formData.location_of_existing_telecom_racks_cabinets ,
-      location_of_planned_new_telecom_racks_cabinets: formData.location_of_planned_new_telecom_racks_cabinets,
-      existing_technology: formData.existing_technology,
-    };
-         
-   
-    
 
     try {
-      const response=await axios.put(`${import.meta.env.VITE_API_URL}/api/site-area-info/${sessionId}`,payload);
-     // Save images
-     const imagesSaved = await saveImages();
-     if (!imagesSaved) {
-       throw new Error('Failed to save images');
-     }
-     setHasUnsavedChanges(false);
-      showSuccess('Data submitted successfully!');
-      console.log(response.data)
+      const saved = await saveDataToAPI();
+      if (saved) {
+        showSuccess('Data submitted successfully!');
+      }
     } catch (err) {
       console.error("Error:", err);
       showError('Error submitting data. Please try again.');
-    } finally {
-      setLoadingApi(false)
     }
   };
 
   return (
-    <div className="max-h-screen flex  items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-        {/* Unsaved Changes Warning */}
+    <div className="h-full flex items-start space-x-2 justify-start bg-gray-100 p-">
+    <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full overflow-y-auto flex flex-col">
+       {/* Unsaved Changes Warning */}
         {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
             <div className="flex items-center">
@@ -578,10 +595,10 @@ const [formData, setFormData] = useState({
           </div>
   </div>
       {/* Submit */}
-      <div className="pt-6 text-center">
+      <div className="mt-auto pt-6 flex justify-center">
         <button type="submit"
           onClick={handleSubmit}
-          className="px-8 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">
+        className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
           {loadingApi ? "loading...": "Save"}  
         </button>
       </div>

@@ -4,6 +4,7 @@ import axios from "axios";
 import { showSuccess, showError } from "../../../utils/notifications";
 import ImageUploader from "../../GalleryComponent";
 import DynamicTable from "../../DynamicTable";
+import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
 
 const DcDistributionForm = () => {
   const { sessionId } = useParams();
@@ -22,7 +23,119 @@ const DcDistributionForm = () => {
   // Add state to track form changes
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [initialFormState, setInitialFormState] = useState(null);
-  const [loadingApi,setLoadingApi] =useState(false)         
+  const [loadingApi,setLoadingApi] =useState(false)
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  // Function to save data via API
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
+    
+    try {
+      setLoadingApi(true);
+      // Basic validation
+      if (!dcPduExist) {
+        setError("Please select if there is a separate DC PDU.");
+        return false;
+      }
+
+      if (dcPduExist === "Yes" && !pduCount) {
+        setError("Please select the number of PDUs.");
+        return false;
+      }
+
+      // Prepare data wrapped in externalDCData for API
+      const submitData = {
+        externalDCData: {
+          has_separate_dc_pdu: dcPduExist,
+          how_many_dc_pdus: dcPduExist === "Yes" ? parseInt(pduCount) : 0,
+          dc_pdus: dcPduExist === "Yes" ? pdus.map((pdu, index) => ({
+            pdu_number: index + 1,
+            is_shared_panel: pdu.shared || null,
+            dc_distribution_model: pdu.model || null,
+            dc_distribution_location: pdu.location || null,
+            pdu_height_from_base: pdu.location === "On ground level" ? null : (parseFloat(pdu.towerBaseHeight) || null),
+            dc_feed_cabinet: pdu.feedCabinet || null,
+            dc_feed_distribution_type: pdu.feedDistribution ? pdu.feedDistribution.toLowerCase() : null,
+            feeding_dc_cbs: pdu.cbFuse || null,
+            dc_cable_length: parseFloat(pdu.dc_cable_length) || null,
+            dc_cable_cross_section: parseFloat(pdu.cableCrossSection) || null,
+            has_free_cbs_fuses: pdu.hasFreeCbs || null,
+            cb_fuse_ratings: pdu.cbDetails ? pdu.cbDetails.filter(r => r.rating && r.connected_module).map(r => ({
+              rating: parseFloat(r.rating) || 0,
+              connected_load: r.connected_module
+            })) : []
+          })) : []
+        }
+      };
+
+      // Check if we have any images to upload
+      const allImageFields = getAllImages();
+      const hasImages = allImageFields.some(imageField => {
+        const imageFiles = uploadedImages[imageField.name];
+        return Array.isArray(imageFiles) && imageFiles.length > 0 && imageFiles[0] instanceof File;
+      });
+
+      let response;
+      
+      if (hasImages) {
+        // Create FormData for multipart submission when images are present
+        const submitFormData = new FormData();
+        
+        // Append the main data as individual FormData fields
+        Object.keys(submitData.externalDCData).forEach(key => {
+          const value = submitData.externalDCData[key];
+          if (typeof value === 'object' && value !== null) {
+            submitFormData.append(key, JSON.stringify(value));
+          } else {
+            submitFormData.append(key, value);
+          }
+        });
+
+        // Handle all image fields - including removed ones
+        allImageFields.forEach(imageField => {
+          const imageFiles = uploadedImages[imageField.name];
+          
+          if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+            const file = imageFiles[0];
+            if (file instanceof File) {
+              submitFormData.append(imageField.name, file);
+            }
+          } else {
+            // If image was removed or doesn't exist, send empty string
+            submitFormData.append(imageField.name, '');
+          }
+        });
+        
+        // Submit as multipart/form-data
+        response = await axios.put(
+          `${import.meta.env.VITE_API_URL}/api/external-dc-distribution/${sessionId}`,
+          submitFormData,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+      } else {
+        // Submit as JSON when no images
+        response = await axios.put(
+          `${import.meta.env.VITE_API_URL}/api/external-dc-distribution/${sessionId}`,
+          submitData,
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      setHasUnsavedChanges(false);
+      showSuccess('Data saved successfully!');
+      return true;
+    } catch (err) {
+      console.error("Error saving data:", err);
+      showError('Error saving data. Please try again.');
+      return false;
+    } finally {
+      setLoadingApi(false);
+    }
+  };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
+         
   // Function to get current form state
   const getCurrentFormState = useCallback(() => {
     return {
@@ -43,19 +156,19 @@ const DcDistributionForm = () => {
   const colorFillAuto='text-[#006100]'
   // Track form changes
   useEffect(() => {
-    if (initialFormState) {
+    if (initialFormState && !isInitialLoading) {
       const currentState = getCurrentFormState();
       const changed = hasFormChanged(currentState, initialFormState);
       setHasUnsavedChanges(changed);
     }
-  }, [dcPduExist, pduCount, pdus, uploadedImages, initialFormState, getCurrentFormState, hasFormChanged]);
+  }, [dcPduExist, pduCount, pdus, uploadedImages, initialFormState, getCurrentFormState, hasFormChanged, isInitialLoading]);
 
   // Set initial form state when data is loaded
   useEffect(() => {
-    if (dcPduExist !== null && !initialFormState) {
+    if (dcPduExist !== null && !initialFormState && !isInitialLoading) {
       setInitialFormState(getCurrentFormState());
     }
-  }, [dcPduExist, initialFormState, getCurrentFormState]);
+  }, [dcPduExist, initialFormState, getCurrentFormState, isInitialLoading]);
 
   // Add warning for page navigation/refresh
   useEffect(() => {
@@ -470,6 +583,9 @@ const DcDistributionForm = () => {
         if (err.response?.status !== 404) {
           showError('Error loading existing data');
         }
+      })
+      .finally(() => {
+        setIsInitialLoading(false);
       });
   }, [sessionId, fetchCbOptions]);
 
@@ -541,148 +657,29 @@ const DcDistributionForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoadingApi(true)
     try {
-      // Basic validation
-      if (!dcPduExist) {
-        setError("Please select if there is a separate DC PDU.");
-        return;
-      }
-
-      if (dcPduExist === "Yes" && !pduCount) {
-        setError("Please select the number of PDUs.");
-        return;
-      }
-
-      // Prepare data wrapped in externalDCData for API
-      const submitData = {
-        externalDCData: {
-          has_separate_dc_pdu: dcPduExist,
-          how_many_dc_pdus: dcPduExist === "Yes" ? parseInt(pduCount) : 0,
-          dc_pdus: dcPduExist === "Yes" ? pdus.map((pdu, index) => ({
-            pdu_number: index + 1,
-            is_shared_panel: pdu.shared || null,
-            dc_distribution_model: pdu.model || null,
-            dc_distribution_location: pdu.location || null,
-            pdu_height_from_base: pdu.location === "On ground level" ? null : (parseFloat(pdu.towerBaseHeight) || null),
-            dc_feed_cabinet: pdu.feedCabinet || null,
-            dc_feed_distribution_type: pdu.feedDistribution ? pdu.feedDistribution.toLowerCase() : null,
-            feeding_dc_cbs: pdu.cbFuse || null,
-            dc_cable_length: parseFloat(pdu.dc_cable_length) || null,
-            dc_cable_cross_section: parseFloat(pdu.cableCrossSection) || null,
-            has_free_cbs_fuses: pdu.hasFreeCbs || null,
-            cb_fuse_ratings: pdu.cbDetails ? pdu.cbDetails.filter(r => r.rating && r.connected_module).map(r => ({
-              rating: parseFloat(r.rating) || 0,
-              connected_load: r.connected_module
-            })) : []
-          })) : []
-        }
-      };
-
-      // Check if we have any images to upload
-      const allImageFields = getAllImages();
-      const hasImages = allImageFields.some(imageField => {
-        const imageFiles = uploadedImages[imageField.name];
-        return Array.isArray(imageFiles) && imageFiles.length > 0 && imageFiles[0] instanceof File;
-      });
-
-      let response;
-      
-      if (hasImages) {
-        // Create FormData for multipart submission when images are present
-        const submitFormData = new FormData();
+      const saved = await saveDataToAPI();
+      if (saved) {
+        showSuccess('External DC Distribution data submitted successfully!');
+        setError(""); // Clear any previous errors
+        setAutoFilledFields({}); // Clear auto-filled status after successful save
         
-        // Append the main data as individual FormData fields
-        Object.keys(submitData.externalDCData).forEach(key => {
-          const value = submitData.externalDCData[key];
-          if (typeof value === 'object' && value !== null) {
-            submitFormData.append(key, JSON.stringify(value));
-          } else {
-            submitFormData.append(key, value);
-          }
-        });
-
-        console.log("Submitting External DC Distribution data with images:", submitData);
-        console.log("Original form distribution values:", pdus.map(pdu => pdu.feedDistribution));
-        
-        // Handle all image fields - including removed ones
-        allImageFields.forEach(imageField => {
-          const imageFiles = uploadedImages[imageField.name];
-          console.log(`Processing image field: ${imageField.name}`, imageFiles);
-          
-          if (Array.isArray(imageFiles) && imageFiles.length > 0) {
-            const file = imageFiles[0];
-            if (file instanceof File) {
-              console.log(`Adding file for ${imageField.name}:`, file.name);
-              submitFormData.append(imageField.name, file);
-            } else {
-              console.log(`Skipping non-File object for ${imageField.name}:`, file);
-            }
-          } else {
-            // If image was removed or doesn't exist, send empty string
-            console.log(`Adding empty string for ${imageField.name}`);
-            submitFormData.append(imageField.name, '');
-          }
-        });
-        
-        // Submit as multipart/form-data
-        response = await axios.put(
-          `${import.meta.env.VITE_API_URL}/api/external-dc-distribution/${sessionId}`,
-          submitFormData,
-          { headers: { 'Content-Type': 'multipart/form-data' } }
-        );
-      } else {
-        // Submit as JSON when no images
-        console.log("Submitting External DC Distribution data as JSON:", submitData);
-        console.log("Original form distribution values:", pdus.map(pdu => pdu.feedDistribution));
-        
-        response = await axios.put(
-          `${import.meta.env.VITE_API_URL}/api/external-dc-distribution/${sessionId}`,
-          submitData,
-          { headers: { 'Content-Type': 'application/json' } }
-        );
+        // Update initial form state
+        setInitialFormState(getCurrentFormState());
       }
-      
-      // Process and update images from the server response
-      const updatedExternalDC = response.data.data.externalDCData;
-      const updatedPdus = Array.isArray(updatedExternalDC.dc_pdus) ? updatedExternalDC.dc_pdus : [];
-      if (updatedPdus.some(pdu => pdu.images?.length > 0)) {
-        const processedImages = processImagesFromResponse(updatedPdus);
-        console.log("Processed images from response:", processedImages);
-        setUploadedImages(processedImages);
-      } else {
-        console.log("No images found in response, keeping existing uploaded images");
-        // Preserve any newly uploaded File objects
-        const newUploadedImages = {};
-        Object.entries(uploadedImages).forEach(([key, files]) => {
-          if (Array.isArray(files) && files.length > 0 && files[0] instanceof File) {
-            newUploadedImages[key] = files;
-          }
-        });
-        setUploadedImages(newUploadedImages);
-      }
-     
-      showSuccess('External DC Distribution data submitted successfully!');
-      console.log("Response:", response.data);
-      setError(""); // Clear any previous errors
-      setAutoFilledFields({}); // Clear auto-filled status after successful save
-      
-      // Reset unsaved changes flag and update initial form state
-      setHasUnsavedChanges(false);
-      setInitialFormState(getCurrentFormState());
     } catch (err) {
       console.error("Error submitting External DC Distribution data:", err);
-      console.error("Full error response:", err.response?.data);
-      showError(`Error submitting data: ${err.response?.data?.error || 'Please try again.'}`);
-    } finally {
-      setLoadingApi(false)
+      showError('Error submitting data. Please try again.');
     }
   };
 
   return (
-    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-        <form className="space-y-4" onSubmit={handleSubmit}>
+    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
+        <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
+   
+       
+
           
           {/* Unsaved Changes Indicator */}
           {hasUnsavedChanges && (
@@ -738,7 +735,7 @@ const DcDistributionForm = () => {
 
           {/* Drop-down: How many */}
           {dcPduExist === "Yes" && (
-            <div className="flex flex-col">
+            <div className="flex flex-col mb-5">
               <label className="font-semibold mb-1">How many?</label>
               <select
                 value={pduCount}
@@ -761,14 +758,15 @@ const DcDistributionForm = () => {
 
           {/* PDU Details */}
           {/* Dynamic DC PDU Table */}
+         
           {pduCount && parseInt(pduCount) > 0 && pdus.length > 0 && (
-            <div className="">
-              <div className="overflow-auto max-h-[700px]">
+            <div className="flex-1 overflow-y-auto">
+            
                 <table className="table-auto w-full border-collapse">
                   <thead className="bg-blue-500 text-white">
                     <tr>
                       <th
-                        className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-10"
+                        className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-20"
                         style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
                       >
                         Field Description
@@ -1052,14 +1050,13 @@ const DcDistributionForm = () => {
                   </tbody>
                 </table>
               </div>
-            </div>
+           
           )}
-
-          <div className="mt-6 flex justify-center gap-4">
-            <button
-              type="submit"
-              className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700 font-semibold"
-            >
+           
+        
+          {/* Save Button at Bottom - Fixed */}
+          <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
+            <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
               {loadingApi ? "loading...": "Save"}     
             </button>
           </div>

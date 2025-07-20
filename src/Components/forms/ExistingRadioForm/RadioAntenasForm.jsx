@@ -3,10 +3,12 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import { showSuccess, showError } from "../../../utils/notifications";
 import ImageUploader from "../../GalleryComponent";
+import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
 
 const RadioAntenasForm = () => {
   const { sessionId } = useParams();
   const [loadingApi,setLoadingApi] =useState(false)
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [formData, setFormData] = useState({
     numberOfAntennas: 1,
     antennas: Array(15).fill(null).map((_, index) => ({
@@ -246,15 +248,19 @@ const RadioAntenasForm = () => {
 
   // Handle image uploads from ImageUploader component
   const handleImageUpload = (imageCategory, files) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     console.log(`Images uploaded for ${imageCategory}:`, files);
     setUploadedImages(prev => ({
       ...prev,
       [imageCategory]: files
     }));
+    setHasUnsavedChanges(true);
   };
 
   // Fetch existing data when component loads
   useEffect(() => {
+    setIsInitialLoading(true);
     const fetchData = async () => {
       try {
         setIsLoading(true);
@@ -274,11 +280,18 @@ const RadioAntenasForm = () => {
             setUploadedImages(processedImages);
           }
         }
+
+        // Reset unsaved changes flag after loading data
+        setHasUnsavedChanges(false);
+        setIsInitialLoading(false);
       } catch (err) {
         console.error("Error loading antenna configuration data:", err);
         if (err.response?.status !== 404) {
           showError('Error loading existing data');
         }
+        // Reset unsaved changes flag even on error
+        setHasUnsavedChanges(false);
+        setIsInitialLoading(false);
       } finally {
         setIsLoading(false);
       }
@@ -290,6 +303,8 @@ const RadioAntenasForm = () => {
   }, [sessionId]);
 
   const handleChange = (antennaIndex, fieldName, value) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     setFormData(prev => {
       const newFormData = { ...prev };
       
@@ -318,6 +333,8 @@ const RadioAntenasForm = () => {
   };
 
   const handleCheckboxChange = (antennaIndex, fieldName, value, checked) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     setFormData(prev => {
       const newFormData = { ...prev };
       const currentAntenna = { ...newFormData.antennas[antennaIndex] };
@@ -351,6 +368,8 @@ const RadioAntenasForm = () => {
   };
 
   const handleNumberOfAntennasChange = (e) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     const count = parseInt(e.target.value);
     if (!count || count < 1) {
       setFormData({ numberOfAntennas: "", antennas: [] });
@@ -404,25 +423,46 @@ const RadioAntenasForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    const prevFormData = { ...formData };
+    try {
+      const saved = await saveDataToAPI();
+      if (saved) {
+        showSuccess('Antenna configuration data submitted successfully!');
+        setError(""); // Clear any previous errors
+      }
+    } catch (err) {
+      console.error("Error submitting antenna configuration data:", err);
+      showError('Error submitting data. Please try again.');
+    }
+  };
+
+  // Function to save data via API
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
     
     try {
-      if (!formData.numberOfAntennas) {
-        setError("Please select the number of antennas.");
-        return;
-      }
+      setLoadingApi(true);
+      // Create FormData for multipart submission
+      const submitFormData = new FormData();
 
-      // Create the data payload in the exact format required
+      // Map form data to API format
       const apiData = mapFormToApiData(formData);
       
-      console.log("Submitting antenna configuration data:", JSON.stringify(apiData, null, 2));
+      // Add antenna count
+      submitFormData.append('antenna_count', apiData.antenna_count);
 
-      // Create FormData for multipart submission (for images)
-      const submitFormData = new FormData();
-      
-      // Add the JSON data
-      submitFormData.append('antenna_data', JSON.stringify(apiData));
+      // Add antenna data as individual form fields
+      apiData.antennas.forEach((antenna, index) => {
+        Object.keys(antenna).forEach(key => {
+          const value = antenna[key];
+          if (Array.isArray(value)) {
+            submitFormData.append(`antennas[${index}][${key}]`, JSON.stringify(value));
+          } else if (typeof value === 'boolean') {
+            submitFormData.append(`antennas[${index}][${key}]`, value.toString());
+          } else if (value !== null && value !== undefined) {
+            submitFormData.append(`antennas[${index}][${key}]`, value.toString());
+          }
+        });
+      });
 
       // Get all possible image fields
       const allImageFields = getAllImages();
@@ -430,84 +470,38 @@ const RadioAntenasForm = () => {
       // Handle all image fields - including removed ones
       allImageFields.forEach(imageField => {
         const imageFiles = uploadedImages[imageField.name];
-        console.log(`Processing image field: ${imageField.name}`, imageFiles);
         
         if (Array.isArray(imageFiles) && imageFiles.length > 0) {
           const file = imageFiles[0];
           if (file instanceof File) {
-            console.log(`Adding file for ${imageField.name}:`, file.name);
             submitFormData.append(imageField.name, file);
-          } else {
-            console.log(`Skipping non-File object for ${imageField.name}:`, file);
-            submitFormData.append(imageField.name, '');
           }
         } else {
           // If image was removed or doesn't exist, send empty string
-          console.log(`Adding empty string for ${imageField.name}`);
           submitFormData.append(imageField.name, '');
         }
       });
 
-      // Log FormData entries for debugging
-      console.log('FormData entries for submission:');
-      for (let pair of submitFormData.entries()) {
-        if (pair[1] instanceof File) {
-          console.log(pair[0] + ': [FILE] ' + pair[1].name);
-        } else {
-          console.log(pair[0] + ': ' + pair[1]);
-        }
-      }
-
-      const response = await axios.put(
+      await axios.put(
         `${import.meta.env.VITE_API_URL}/api/antenna-configuration/${sessionId}`,
         submitFormData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        }
+        { headers: { 'Content-Type': 'multipart/form-data' } }
       );
       
-      // After successful submission, fetch the latest data
-      const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/antenna-configuration/${sessionId}`);
-      const latestData = getResponse.data.data;
-
-      if (latestData) {
-        const mappedData = mapApiToFormData(latestData);
-        setFormData(mappedData);
-
-        // Process and update images
-        if (latestData.antennas?.some(ant => ant.images?.length > 0)) {
-          const processedImages = processImagesFromResponse(latestData.antennas);
-          console.log("Processed images from response:", processedImages);
-          setUploadedImages(processedImages);
-        } else {
-          console.log("No images found in response, keeping existing uploaded images");
-          // Keep existing uploaded images that are File objects
-          const newUploadedImages = {};
-          Object.entries(uploadedImages).forEach(([key, files]) => {
-            if (Array.isArray(files) && files.length > 0 && files[0] instanceof File) {
-              newUploadedImages[key] = files;
-            }
-          });
-          setUploadedImages(newUploadedImages);
-        }
-      }
-      
       setHasUnsavedChanges(false);
-      showSuccess('Antenna configuration data and images submitted successfully!');
-      console.log("Response:", response.data);
-      setError("");
+      showSuccess('Data saved successfully!');
+      return true;
     } catch (err) {
-      console.error("Error submitting antenna configuration data:", err);
-      console.error("Full error response:", err.response?.data);
-      showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
-      // Restore previous form data if submission fails
-      setFormData(prevFormData);
+      console.error("Error saving data:", err);
+      showError('Error saving data. Please try again.');
+      return false;
     } finally {
-      setIsSubmitting(false);
+      setLoadingApi(false);
     }
   };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
 
   // Helper functions to check conditions
   const hasNokiaVendor = () => {
@@ -566,8 +560,8 @@ const RadioAntenasForm = () => {
   }, [hasUnsavedChanges]);
 
   return (
-    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
         {/* Unsaved Changes Warning */}
         {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
@@ -584,10 +578,12 @@ const RadioAntenasForm = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
           
+          
+             
           {/* Number of Antennas Selection */}
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+          <div className="p-4 bg-gray-50 rounded-lg">
             <label className="block font-semibold mb-2">How many antennas on site?</label>
             <select
               name="numberOfAntennas"
@@ -604,12 +600,12 @@ const RadioAntenasForm = () => {
           </div>
 
           {/* Table Layout */}
-          <div className="overflow-auto max-h-[700px]">
+          <div className="flex-1 overflow-y-auto">
             <table className="table-auto w-full border-collapse">
               <thead className="bg-blue-500 text-white">
                 <tr>
                   <th
-                    className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-10"
+                    className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-20"
                     style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
                   >
                     Field Description
@@ -1342,26 +1338,15 @@ const RadioAntenasForm = () => {
             </div>
           )}
 
-          <div className="mt-6 flex justify-center">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className={`px-6 py-3 text-white rounded font-medium ${
-                isSubmitting 
-                  ? 'bg-gray-400 cursor-not-allowed' 
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-            >
-              {isSubmitting ? (
-                <div className="flex items-center">
-                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                  Saving Images & Data...
-                </div>
-              ) : (
-                'Save'
-              )}
+          
+   {/* Save Button at Bottom - Fixed */}
+   <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
+            <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
+              {isSubmitting ? "loading...": "Save"}     
             </button>
           </div>
+
+
         </form>
       </div>
       <ImageUploader 

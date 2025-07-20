@@ -4,6 +4,7 @@ import axios from "axios";
 import ImageUploader from "../../GalleryComponent";
 import { showSuccess, showError } from "../../../utils/notifications";
 import useImageManager from "../../../hooks/useImageManager";
+import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
 
 function SitevistinfoForm() {
   const { sessionId, siteId } = useParams(); 
@@ -75,52 +76,65 @@ function SitevistinfoForm() {
   
   // Handle form submission
   const handleSubmit = async (e) => {
-    setLoadingApi(true)
     e.preventDefault();
 
-    // Prepare the payload excluding images for now
-    const { frontImage, sideImage, topImage, ...dataWithoutImages } = formData;
-
-    const payload = {
-      surveyor_name: dataWithoutImages.surveyor_name,
-      subcontractor_company: dataWithoutImages.subcontractor_company,
-      surveyor_phone: dataWithoutImages.surveyor_phone,
-      nokia_representative_name: dataWithoutImages.nokia_representative_name,
-      nokia_representative_title: dataWithoutImages.nokia_representative_title,
-      customer_representative_name: dataWithoutImages.customer_representative_name,
-      customer_representative_title: dataWithoutImages.customer_representative_title,
-      survey_date: dataWithoutImages.survey_date,
-     
-    };
-
-    
-
     try {
-      const response=await axios.put(`${import.meta.env.VITE_API_URL}/api/site-visit-info/${sessionId}`,payload);
-       // Save images
-       const imagesSaved = await saveImages();
-       if (!imagesSaved) {
-         throw new Error('Failed to save images');
-       }
-       setHasUnsavedChanges(false);
-       
-      showSuccess('Data submitted successfully!');
-      console.log(response)
+      const saved = await saveDataToAPI();
+      if (saved) {
+        showSuccess('Data submitted successfully!');
+      }
     } catch (err) {
       console.error("Error:", err);
       showError('Error submitting data. Please try again.');
-    } finally {
-      setLoadingApi(false)
     }
   };
+
+  // Function to save data via API (for use with useUnsavedChanges hook)
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
+    
+    try {
+      setLoadingApi(true);
+      const payload = {
+        surveyor_name: formData.surveyor_name,
+        subcontractor_company: formData.subcontractor_company,
+        surveyor_phone: formData.surveyor_phone,
+        nokia_representative_name: formData.nokia_representative_name,
+        nokia_representative_title: formData.nokia_representative_title,
+        customer_representative_name: formData.customer_representative_name,
+        customer_representative_title: formData.customer_representative_title,
+        survey_date: formData.survey_date,
+      };
+
+      await axios.put(`${import.meta.env.VITE_API_URL}/api/site-visit-info/${sessionId}`, payload);
+      
+      // Save images
+      const imagesSaved = await saveImages();
+      if (!imagesSaved) {
+        throw new Error('Failed to save images');
+      }
+      
+      setHasUnsavedChanges(false);
+      return true;
+    } catch (err) {
+      console.error("Error saving data:", err);
+      return false;
+    } finally {
+      setLoadingApi(false);
+    }
+  };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
 
   if (loading ) {
     return <div>Loading...</div>;
   }
 
   return (
-  <div className="max-h-screen flex  items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+    <div className="h-full flex items-start space-x-2 justify-start bg-gray-100 p-">
+    <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full overflow-y-auto flex flex-col">
+     
         {/* Unsaved Changes Warning */}
         {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
@@ -136,8 +150,8 @@ function SitevistinfoForm() {
             </div>
           </div>
         )}
-        <form className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 " onSubmit={handleSubmit}>
-
+        <form className="flex-1 flex flex-col" onSubmit={handleSubmit}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* Survey Date */}
           <div className="flex flex-col">
             <label htmlFor="survey_date" className="mb-1 font-semibold">Survey Date</label>
@@ -251,9 +265,9 @@ function SitevistinfoForm() {
                 className="form-input"
             />
           </div>
-
-          {/* Submit Button */}
-          <div className="md:col-span-2 flex justify-center">
+</div>
+          {/* Save Button at Bottom */}
+          <div className="mt-auto pt-6 flex justify-center">
             <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
               {loadingApi ? "loading...": "Save"}  
             </button>

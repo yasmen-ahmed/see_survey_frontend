@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { showSuccess, showError } from '../../../utils/notifications';
 import ImageUploader from '../../GalleryComponent';
+import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
 
 const TransmissionInformationForm = () => {
   const { sessionId } = useParams();
@@ -10,7 +11,8 @@ const TransmissionInformationForm = () => {
   const [uploadedImages, setUploadedImages] = useState({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loadingApi,setLoadingApi] =useState(false)
-    const [formData, setFormData] = useState({
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [formData, setFormData] = useState({
     type_of_transmission: '',
     existing_transmission_base_band_location: '',
     existing_transmission_equipment_vendor: '',
@@ -23,6 +25,70 @@ const TransmissionInformationForm = () => {
   });
   const bgColorFillAuto = "bg-[#c6efce]"
   const colorFillAuto = 'text-[#006100]'
+
+  // Function to save data via API
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
+    
+    try {
+      setLoadingApi(true);
+      // Create FormData for multipart submission
+      const submitFormData = new FormData();
+
+      // Build the payload to match the expected API structure
+      const payload = {
+        type_of_transmission: formData.type_of_transmission,
+        existing_transmission_base_band_location: formData.existing_transmission_base_band_location,
+        existing_transmission_equipment_vendor: formData.existing_transmission_equipment_vendor,
+        existing_odf_location: formData.existing_odf_location,
+        cable_length_odf_to_baseband: formData.cable_length_odf_to_baseband,
+        odf_fiber_cable_type: formData.odf_fiber_cable_type,
+        how_many_free_ports_odf: formData.how_many_free_ports_odf,
+        how_many_mw_link_exist: formData.how_many_mw_link_exist,
+        mw_links: formData.mw_links
+      };
+
+      // Add data fields to FormData
+      submitFormData.append('data', JSON.stringify(payload));
+
+      // Add images if they exist
+      const allImageFields = generateMWImages();
+      allImageFields.forEach(imageField => {
+        const imageFiles = uploadedImages[imageField.name];
+        if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+          const file = imageFiles[0];
+          if (file instanceof File) {
+            submitFormData.append(imageField.name, file);
+          }
+        } else {
+          submitFormData.append(imageField.name, '');
+        }
+      });
+
+      await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/transmission-mw/${sessionId}`,
+        submitFormData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      
+      setHasUnsavedChanges(false);
+      showSuccess('Data saved successfully!');
+      return true;
+    } catch (err) {
+      console.error("Error saving data:", err);
+      showError('Error saving data. Please try again.');
+      return false;
+    } finally {
+      setLoadingApi(false);
+    }
+  };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
   
   const isFieldAutoFilled = (linkIndex, fieldName) => {
     if (linkIndex === 0) return false; // First row is never auto-filled
@@ -75,7 +141,9 @@ const TransmissionInformationForm = () => {
 
   // Handle image uploads
   const handleImageUpload = (imageCategory, files) => {
-    setHasUnsavedChanges(true); // Add this line at the start of the function
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
+    setHasUnsavedChanges(true);
     console.log(`Images uploaded for ${imageCategory}:`, files);
     setUploadedImages(prev => ({
       ...prev,
@@ -85,6 +153,7 @@ const TransmissionInformationForm = () => {
 
   // Fetch existing data when component loads
   useEffect(() => {
+    setIsInitialLoading(true);
     axios.get(`${import.meta.env.VITE_API_URL}/api/transmission-mw/${sessionId}`)
       .then(res => {
         const data = res.data.data || res.data;
@@ -117,16 +186,21 @@ const TransmissionInformationForm = () => {
             setUploadedImages(processedImages);
           }
         }
+
+        // Reset unsaved changes flag after loading data
+        setHasUnsavedChanges(false);
+        setIsInitialLoading(false);
       })
       .catch(err => {
         console.error("Error loading MW transmission data:", err);
         if (err.response?.status !== 404) {
           showError('Error loading existing data');
         }
+        // Reset unsaved changes flag even on error
+        setHasUnsavedChanges(false);
+        setIsInitialLoading(false);
       });
   }, [sessionId]);
-
-  
 
   // Generate cabinet options based on numberOfCabinets
   const generateCabinetOptions = () => {
@@ -138,6 +212,8 @@ const TransmissionInformationForm = () => {
   };
 
   const handleChange = (name, value) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
     setHasUnsavedChanges(true);
     console.log(`Changing ${name} to:`, value);
     setFormData((prev) => {
@@ -179,7 +255,9 @@ const TransmissionInformationForm = () => {
   };
 
   const handleMWLinkChange = (linkIndex, fieldName, value) => {
-    setHasUnsavedChanges(true); // Add this line at the start of the function
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    
+    setHasUnsavedChanges(true);
     setFormData(prev => {
       const newFormData = { ...prev };
       const numLinks = parseInt(prev.how_many_mw_link_exist) || 1;
@@ -206,139 +284,47 @@ const TransmissionInformationForm = () => {
           [`${fieldName}AutoFilled`]: false
         };
       }
-      
-      // If this is the first link (index 0), auto-fill other empty fields
-      if (linkIndex === 0 && value) {
+
+      // Auto-fill other links if this is the first link
+      if (linkIndex === 0) {
         for (let i = 1; i < numLinks; i++) {
           if (!newFormData.mw_links[i]) {
             newFormData.mw_links[i] = {};
           }
           
-          const currentField = newFormData.mw_links[i][fieldName];
-          const wasAutoFilled = newFormData.mw_links[i][`${fieldName}AutoFilled`];
-          
           // Only auto-fill if the field is empty or was previously auto-filled
-          if (!currentField || wasAutoFilled) {
-            newFormData.mw_links[i] = {
-              ...newFormData.mw_links[i],
-              [fieldName]: value,
-              [`${fieldName}AutoFilled`]: true
-            };
+          if (!newFormData.mw_links[i][fieldName] || newFormData.mw_links[i][`${fieldName}AutoFilled`]) {
+            if (fieldName === 'located_in') {
+              newFormData.mw_links[i] = {
+                ...newFormData.mw_links[i],
+                [fieldName]: newFormData.mw_links[linkIndex][fieldName],
+                [`${fieldName}AutoFilled`]: true
+              };
+            } else {
+              newFormData.mw_links[i] = {
+                ...newFormData.mw_links[i],
+                [fieldName]: value,
+                [`${fieldName}AutoFilled`]: true
+              };
+            }
           }
         }
       }
-      
+
       return newFormData;
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoadingApi(true)
     try {
-      // Create FormData for multipart submission
-      const formDataToSend = new FormData();
-
-      // Add form data
-      const submitData = {
-        type_of_transmission: formData.type_of_transmission,
-        existing_transmission_base_band_location: formData.existing_transmission_base_band_location,
-        existing_transmission_equipment_vendor: formData.existing_transmission_equipment_vendor,
-        existing_odf_location: formData.existing_odf_location,
-        cable_length_odf_to_baseband: parseFloat(formData.cable_length_odf_to_baseband) || 0,
-        odf_fiber_cable_type: formData.odf_fiber_cable_type,
-        how_many_free_ports_odf: parseInt(formData.how_many_free_ports_odf) || 0,
-        how_many_mw_link_exist: parseInt(formData.how_many_mw_link_exist) || 0,
-        mw_links: formData.mw_links.map((link, index) => ({
-          link_id: link.link_id || (index + 1),
-          located_in: link.located_in || '',
-          mw_equipment_vendor: link.mw_equipment_vendor || '',
-          idu_type: link.idu_type || '',
-          card_type_model: link.card_type_model || '',
-          destination_site_id: link.destination_site_id || '',
-          mw_backhauling_type: link.mw_backhauling_type || '',
-          ethernet_ports_used: parseInt(link.ethernet_ports_used) || 0,
-          ethernet_ports_free: parseInt(link.ethernet_ports_free) || 0
-        }))
-      };
-
-      // Add the JSON data
-      formDataToSend.append('data', JSON.stringify(submitData));
-
-      // Get all possible image fields
-      const allImageFields = generateMWImages();
-      
-      console.log("All image fields:", allImageFields);
-      console.log("Uploaded images state:", uploadedImages);
-      
-      // Handle all image fields
-      allImageFields.forEach(imageField => {
-        const imageFiles = uploadedImages[imageField.name];
-        console.log(`Processing image field: ${imageField.name}`, imageFiles);
-        
-        if (Array.isArray(imageFiles) && imageFiles.length > 0) {
-          const file = imageFiles[0];
-          if (file instanceof File) {
-            console.log(`Adding file for ${imageField.name}:`, file.name);
-            formDataToSend.append(imageField.name, file);
-          } else {
-            console.log(`Skipping non-File object for ${imageField.name}:`, file);
-          }
-        } else {
-          console.log(`Adding empty string for ${imageField.name}`);
-          formDataToSend.append(imageField.name, '');
-        }
-      });
-
-      // Log FormData contents for debugging
-      for (let pair of formDataToSend.entries()) {
-        if (pair[1] instanceof File) {
-          console.log(pair[0] + ': [FILE] ' + pair[1].name);
-        } else {
-          console.log(pair[0] + ': ' + pair[1]);
-        }
+      const saved = await saveDataToAPI();
+      if (saved) {
+        showSuccess('Transmission MW data and images submitted successfully!');
       }
-
-      const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/transmission-mw/${sessionId}`,
-        formDataToSend,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
-
-      console.log("Server response:", response.data);
-      
-      // After successful submission, fetch the latest data
-      const getResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/transmission-mw/${sessionId}`);
-      const latestData = getResponse.data.data || getResponse.data;
-
-      // Remove auto-filled flags from all links
-      if (latestData.mw_links) {
-        setFormData(prev => ({
-          ...prev,
-          mw_links: prev.mw_links.map(link => {
-            const cleanedLink = { ...link };
-            // Remove all auto-filled flags
-            Object.keys(cleanedLink).forEach(key => {
-              if (key.endsWith('AutoFilled')) {
-                delete cleanedLink[key];
-              }
-            });
-            return cleanedLink;
-          })
-        }));
-      }
-      setHasUnsavedChanges(false);
-      showSuccess('MW transmission data and images submitted successfully!');
     } catch (err) {
-      console.error("Error submitting data:", err);
-      console.error("Error response:", err.response?.data);
-      showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
-    } finally {
-      setLoadingApi(false)
+      console.error("Error submitting Transmission MW data:", err);
+      showError('Error submitting data. Please try again.');
     }
   };
 
@@ -358,9 +344,9 @@ const TransmissionInformationForm = () => {
   return () => window.removeEventListener('beforeunload', handleBeforeUnload);
 }, [hasUnsavedChanges]);
   return (
-    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%] max-h-[650px] overflow-y-auto">
-            {/* Unsaved Changes Warning */}
+    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
+    <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
+      {/* Unsaved Changes Warning */}
             {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
             <div className="flex items-center">
@@ -375,8 +361,9 @@ const TransmissionInformationForm = () => {
             </div>
           </div>
         )}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className='overflow-auto max-h-[850px]'>
+        <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
+          <div className="flex-1 overflow-y-auto">
+           
 
 
             {/* Basic Transmission Information */}
@@ -738,12 +725,10 @@ const TransmissionInformationForm = () => {
               </div>
             )}
           </div>
-          <div className="mt-6 flex justify-center">  
-            <button
-              type="submit"
-              className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700 font-semibold"
-            >
-              {loadingApi ? "loading...": "Save"}     
+    {/* Save Button at Bottom - Fixed */}
+    <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
+            <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
+              {loadingApi ? "loading...": "Save"}  
             </button>
           </div>
         </form>
