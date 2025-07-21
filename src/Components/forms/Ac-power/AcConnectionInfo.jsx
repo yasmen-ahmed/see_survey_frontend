@@ -8,11 +8,27 @@ const AcInformationForm = () => {
   const { sessionId, siteId } = useParams();
   const [powerSources, setPowerSources] = useState([]);
   const [dieselCount, setDieselCount] = useState(0);
-  const [dieselGenerators, setDieselGenerators] = useState([{ capacity: '', status: '' }, { capacity: '', status: '' }]);
+  const [dieselGenerators, setDieselGenerators] = useState([
+    { 
+      capacity: '', 
+      status: '', 
+      cable_size_from_generator_to_ac_panel: '',
+      generator_brand: '',
+      fuel_tank_capacity: ''
+    }, 
+    { 
+      capacity: '', 
+      status: '', 
+      cable_size_from_generator_to_ac_panel: '',
+      generator_brand: '',
+      fuel_tank_capacity: ''
+    }
+  ]);
   const [solarCapacity, setSolarCapacity] = useState('');
   const [uploadedImages, setUploadedImages] = useState({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loadingApi, setLoadingApi] = useState(false)
+  const [transformerCapacity, setTransformerCapacity] = useState('');
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/api/ac-connection-info/${sessionId}`)
       .then(res => {
@@ -21,6 +37,9 @@ const AcInformationForm = () => {
 
         // Set the power sources based on the response
         setPowerSources(data.power_sources || []);
+        
+        // Set transformer capacity
+        setTransformerCapacity(data.transformer_capacity || '');
 
         // If diesel generators are present, set the count and details
         if (data.power_sources && data.power_sources.includes('diesel_generator') && data.diesel_config) {
@@ -28,14 +47,32 @@ const AcInformationForm = () => {
 
           // Map the generators and convert status to proper case
           const mappedGenerators = data.diesel_config.generators.map(gen => ({
-            capacity: gen.capacity,
-            status: capitalizeFirstLetter(gen.status)
+            capacity: gen.capacity || '',
+            status: capitalizeFirstLetter(gen.status || ''),
+            cable_size_from_generator_to_ac_panel: gen.cable_size_from_generator_to_ac_panel || '',
+            generator_brand: gen.generator_brand || '',
+            fuel_tank_capacity: gen.fuel_tank_capacity || ''
           }));
 
           setDieselGenerators(mappedGenerators);
         } else {
           setDieselCount(0);
-          setDieselGenerators([{ capacity: '', status: '' }, { capacity: '', status: '' }]);
+          setDieselGenerators([
+            { 
+              capacity: '', 
+              status: '', 
+              cable_size_from_generator_to_ac_panel: '',
+              generator_brand: '',
+              fuel_tank_capacity: ''
+            }, 
+            { 
+              capacity: '', 
+              status: '', 
+              cable_size_from_generator_to_ac_panel: '',
+              generator_brand: '',
+              fuel_tank_capacity: ''
+            }
+          ]);
         }
 
         // If solar config is present, set the solar capacity
@@ -106,13 +143,17 @@ const AcInformationForm = () => {
     // Add the main payload as a JSON string
     const payload = {
       power_sources: powerSources,
+      transformer_capacity: transformerCapacity || null,
       ...(powerSources.includes('diesel_generator') && dieselCount > 0 && {
         diesel_config: {
           count: dieselCount,
           generators: dieselGenerators.slice(0, dieselCount).map((gen, index) => ({
             name: `Generator ${index + 1}`,
             status: normalizeStatus(gen.status),
-            capacity: parseInt(gen.capacity) || 0
+            capacity: parseInt(gen.capacity) || 0,
+            cable_size_from_generator_to_ac_panel: gen.cable_size_from_generator_to_ac_panel || '',
+            generator_brand: gen.generator_brand || '',
+            fuel_tank_capacity: gen.fuel_tank_capacity || ''
           }))
         }
       }),
@@ -125,14 +166,15 @@ const AcInformationForm = () => {
 
     formDataToSend.append('data', JSON.stringify(payload));
 
-    // Add images if they exist
-    const imageFiles = uploadedImages['generator_photo'];
-    if (Array.isArray(imageFiles) && imageFiles.length > 0) {
-      const file = imageFiles[0];
-      if (file instanceof File) {
-        formDataToSend.append('generator_photo', file);
+    // Add all dynamic images
+    Object.entries(uploadedImages).forEach(([imageCategory, files]) => {
+      if (Array.isArray(files) && files.length > 0) {
+        const file = files[0];
+        if (file instanceof File) {
+          formDataToSend.append(imageCategory, file);
+        }
       }
-    }
+    });
 
     try {
       const response = await axios.put(
@@ -193,7 +235,13 @@ const AcInformationForm = () => {
   const handleDieselCountChange = (count) => {
     setHasUnsavedChanges(true);
     setDieselCount(count);
-    setDieselGenerators(Array.from({ length: count }, () => ({ capacity: '', status: '' })));
+    setDieselGenerators(Array.from({ length: count }, () => ({ 
+      capacity: '', 
+      status: '', 
+      cable_size_from_generator_to_ac_panel: '',
+      generator_brand: '',
+      fuel_tank_capacity: ''
+    })));
   };
 
   const handleGeneratorChange = (index, field, value) => {
@@ -203,16 +251,44 @@ const AcInformationForm = () => {
     setDieselGenerators(newGenerators);
   };
 
-  const images = [
-    { label: 'Generator photo', name: 'generator_photo' }
-  ];
+
+
+  const [images, setImages] = useState([]);
+
+  // Update images when dieselCount changes
+  useEffect(() => {
+    const generateImagesArray = () => {
+      const baseImages = [
+        { label: 'Generator photo', name: 'generator_photo' },
+        { label: 'Fuel Tank photo', name: 'fuel_tank_photo' },
+        { label: 'Photos of Transformer and Name Plate', name: 'transformer_photo' }
+      ];
+
+      // Add generator photos based on dieselCount
+      const generatorImages = [];
+      for (let i = 1; i <= dieselCount; i++) {
+        generatorImages.push({
+          label: `Generator #${i} photo 1 `,
+          name: `generator_photo_1_${i}`
+        },{
+          label: `Generator #${i} photo 2 `,
+          name: `generator_photo_2_${i}` 
+        });
+      }
+
+      return [...baseImages, ...generatorImages];
+    };
+
+    setImages(generateImagesArray());
+  }, [dieselCount]);
 
   console.log("Current image data:", images);
+  console.log("Current dieselCount:", dieselCount);
 
   return (
     <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
-       {/* Unsaved Changes Warning */}
+        {/* Unsaved Changes Warning */}
         {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 flex-shrink-0">
             <div className="flex items-center">
@@ -277,6 +353,21 @@ const AcInformationForm = () => {
                 </div>
               </div>
 
+              {
+                powerSources.includes('commercial_power') && (
+                  <div className="md:col-span-2">
+                    <h3 className="text-lg font-bold mb-4">Transformer capacity (KVA)</h3>
+                    <input
+                      type="number"
+                      name="transformer_capacity"
+                      value={transformerCapacity}
+                      onChange={(e) => setTransformerCapacity(e.target.value)}
+                      className="border p-3 form-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+
+                    />
+                  </div>
+                )
+              }
 
               {/* AC Source Form */}
               {powerSources.includes('diesel_generator') && (
@@ -349,6 +440,40 @@ const AcInformationForm = () => {
                               ))}
                             </div>
                           </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 col-span-2 mt-2">
+                            <div className="flex flex-col ">
+                              <label className="font-semibold mb-1">Cable size from generator to AC panel (mm)</label>
+                              <input
+                                type="number"
+                                name={`cable_size_from_generator_to_ac_panel`}
+                                value={gen.cable_size_from_generator_to_ac_panel}
+                                onChange={(e) => handleGeneratorChange(index, 'cable_size_from_generator_to_ac_panel', e.target.value)}
+                                className="border p-3 form-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div className="flex flex-col ">
+                              <label className="font-semibold mb-1">Generator Brand</label>
+                              <input
+                                type="text"
+                                name={`generator_brand`}
+                                value={gen.generator_brand}
+                                onChange={(e) => handleGeneratorChange(index, 'generator_brand', e.target.value)}
+                                className="border p-3 form-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div className="flex flex-col">
+                              <label className="font-semibold mb-1">Fuel Tank capacity (litter)</label>
+                              <input
+                                type="text"
+                                name={`fuel_tank_capacity`}
+                                value={gen.fuel_tank_capacity}
+                                onChange={(e) => handleGeneratorChange(index, 'fuel_tank_capacity', e.target.value)}
+                                className="border p-3 form-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+
+                          </div>
                         </div>
                       ))}
                     </>
@@ -380,7 +505,7 @@ const AcInformationForm = () => {
           {/* Save Button at Bottom - Fixed */}
           <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
             <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
-              {loadingApi ? "loading...": "Save"}  
+              {loadingApi ? "loading..." : "Save"}
             </button>
           </div>
         </form>
