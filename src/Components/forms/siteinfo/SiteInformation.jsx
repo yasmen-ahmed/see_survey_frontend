@@ -129,6 +129,8 @@ const [formData, setFormData] = useState({
     { label: 'Crane Access to the Street', name: 'crane_access_street' },
     { label: 'Crane Location', name: 'crane_location' },
     { label: 'Site Environment View', name: 'site_environment' },
+    { label: 'Site Map Snapshot', name: 'site_map_snapshot' },
+    { label: 'Site ID Picture', name: 'site_id_picture' },
   ];
   
 

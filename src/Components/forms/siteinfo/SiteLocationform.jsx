@@ -8,7 +8,7 @@ import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
 
 const SiteLocationForm = () => {
   const { sessionId, siteId } = useParams();
-  const { uploadedImages, handleImageUpload, saveImages, loading } = useImageManager(sessionId);
+  const { uploadedImages, initialImages, handleImageUpload, saveImages, loading, resetUnsavedChanges } = useImageManager(sessionId);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loadingApi,setLoadingApi] =useState(false)
   
@@ -49,6 +49,7 @@ const SiteLocationForm = () => {
       }
       
       setHasUnsavedChanges(false);
+      resetUnsavedChanges(); // Reset the image change detection
       showSuccess('Data saved successfully!');
       return true;
     } catch (err) {
@@ -62,6 +63,25 @@ const SiteLocationForm = () => {
 
   // Use the unsaved changes hook
   useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
+
+  // Detect image changes
+  useEffect(() => {
+    if (Object.keys(uploadedImages).length > 0) {
+      // Check if any images have been uploaded (not just loaded from server)
+      const hasNewImages = Object.entries(uploadedImages).some(([category, files]) => {
+        if (files && files.length > 0) {
+          const file = files[0];
+          // If it's a File object, it's a newly uploaded file
+          return file instanceof File;
+        }
+        return false;
+      });
+      
+      if (hasNewImages) {
+        setHasUnsavedChanges(true);
+      }
+    }
+  }, [uploadedImages]);
 
   // Fetch survey details for pre-filling when session ID changes
   useEffect(() => {
@@ -112,7 +132,17 @@ const SiteLocationForm = () => {
     { label: 'Crane Access to the Street', name: 'crane_access_street' },
     { label: 'Crane Location', name: 'crane_location' },
     { label: 'Site Environment View', name: 'site_environment' },
+    { label: 'Site Map Snapshot', name: 'site_map_snapshot' },
+    { label: 'Site ID Picture', name: 'site_id_picture' },
   ];
+
+  // Handle image upload and detect changes
+  const handleImageUploadWithChangeDetection = (imageCategory, files) => {
+    handleImageUpload(imageCategory, files);
+    
+    // Set unsaved changes when any image is uploaded
+    setHasUnsavedChanges(true);
+  };
 
   // Handle input change for form fields
   const handleInputChange = (e) => {
@@ -284,7 +314,7 @@ const SiteLocationForm = () => {
 
       <ImageUploader 
         images={images}
-        onImageUpload={handleImageUpload}
+        onImageUpload={handleImageUploadWithChangeDetection}
         uploadedImages={uploadedImages}
       />
     </div>

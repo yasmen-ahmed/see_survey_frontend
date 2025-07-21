@@ -3,6 +3,7 @@ import axios from 'axios';
 
 const useImageManager = (sessionId) => {
   const [uploadedImages, setUploadedImages] = useState({});
+  const [initialImages, setInitialImages] = useState({});
   const [loading, setLoading] = useState(true);
 
   // Fetch images when component mounts
@@ -42,6 +43,7 @@ const useImageManager = (sessionId) => {
 
         console.log('Processed images:', processedImages); // Debug log
         setUploadedImages(processedImages);
+        setInitialImages(processedImages); // Store initial state
       } catch (error) {
         console.error('Error fetching images:', error);
       } finally {
@@ -87,6 +89,9 @@ const useImageManager = (sessionId) => {
         }
       );
 
+      // Update initial images after successful save
+      setInitialImages(uploadedImages);
+
       return true;
     } catch (error) {
       console.error('Error saving images:', error);
@@ -96,9 +101,11 @@ const useImageManager = (sessionId) => {
 
   return {
     uploadedImages,
+    initialImages,
     handleImageUpload,
     saveImages,
-    loading
+    loading,
+    resetUnsavedChanges: () => setInitialImages(uploadedImages)
   };
 };
 
