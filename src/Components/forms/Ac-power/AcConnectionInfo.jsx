@@ -1,8 +1,9 @@
 import axios from "axios";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import ImageUploader from "../../GalleryComponent";
 import { showSuccess, showError } from "../../../utils/notifications";
+import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
 
 const AcInformationForm = () => {
   const { sessionId, siteId } = useParams();
@@ -29,78 +30,6 @@ const AcInformationForm = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loadingApi, setLoadingApi] = useState(false)
   const [transformerCapacity, setTransformerCapacity] = useState('');
-  useEffect(() => {
-    axios.get(`${import.meta.env.VITE_API_URL}/api/ac-connection-info/${sessionId}`)
-      .then(res => {
-        const data = res.data.data;
-        console.log("API Response:", data);
-
-        // Set the power sources based on the response
-        setPowerSources(data.power_sources || []);
-        
-        // Set transformer capacity
-        setTransformerCapacity(data.transformer_capacity || '');
-
-        // If diesel generators are present, set the count and details
-        if (data.power_sources && data.power_sources.includes('diesel_generator') && data.diesel_config) {
-          setDieselCount(data.diesel_config.count);
-
-          // Map the generators and convert status to proper case
-          const mappedGenerators = data.diesel_config.generators.map(gen => ({
-            capacity: gen.capacity || '',
-            status: capitalizeFirstLetter(gen.status || ''),
-            cable_size_from_generator_to_ac_panel: gen.cable_size_from_generator_to_ac_panel || '',
-            generator_brand: gen.generator_brand || '',
-            fuel_tank_capacity: gen.fuel_tank_capacity || ''
-          }));
-
-          setDieselGenerators(mappedGenerators);
-        } else {
-          setDieselCount(0);
-          setDieselGenerators([
-            { 
-              capacity: '', 
-              status: '', 
-              cable_size_from_generator_to_ac_panel: '',
-              generator_brand: '',
-              fuel_tank_capacity: ''
-            }, 
-            { 
-              capacity: '', 
-              status: '', 
-              cable_size_from_generator_to_ac_panel: '',
-              generator_brand: '',
-              fuel_tank_capacity: ''
-            }
-          ]);
-        }
-
-        // If solar config is present, set the solar capacity
-        if (data.solar_config) {
-          setSolarCapacity(data.solar_config.capacity || '');
-        } else {
-          setSolarCapacity('');
-        }
-
-        // Handle images from the response
-        if (data.images && data.images.length > 0) {
-          console.log("Found images:", data.images);
-          const processedImages = {};
-          data.images.forEach(image => {
-            processedImages[image.image_category] = [{
-              id: image.id,
-              file_url: image.file_url,
-              name: image.original_filename
-            }];
-          });
-          setUploadedImages(processedImages);
-        }
-      })
-      .catch(err => {
-        console.error("Error loading survey details:", err);
-        showError("Failed to load survey details");
-      });
-  }, [sessionId]);
 
   // Helper function to capitalize first letter
   const capitalizeFirstLetter = (string) => {
@@ -251,6 +180,17 @@ const AcInformationForm = () => {
     setDieselGenerators(newGenerators);
   };
 
+  // Handler for transformer capacity changes
+  const handleTransformerCapacityChange = (value) => {
+    setHasUnsavedChanges(true);
+    setTransformerCapacity(value);
+  };
+
+  // Handler for solar capacity changes
+  const handleSolarCapacityChange = (value) => {
+    setHasUnsavedChanges(true);
+    setSolarCapacity(value);
+  };
 
 
   const [images, setImages] = useState([]);
@@ -284,6 +224,136 @@ const AcInformationForm = () => {
 
   console.log("Current image data:", images);
   console.log("Current dieselCount:", dieselCount);
+
+  // Function to save data via API for auto-save - memoized with useCallback
+  const saveDataToAPI = useCallback(async () => {
+    if (!hasUnsavedChanges) return true;
+    
+    try {
+      setLoadingApi(true);
+      
+      // Prepare the payload (same as handleSubmit)
+      const payload = {
+        power_sources: powerSources,
+        transformer_capacity: transformerCapacity || null,
+        ...(powerSources.includes('diesel_generator') && dieselCount > 0 && {
+          diesel_config: {
+            count: dieselCount,
+            generators: dieselGenerators.slice(0, dieselCount).map((gen, index) => ({
+              name: `Generator ${index + 1}`,
+              status: normalizeStatus(gen.status),
+              capacity: parseInt(gen.capacity) || 0,
+              cable_size_from_generator_to_ac_panel: gen.cable_size_from_generator_to_ac_panel || '',
+              generator_brand: gen.generator_brand || '',
+              fuel_tank_capacity: gen.fuel_tank_capacity || ''
+            }))
+          }
+        }),
+        ...(powerSources.includes('solar_cell') && solarCapacity && {
+          solar_config: {
+            capacity: parseInt(solarCapacity) || 0
+          }
+        })
+      };
+
+      // Send data as JSON for auto-save (no images)
+      await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/ac-connection-info/${sessionId}`,
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      setHasUnsavedChanges(false);
+      showSuccess('AC connection data saved successfully');
+      return true;
+    } catch (err) {
+      console.error("Error saving AC connection data:", err);
+      showError('Error saving AC connection data');
+      return false;
+    } finally {
+      setLoadingApi(false);
+    }
+  }, [hasUnsavedChanges, powerSources, transformerCapacity, dieselCount, dieselGenerators, solarCapacity, sessionId, normalizeStatus]);
+
+  // Use the unsaved changes hook for auto-save
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
+
+  useEffect(() => {
+    axios.get(`${import.meta.env.VITE_API_URL}/api/ac-connection-info/${sessionId}`)
+      .then(res => {
+        const data = res.data.data;
+        console.log("API Response:", data);
+
+        // Set the power sources based on the response
+        setPowerSources(data.power_sources || []);
+        
+        // Set transformer capacity
+        setTransformerCapacity(data.transformer_capacity || '');
+
+        // If diesel generators are present, set the count and details
+        if (data.power_sources && data.power_sources.includes('diesel_generator') && data.diesel_config) {
+          setDieselCount(data.diesel_config.count);
+
+          // Map the generators and convert status to proper case
+          const mappedGenerators = data.diesel_config.generators.map(gen => ({
+            capacity: gen.capacity || '',
+            status: capitalizeFirstLetter(gen.status || ''),
+            cable_size_from_generator_to_ac_panel: gen.cable_size_from_generator_to_ac_panel || '',
+            generator_brand: gen.generator_brand || '',
+            fuel_tank_capacity: gen.fuel_tank_capacity || ''
+          }));
+
+          setDieselGenerators(mappedGenerators);
+        } else {
+          setDieselCount(0);
+          setDieselGenerators([
+            { 
+              capacity: '', 
+              status: '', 
+              cable_size_from_generator_to_ac_panel: '',
+              generator_brand: '',
+              fuel_tank_capacity: ''
+            }, 
+            { 
+              capacity: '', 
+              status: '', 
+              cable_size_from_generator_to_ac_panel: '',
+              generator_brand: '',
+              fuel_tank_capacity: ''
+            }
+          ]);
+        }
+
+        // If solar config is present, set the solar capacity
+        if (data.solar_config) {
+          setSolarCapacity(data.solar_config.capacity || '');
+        } else {
+          setSolarCapacity('');
+        }
+
+        // Handle images from the response
+        if (data.images && data.images.length > 0) {
+          console.log("Found images:", data.images);
+          const processedImages = {};
+          data.images.forEach(image => {
+            processedImages[image.image_category] = [{
+              id: image.id,
+              file_url: image.file_url,
+              name: image.original_filename
+            }];
+          });
+          setUploadedImages(processedImages);
+        }
+      })
+      .catch(err => {
+        console.error("Error loading survey details:", err);
+        showError("Failed to load survey details");
+      });
+  }, [sessionId]);
 
   return (
     <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
@@ -361,7 +431,7 @@ const AcInformationForm = () => {
                       type="number"
                       name="transformer_capacity"
                       value={transformerCapacity}
-                      onChange={(e) => setTransformerCapacity(e.target.value)}
+                      onChange={(e) => handleTransformerCapacityChange(e.target.value)}
                       className="border p-3 form-input focus:outline-none focus:ring-2 focus:ring-blue-500"
 
                     />
@@ -491,7 +561,7 @@ const AcInformationForm = () => {
                       type="number"
                       name="solarCapacity"
                       value={solarCapacity}
-                      onChange={(e) => setSolarCapacity(e.target.value)}
+                      onChange={(e) => handleSolarCapacityChange(e.target.value)}
                       className="border p-3 form-input focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     />
