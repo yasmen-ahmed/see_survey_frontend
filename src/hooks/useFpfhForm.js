@@ -328,6 +328,7 @@ export const useFpfhForm = (sessionId) => {
     handleFpfhCountChange,
     handleChange,
     handleSubmit,
-    hasUnsavedChanges
+    hasUnsavedChanges,
+    setHasUnsavedChanges
   };
 }; 

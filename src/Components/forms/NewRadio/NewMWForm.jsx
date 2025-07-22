@@ -4,6 +4,7 @@ import { mwQuestions } from '../../../config/mwQuestions';
 import ImageUploader from '../../GalleryComponent';
 import { getNewMWData, saveNewMWData } from '../../../services/newMwService';
 import { showSuccess, showError } from "../../../utils/notifications";
+import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL; // fallback if needed
 
@@ -23,7 +24,7 @@ function clearAutoFilledFlags(formData) {
 
 
 const NewMWForm = () => {
-  const { sessionId,siteId } = useParams();
+  const { sessionId, siteId } = useParams();
   const [mwCount, setMwCount] = useState(1);
   const [formData, setFormData] = useState({});
   const [uploadedImages, setUploadedImages] = useState({});
@@ -33,6 +34,68 @@ const NewMWForm = () => {
 
   const bgColorFillAuto = "bg-[#c6efce]";
   const colorFillAuto = 'text-[#006100]';
+
+  // Function to save data via API
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
+
+    try {
+      setIsSaving(true);
+
+      if (!validateForm()) return false;
+
+      // Build payload
+      const mwArray = [];
+      for (let i = 1; i <= mwCount; i++) {
+        mwArray.push({
+          mw_index: i,
+          fields: formData[`mw${i}`] || {}
+        });
+      }
+
+      const payload = new FormData();
+      payload.append('fields', JSON.stringify(mwArray));
+
+      console.log('MW Array being sent:', mwArray);
+      console.log('Uploaded images:', uploadedImages);
+
+      // Append images (only new File objects)
+      Object.entries(uploadedImages).forEach(([category, files]) => {
+        if (Array.isArray(files) && files.length > 0) {
+          const file = files[0];
+          if (file instanceof File) {
+            console.log(`Appending file for ${category}:`, file.name);
+            payload.append(category, file);
+          }
+        }
+      });
+
+      const response = await saveNewMWData(sessionId, payload);
+      console.log('Response from saveNewMWData:', response);
+
+      if (response.success) {
+        showSuccess('Antenna configuration data and images saved successfully!');
+        setHasUnsavedChanges(false);
+        const cleanedFormData = clearAutoFilledFlags(formData);
+        setFormData(cleanedFormData);
+        // Remove autofill highlights
+        loadExistingData();
+        return true;
+      } else {
+        showError(response.error || 'Failed to save');
+        return false;
+      }
+    } catch (err) {
+      console.error(err);
+      showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
 
   const getMwImages = (index) => {
     return [
@@ -110,12 +173,12 @@ const NewMWForm = () => {
     setHasUnsavedChanges(true);
     setFormData(prev => {
       const updated = { ...prev };
-      
+
       // Update the changed MW
       if (!updated[`mw${mwIndex}`]) {
         updated[`mw${mwIndex}`] = {};
       }
-      
+
       updated[`mw${mwIndex}`] = {
         ...updated[`mw${mwIndex}`],
         [fieldId]: value,
@@ -139,7 +202,7 @@ const NewMWForm = () => {
           }
         }
       }
-      
+
       return updated;
     });
   };
@@ -170,66 +233,9 @@ const NewMWForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateForm()) return;
-
-    setIsSaving(true);
-
-    try {
-      // Build payload
-      const mwArray = [];
-      for (let i = 1; i <= mwCount; i++) {
-        mwArray.push({
-          mw_index: i,
-          fields: formData[`mw${i}`] || {}
-        });
-      }
-
-      const payload = new FormData();
-      payload.append('fields', JSON.stringify(mwArray));
-
-      console.log('MW Array being sent:', mwArray);
-      console.log('Uploaded images:', uploadedImages);
-
-      // Append images (only new File objects)
-      Object.entries(uploadedImages).forEach(([category, files]) => {
-        if (Array.isArray(files) && files.length > 0) {
-          const file = files[0];
-          if (file instanceof File) {
-            console.log(`Appending file for ${category}:`, file.name);
-            payload.append(category, file);
-          }
-        }
-      });
-
-      // Log FormData entries for debugging
-      console.log('FormData entries:');
-      for (let pair of payload.entries()) {
-        if (pair[1] instanceof File) {
-          console.log(pair[0] + ': [FILE] ' + pair[1].name);
-        } else {
-          console.log(pair[0] + ': ' + pair[1]);
-        }
-      }
-
-      const response = await saveNewMWData(sessionId, payload);
-      console.log('Response from saveNewMWData:', response);
-
-      if (response.success) {
-        showSuccess('Antenna configuration data and images submitted successfully!');
-        setHasUnsavedChanges(false);
-        const cleanedFormData = clearAutoFilledFlags(formData);
-        setFormData(cleanedFormData);
-         // Remove autofill highlights
-        loadExistingData();
-      } else {
-        alert(response.error || 'Failed to save');
-      }
-    } catch (err) {
-      console.error(err);
-      showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
-    } finally {
-      setIsSaving(false);
+    const saved = await saveDataToAPI();
+    if (saved) {
+      showSuccess('Antenna configuration data and images submitted successfully!');
     }
   };
 
@@ -248,7 +254,7 @@ const NewMWForm = () => {
             fetchedFormData[`mw${mw_index}`] = Object.fromEntries(
               Object.entries(fields).filter(([key]) => !key.endsWith('AutoFilled'))
             );
-            
+
           }
           if (Array.isArray(images)) {
             images.forEach(img => {
@@ -272,6 +278,8 @@ const NewMWForm = () => {
       console.error('Failed to load MW data', err);
     } finally {
       setIsLoading(false);
+      // Reset unsaved changes flag after loading data
+      setHasUnsavedChanges(false);
     }
   };
 
@@ -288,11 +296,10 @@ const NewMWForm = () => {
             <select
               value={value}
               onChange={onChange}
-              className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                formData[`mw${mwIndex}`]?.[`${question.id}AutoFilled`] 
-                  ? `${bgColorFillAuto} ${colorFillAuto}` 
+              className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${formData[`mw${mwIndex}`]?.[`${question.id}AutoFilled`]
+                  ? `${bgColorFillAuto} ${colorFillAuto}`
                   : ''
-              }`}
+                }`}
               required={question.required}
             >
               <option value="">Select {question.label}</option>
@@ -314,11 +321,10 @@ const NewMWForm = () => {
         );
       case 'radio':
         return (
-          <div className={`flex gap-4 p-2 rounded ${
-            formData[`mw${mwIndex}`]?.[`${question.id}AutoFilled`] 
+          <div className={`flex gap-4 p-2 rounded ${formData[`mw${mwIndex}`]?.[`${question.id}AutoFilled`]
               ? bgColorFillAuto
               : ''
-          }`}>
+            }`}>
             {question.options.map(opt => (
               <label key={opt} className="flex items-center gap-2">
                 <input
@@ -345,11 +351,10 @@ const NewMWForm = () => {
             placeholder={question.placeholder}
             min={question.min}
             max={question.max}
-            className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              formData[`mw${mwIndex}`]?.[`${question.id}AutoFilled`] 
-                ? `${bgColorFillAuto} ${colorFillAuto}` 
+            className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${formData[`mw${mwIndex}`]?.[`${question.id}AutoFilled`]
+                ? `${bgColorFillAuto} ${colorFillAuto}`
                 : ''
-            }`}
+              }`}
             required={question.required}
           />
         );
@@ -360,11 +365,10 @@ const NewMWForm = () => {
             value={value}
             onChange={onChange}
             placeholder={question.placeholder}
-            className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              formData[`mw${mwIndex}`]?.[`${question.id}AutoFilled`] 
-                ? `${bgColorFillAuto} ${colorFillAuto}` 
+            className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${formData[`mw${mwIndex}`]?.[`${question.id}AutoFilled`]
+                ? `${bgColorFillAuto} ${colorFillAuto}`
                 : ''
-            }`}
+              }`}
             required={question.required}
           />
         );
@@ -372,8 +376,8 @@ const NewMWForm = () => {
   };
 
   return (
-    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
+    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
         {/* Unsaved Changes Warning */}
         {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
@@ -390,22 +394,25 @@ const NewMWForm = () => {
           </div>
         )}
 
-        <div className="flex flex-col">
-          <label className="font-semibold mb-2">
-            How many new MW planned?
-          </label>
-          <select
-            value={mwCount}
-            onChange={handleCountChange}
-            className="form-input"
-          >
-            {[1, 2, 3, 4, 5].map(num => (
-              <option key={num} value={num}>{num}</option>
-            ))}
-          </select>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-          <div className="overflow-auto max-h-[550px]">
+        <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
+
+          <div className="flex flex-col">
+            <label className="font-semibold mb-2">
+              How many new MW planned?
+            </label>
+            <select
+              value={mwCount}
+              onChange={handleCountChange}
+              className="form-input"
+            >
+              {[1, 2, 3, 4, 5].map(num => (
+                <option key={num} value={num}>{num}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+
             <table className="table-auto w-full border-collapse">
               <thead className="bg-blue-500 text-white">
                 <tr>
@@ -446,29 +453,30 @@ const NewMWForm = () => {
               </tbody>
             </table>
           </div>
+   
 
-          <div className="flex justify-center mt-6">
-            <button
-              type="submit"
-              className={`px-6 py-3 text-white rounded font-semibold ${
-                isSaving
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-500 hover:bg-blue-700' 
-              }`}
-              disabled={isSaving}
-            >
-              {isSaving ? 'loading...' : 'Save '}
-            </button>
-          </div>
-        </form>
+      {/* Save Button at Bottom - Fixed */}
+      <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
+        <button
+          type="submit"
+          className={`px-6 py-3 text-white rounded font-semibold ${isSaving
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-blue-500 hover:bg-blue-700'
+            }`}
+          disabled={isSaving}
+        >
+          {isSaving ? 'loading...' : 'Save'}
+        </button>
       </div>
+    </form>
+      </div >
 
-      <ImageUploader
-        images={allImages}
-        onImageUpload={handleImageUpload}
-        uploadedImages={uploadedImages}
-      />
-    </div>
+  <ImageUploader
+    images={allImages}
+    onImageUpload={handleImageUpload}
+    uploadedImages={uploadedImages}
+  />
+    </div >
   );
 };
 

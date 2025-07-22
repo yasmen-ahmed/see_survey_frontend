@@ -272,7 +272,6 @@ export const useAntennaForm = (sessionId) => {
       // Prepare antenna data
       const antennaData = antennaForms.slice(0, antennaCount).map((antenna, index) => ({
         antenna_index: index + 1,
-        operator: antenna.operator,
         base_height_from_tower: antenna.baseHeight,
         tower_leg_location: antenna.towerLeg,
         sector_number: antenna.sectorNumber,
@@ -346,6 +345,7 @@ export const useAntennaForm = (sessionId) => {
     handleAntennaCountChange,
     handleChange,
     handleSubmit,
-    hasUnsavedChanges
+    hasUnsavedChanges,
+    setHasUnsavedChanges
   };
 }; 
