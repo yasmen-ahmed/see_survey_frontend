@@ -368,10 +368,65 @@ const PowerMeterForm = () => {
             </div>
           </div>
 
-          {/* Electrical Measurements Section */}
+      
+
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Length of Power Meter Cable (in meters)</label>
+            <input
+              type="number"
+              step="0.1"
+              name="cableLength"
+              value={formData.cableLength}
+              onChange={handleChange}
+              className="form-input"
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Cross Section of Power Cable (in mm²)</label>
+            <input
+              type="number"
+              step="0.1"
+              name="crossSection"
+              value={formData.crossSection}
+              onChange={handleChange}
+              className="form-input"
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Main CB Rating (in Amp)</label>
+            <input
+              type="number"
+              step="0.1"
+              name="mainCBRating"
+              value={formData.mainCBRating}
+              onChange={handleChange}
+              className="form-input"
+            />
+          </div>
+
+          <div className="flex flex-col mb-4">
+            <label className="font-semibold mb-2">Main CB Type (the CB connecting the power meter with AC)</label>
+            <div className="flex gap-6">
+              {["Three phase", "Single phase"].map((type) => (
+                <label key={type} className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="cbType"
+                    value={type}
+                    checked={formData.cbType === type}
+                    onChange={handleChange}
+                    className="mr-2"
+                  />
+                  {type}
+                </label>
+              ))}
+            </div>
+          </div>    {/* Electrical Measurements Section */}
           {formData.powerSourceType && (
             <div className="col-span-2 bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-bold mb-4 text-blue-700">Electrical Measurements</h3>
+              <h3 className="text-lg font-bold mb-4 text-blue-700">AC Power Mesurment</h3>
               
               <div className=" grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Voltage Measurements */}
@@ -596,60 +651,7 @@ const PowerMeterForm = () => {
             </div>
           )}
 
-          <div className="flex flex-col">
-            <label className="font-semibold mb-1">Length of Power Meter Cable (in meters)</label>
-            <input
-              type="number"
-              step="0.1"
-              name="cableLength"
-              value={formData.cableLength}
-              onChange={handleChange}
-              className="form-input"
-            />
-          </div>
 
-          <div className="flex flex-col">
-            <label className="font-semibold mb-1">Cross Section of Power Cable (in mm²)</label>
-            <input
-              type="number"
-              step="0.1"
-              name="crossSection"
-              value={formData.crossSection}
-              onChange={handleChange}
-              className="form-input"
-            />
-          </div>
-
-          <div className="flex flex-col">
-            <label className="font-semibold mb-1">Main CB Rating (in Amp)</label>
-            <input
-              type="number"
-              step="0.1"
-              name="mainCBRating"
-              value={formData.mainCBRating}
-              onChange={handleChange}
-              className="form-input"
-            />
-          </div>
-
-          <div className="flex flex-col mb-4">
-            <label className="font-semibold mb-2">Main CB Type (the CB connecting the power meter with AC)</label>
-            <div className="flex gap-6">
-              {["Three phase", "Single phase"].map((type) => (
-                <label key={type} className="inline-flex items-center">
-                  <input
-                    type="radio"
-                    name="cbType"
-                    value={type}
-                    checked={formData.cbType === type}
-                    onChange={handleChange}
-                    className="mr-2"
-                  />
-                  {type}
-                </label>
-              ))}
-            </div>
-          </div>
           </div>
           </div>
           <div className="mt-6 flex justify-center">
