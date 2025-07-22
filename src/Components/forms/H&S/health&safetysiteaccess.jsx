@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { showSuccess, showError } from '../../../utils/notifications';
+import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
 
 // QUESTION KEYS UPDATED TO MATCH API FIELDS
 const questions = [
@@ -104,6 +105,31 @@ const HealthAndSafetyTab1 = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  // Function to save data via API
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
+    
+    try {
+      setIsSubmitting(true);
+      const payload = { ...formData }; // Already in correct format
+      console.log("Submitting health & safety data:", payload);
+
+      await axios.put(`${import.meta.env.VITE_API_URL}/api/health-safety-site-access/${sessionId}`, payload);
+      setHasUnsavedChanges(false);
+      showSuccess('Health & Safety data saved successfully!');
+      return true;
+    } catch (err) {
+      console.error("Error submitting health & safety data:", err);
+      showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
+
   // Load existing data
   useEffect(() => {
     const fetchData = async () => {
@@ -129,6 +155,8 @@ const HealthAndSafetyTab1 = () => {
         }
       } finally {
         setIsLoading(false);
+        // Reset unsaved changes flag after loading data
+        setHasUnsavedChanges(false);
       }
     };
 
@@ -147,20 +175,9 @@ const HealthAndSafetyTab1 = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const payload = { ...formData }; // Already in correct format
-      console.log("Submitting health & safety data:", payload);
-
-      await axios.put(`${import.meta.env.VITE_API_URL}/api/health-safety-site-access/${sessionId}`, payload);
-      setHasUnsavedChanges(false);
+    const saved = await saveDataToAPI();
+    if (saved) {
       showSuccess('Health & Safety data submitted successfully!');
-    } catch (err) {
-      console.error("Error submitting health & safety data:", err);
-      showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -192,10 +209,10 @@ const HealthAndSafetyTab1 = () => {
   };
 
   return (
-    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-          {/* Unsaved Changes Warning */}
-          {hasUnsavedChanges && (
+    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
+        {/* Unsaved Changes Warning */}
+        {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
             <div className="flex items-center">
               <div className="ml-3">
@@ -209,20 +226,21 @@ const HealthAndSafetyTab1 = () => {
             </div>
           </div>
         )}
-          <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            {questions.map(renderField)}
+        
+        <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
+          <div className="flex-1 overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {questions.map(renderField)}
+            </div>
           </div>
-          <div className="flex justify-center mt-8 pt-6">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className={`px-6 py-3 text-white rounded font-semibold ${
-                isSubmitting  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-500 hover:bg-blue-700' 
-              }`}
+
+          {/* Save Button at Bottom - Fixed */}
+          <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
+            <button 
+              type="submit" 
+              className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700"
             >
-              {isSubmitting ? 'loading...' : 'Save '}
+              {isSubmitting ? "loading..." : "Save"}
             </button>
           </div>
         </form>

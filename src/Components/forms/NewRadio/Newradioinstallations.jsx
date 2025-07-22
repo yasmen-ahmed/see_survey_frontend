@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { showSuccess, showError } from "../../../utils/notifications";
+import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
 
 const NewSectorPlanningTab = () => {
   const { sessionId } = useParams();
@@ -21,18 +22,43 @@ const NewSectorPlanningTab = () => {
     newFpfhInstalled: 0
   });
 
-  // Add beforeunload event listener
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
+  // Function to save data via API
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
+    
+    try {
+      setIsSubmitting(true);
+      const apiData = {
+        new_sectors_planned: parseInt(formData.newSectorsPlanned),
+        new_radio_units_planned: parseInt(formData.newRadioUnitsPlanned),
+        existing_radio_units_swapped: parseInt(formData.existingRadioUnitsSwapped),
+        new_antennas_planned: parseInt(formData.newAntennasPlanned),
+        existing_antennas_swapped: parseInt(formData.existingAntennasSwapped),
+        new_fpfh_installed: parseInt(formData.newFpfhInstalled)
+      };
+      
+      console.log("Submitting new radio installations data:", apiData);
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
+      await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/new-radio-installations/${sessionId}`,
+        apiData
+      );
+      
+      setHasUnsavedChanges(false);
+      showSuccess('New radio installations data saved successfully!');
+      setErrors({});
+      return true;
+    } catch (err) {
+      console.error("Error submitting new radio installations data:", err);
+      showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
 
   // Load existing data when component mounts
   useEffect(() => {
@@ -61,6 +87,8 @@ const NewSectorPlanningTab = () => {
         }
       } finally {
         setIsLoading(false);
+        // Reset unsaved changes flag after loading data
+        setHasUnsavedChanges(false);
       }
     };
 
@@ -114,42 +142,17 @@ const NewSectorPlanningTab = () => {
       return;
     }
 
-    setIsSubmitting(true);
-
-    try {
-      const apiData = {
-        new_sectors_planned: parseInt(formData.newSectorsPlanned),
-        new_radio_units_planned: parseInt(formData.newRadioUnitsPlanned),
-        existing_radio_units_swapped: parseInt(formData.existingRadioUnitsSwapped),
-        new_antennas_planned: parseInt(formData.newAntennasPlanned),
-        existing_antennas_swapped: parseInt(formData.existingAntennasSwapped),
-        new_fpfh_installed: parseInt(formData.newFpfhInstalled)
-      };
-      
-      console.log("Submitting new radio installations data:", apiData);
-
-      const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/new-radio-installations/${sessionId}`,
-        apiData
-      );
-      
-      setHasUnsavedChanges(false);
+    const saved = await saveDataToAPI();
+    if (saved) {
       showSuccess('New radio installations data submitted successfully!');
-      console.log("Response:", response.data);
-      setErrors({});
-    } catch (err) {
-      console.error("Error submitting new radio installations data:", err);
-      showError(`Error submitting data: ${err.response?.data?.message || 'Please try again.'}`);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="max-h-screen flex items-start space-x-2 justify-start bg-gray-100 p-2">
-      <div className="bg-white p-3 rounded-xl shadow-md w-[80%]">
-          {/* Unsaved Changes Warning */}
-          {hasUnsavedChanges && (
+    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
+        {/* Unsaved Changes Warning */}
+        {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
             <div className="flex items-center">
               <div className="ml-3">
@@ -163,16 +166,18 @@ const NewSectorPlanningTab = () => {
             </div>
           </div>
         )}
-          <form onSubmit={handleSubmit} className="space-y-4">
+        
+        <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
+          <div className="flex-1 overflow-y-auto">
             {errors.submit && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                 {errors.submit}
               </div>
             )}
 
             <div className='grid grid-cols-2 gap-4'>
               {questions.map((question, index) => (
-                <div key={question.key} className="bg-white  ">
+                <div key={question.key} className="bg-white">
                   <div className='mb-2 font-semibold text-gray-700'>{question.label}</div>
                   <select 
                     className={`form-input ${
@@ -196,22 +201,23 @@ const NewSectorPlanningTab = () => {
                 </div>
               ))}
             </div>
+          </div>
 
-            <div className="mt-6 flex justify-center">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className={`px-6 py-3 text-white rounded font-semibold ${
-                  isSubmitting
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-500 hover:bg-blue-700'
-                }`}
-              >
-                {isSubmitting ? 'loading...' : 'Save '}
-              </button>
-            </div>
-          </form>
-        
+          {/* Save Button at Bottom - Fixed */}
+          <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`px-6 py-3 text-white rounded font-semibold ${
+                isSubmitting
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-blue-500 hover:bg-blue-700'
+              }`}
+            >
+              {isSubmitting ? 'loading...' : 'Save'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

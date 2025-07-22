@@ -200,7 +200,7 @@ function SiteAccessForm() {
             </div>
           </div>
         )}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6  max-h-[550px] overflow-y-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto">
           <div>
             <label className="block font-medium mb-1">Site Access Permission Required</label>
             <div className="flex gap-4">

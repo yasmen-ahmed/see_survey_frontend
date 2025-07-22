@@ -1,4 +1,5 @@
 import React from 'react';
+import useUnsavedChanges from '../../hooks/useUnsavedChanges';
 
 const DynamicFormTable = ({
   title = '',
@@ -14,8 +15,14 @@ const DynamicFormTable = ({
   maxHeight = '600px',
   showSubmitButton = true,
   submitButtonText = 'Save ',
-  hasUnsavedChanges = false
+  hasUnsavedChanges = false,
+  saveDataToAPI = null // New prop for auto-save function
 }) => {
+  // Use the unsaved changes hook if saveDataToAPI is provided
+  if (saveDataToAPI) {
+    useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
+  }
+
   // Ensure entities is always an array
   const safeEntities = Array.isArray(entities) ? entities : [];
   
@@ -149,7 +156,7 @@ const DynamicFormTable = ({
   }
 
   return (
-    <form onSubmit={onSubmit} className="w-full">
+    <form onSubmit={onSubmit} className="flex-1 flex flex-col min-h-0">
       {title && (
         <div className="text-center mb-4">
           <h2 className="text-xl font-bold text-gray-800">{title}</h2>
@@ -178,13 +185,13 @@ const DynamicFormTable = ({
         </div>
       )}
 
-      {/* Table Layout */}
-      <div className="overflow-auto" style={{ maxHeight }}>
+      {/* Table Layout - Scrollable Content */}
+      <div className="flex-1 overflow-y-auto">
         <table className="table-auto w-full border-collapse">
           <thead className="bg-blue-500 text-white">
             <tr>
               <th
-                className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-10"
+                className="border px-2 py-3 text-left font-semibold sticky top-0 left-0 bg-blue-500 z-20"
                 style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
               >
                 Field Description
@@ -226,23 +233,13 @@ const DynamicFormTable = ({
           </tbody>
         </table>
       </div>
-
-      {/* Submit Button */}
-      {showSubmitButton && (
-        <div className="mt-4 flex justify-center">
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className={`px-6 py-3 text-white rounded font-semibold ${
-              isSubmitting
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-blue-500 hover:bg-blue-700'
-            }`}
-          >
-            {isSubmitting ? 'loading...' : submitButtonText}
-          </button>
-        </div>
-      )}
+ {/* Save Button at Bottom - Fixed */}
+ <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
+            <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
+              {isSubmitting ? "loading...": "Save"}  
+            </button>
+          </div>
+    
     </form>
   );
 };

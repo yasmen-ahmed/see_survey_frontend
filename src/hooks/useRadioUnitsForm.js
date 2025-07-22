@@ -392,6 +392,7 @@ export const useRadioUnitsForm = (sessionId) => {
     handleRadioUnitsCountChange,
     handleChange,
     handleSubmit,
-    hasUnsavedChanges
+    hasUnsavedChanges,
+    setHasUnsavedChanges
   };
 };
