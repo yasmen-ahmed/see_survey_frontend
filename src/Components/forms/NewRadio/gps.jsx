@@ -255,64 +255,64 @@ const GPSAntennaTab = () => {
         
         <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
           <div className="flex-1 overflow-y-auto">
-            {/* 1. Location Radio Buttons */}
+          {/* 1. Location Radio Buttons */}
+          <div>
+            <label className="block font-semibold mb-2">
+              New GPS antenna proposed location
+            </label>
+            <div className="flex gap-4">
+              {['On tower', 'On building'].map((option) => (
+                <label key={option} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="location"
+                    value={option}
+                    checked={formData.location === option}
+                    onChange={(e) => handleChange('location', e.target.value)}
+                    className="w-4 h-4"
+                    required
+                  />
+                  {option}
+                </label>
+              ))}
+            </div>
+            <hr className="my-2 w-1/2" />
+          </div>
+         
+          <div className='grid grid-cols-2 gap-4'>
+            {/* 2. Antenna Height Input */}
             <div>
               <label className="block font-semibold mb-2">
-                New GPS antenna proposed location
+                New GPS antenna height from tower base level (meters)
               </label>
-              <div className="flex gap-4">
-                {['On tower', 'On building'].map((option) => (
-                  <label key={option} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="radio"
-                      name="location"
-                      value={option}
-                      checked={formData.location === option}
-                      onChange={(e) => handleChange('location', e.target.value)}
-                      className="w-4 h-4"
-                      required
-                    />
-                    {option}
-                  </label>
-                ))}
-              </div>
-              <hr className="my-2 w-1/2" />
+              <input
+                type="number"
+                min="0"
+                value={formData.height}
+                onChange={(e) => handleChange('height', e.target.value)}
+                className="form-input"
+                placeholder="Enter height in meters"
+                required
+              />
             </div>
-           
-            <div className='grid grid-cols-2 gap-4'>
-              {/* 2. Antenna Height Input */}
-              <div>
-                <label className="block font-semibold mb-2">
-                  New GPS antenna height from tower base level (meters)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.height}
-                  onChange={(e) => handleChange('height', e.target.value)}
-                  className="form-input"
-                  placeholder="Enter height in meters"
-                  required
-                />
-              </div>
 
-              {/* 3. Cable Length Input */}
-              <div>
-                <label className="block font-semibold mb-2">
-                  Cable length from the new GPS antenna location to the base band (meters)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.cableLength}
-                  onChange={(e) => handleChange('cableLength', e.target.value)}
-                  className="form-input"
-                  placeholder="Enter cable length in meters"
-                  required
-                />
-              </div>
+            {/* 3. Cable Length Input */}
+            <div>
+              <label className="block font-semibold mb-2">
+                Cable length from the new GPS antenna location to the base band (meters)
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formData.cableLength}
+                onChange={(e) => handleChange('cableLength', e.target.value)}
+                className="form-input"
+                placeholder="Enter cable length in meters"
+                required
+              />
             </div>
-            <hr className="my-2" />
+          </div>
+          <hr className="my-2" />
           </div>
 
           {/* Save Button at Bottom - Fixed */}

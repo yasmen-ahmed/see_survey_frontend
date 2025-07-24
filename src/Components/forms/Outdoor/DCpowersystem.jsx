@@ -19,7 +19,10 @@ const DCPowerInformationForm = () => {
       how_many_existing_dc_rectifier_modules: '',
       rectifier_module_capacity: '',
       total_capacity_existing_dc_power_system: '',
-      how_many_free_slot_available_rectifier: ''
+      how_many_free_slot_available_rectifier: '',
+      dc_rectifier_condition: '',
+      rect_load_current_reading: '',
+      existing_site_temperature: ''
     },
     batteries: {
       existing_batteries_strings_location: [],
@@ -28,13 +31,17 @@ const DCPowerInformationForm = () => {
       how_many_existing_battery_string: '',
       total_battery_capacity: '',
       how_many_free_slot_available_battery: '',
-      new_battery_string_installation_location: []
+      new_battery_string_installation_location: [],
+      batteries_condition: '',
+      new_battery_type: '',
+      new_battery_capacity: '',
+      new_battery_qty: ''
     }
   });
 
   // Function to save data via API
   const saveDataToAPI = async () => {
-    if (!hasUnsavedChanges) return true;
+    if (!hasUnsavedChanges || isInitialLoading) return true;
     
     try {
       setLoadingApi(true);
@@ -47,7 +54,9 @@ const DCPowerInformationForm = () => {
         rectifier_module_capacity: parseFloat(formData.dc_rectifiers.rectifier_module_capacity) || 0,
         total_capacity_existing_dc_power_system: parseFloat(formData.dc_rectifiers.total_capacity_existing_dc_power_system) || 0,
         how_many_existing_dc_rectifier_modules: parseInt(formData.dc_rectifiers.how_many_existing_dc_rectifier_modules) || 0,
-        how_many_free_slot_available_rectifier: parseInt(formData.dc_rectifiers.how_many_free_slot_available_rectifier) || 0
+        how_many_free_slot_available_rectifier: parseInt(formData.dc_rectifiers.how_many_free_slot_available_rectifier) || 0,
+        rect_load_current_reading: parseFloat(formData.dc_rectifiers.rect_load_current_reading) || 0,
+        existing_site_temperature: parseFloat(formData.dc_rectifiers.existing_site_temperature) || 0
       };
 
       const batteries = {
@@ -55,7 +64,9 @@ const DCPowerInformationForm = () => {
         how_many_existing_battery_string: parseInt(formData.batteries.how_many_existing_battery_string) || 0,
         total_battery_capacity: parseFloat(formData.batteries.total_battery_capacity) || 0,
         how_many_free_slot_available_battery: parseInt(formData.batteries.how_many_free_slot_available_battery) || 0,
-        new_battery_string_installation_location: formData.batteries.new_battery_string_installation_location || []
+        new_battery_string_installation_location: formData.batteries.new_battery_string_installation_location || [],
+        new_battery_capacity: parseFloat(formData.batteries.new_battery_capacity) || 0,
+        new_battery_qty: parseInt(formData.batteries.new_battery_qty) || 0
       };
 
       submitFormData.append('dc_rectifiers', JSON.stringify(dc_rectifiers));
@@ -131,7 +142,11 @@ const DCPowerInformationForm = () => {
     fields.push(
       { label: 'Free slots for new Rectifier modules', name: 'free_slots_rectifier_modules' },
       { label: 'Rectifier CB photos', name: 'rectifier_cb_photos' },
-      { label: 'Rectifier Free CB Photo', name: 'rectifier_free_cb_photo' }
+      { label: 'Rectifier Free CB Photo', name: 'rectifier_free_cb_photo' },
+      { label: 'RECT Load current reading', name: 'rect_load_current_reading_photo' },
+      { label: 'Existing site temperature (C)', name: 'existing_site_temperature_photo' },
+      { label: 'Rectifier Picture', name: 'rectifier_picture' },
+      { label: 'Rectifier manufactory/specification Picture (model number)', name: 'rectifier_manufactory_specification_picture' }
     );
 
     // Add battery string photos based on count
@@ -211,7 +226,10 @@ const DCPowerInformationForm = () => {
               how_many_existing_dc_rectifier_modules: dcPowerData.dc_rectifiers?.how_many_existing_dc_rectifier_modules || '',
               rectifier_module_capacity: dcPowerData.dc_rectifiers?.rectifier_module_capacity || '',
               total_capacity_existing_dc_power_system: dcPowerData.dc_rectifiers?.total_capacity_existing_dc_power_system || '',
-              how_many_free_slot_available_rectifier: dcPowerData.dc_rectifiers?.how_many_free_slot_available_rectifier || ''
+              how_many_free_slot_available_rectifier: dcPowerData.dc_rectifiers?.how_many_free_slot_available_rectifier || '',
+              dc_rectifier_condition: dcPowerData.dc_rectifiers?.dc_rectifier_condition || '',
+              rect_load_current_reading: dcPowerData.dc_rectifiers?.rect_load_current_reading || '',
+              existing_site_temperature: dcPowerData.dc_rectifiers?.existing_site_temperature || ''
             },
             batteries: {
               existing_batteries_strings_location: dcPowerData.batteries?.existing_batteries_strings_location || [],
@@ -220,7 +238,11 @@ const DCPowerInformationForm = () => {
               how_many_existing_battery_string: dcPowerData.batteries?.how_many_existing_battery_string || '',
               total_battery_capacity: dcPowerData.batteries?.total_battery_capacity || '',
               how_many_free_slot_available_battery: dcPowerData.batteries?.how_many_free_slot_available_battery || '',
-              new_battery_string_installation_location: dcPowerData.batteries?.new_battery_string_installation_location || []
+              new_battery_string_installation_location: dcPowerData.batteries?.new_battery_string_installation_location || [],
+              batteries_condition: dcPowerData.batteries?.batteries_condition || '',
+              new_battery_type: dcPowerData.batteries?.new_battery_type || '',
+              new_battery_capacity: dcPowerData.batteries?.new_battery_capacity || '',
+              new_battery_qty: dcPowerData.batteries?.new_battery_qty || ''
             }
           });
 
@@ -345,7 +367,7 @@ const DCPowerInformationForm = () => {
     <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
     <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
       {/* Unsaved Changes Warning */}
-        {hasUnsavedChanges && (
+        {hasUnsavedChanges && !isInitialLoading && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
             <div className="flex items-center">
               <div className="ml-3">
@@ -443,6 +465,29 @@ const DCPowerInformationForm = () => {
             </div>
 
             <div>
+              <label className='block font-semibold mb-2'>RECT Load current reading (A)</label>
+              <input
+                type='number'
+                step='0.1'
+                className='form-input'
+                value={formData.dc_rectifiers.rect_load_current_reading}
+                onChange={(e) => handleChange('dc_rectifiers', 'rect_load_current_reading', e.target.value)}
+                placeholder='0.0'
+              />
+            </div>
+
+            <div>
+              <label className='block font-semibold mb-2'>Existing site temperature (C)</label>
+              <input
+                type='number'
+                step='0.1'
+                className='form-input'
+                value={formData.dc_rectifiers.existing_site_temperature}
+                onChange={(e) => handleChange('dc_rectifiers', 'existing_site_temperature', e.target.value)}
+                placeholder='25.0'
+              />
+            </div>
+            <div>
               <label className='block font-semibold mb-2'>How many free slot available for new rectifier modules?</label>
               <select
                 className='form-input'
@@ -455,6 +500,27 @@ const DCPowerInformationForm = () => {
                 ))}
               </select>
             </div>
+
+            <div>
+              <label className='block font-semibold mb-2'>DC rectifier condition</label>
+              <div className="flex gap-4">
+                {['Good', 'Satisfying', 'Bad', 'Not working'].map((option) => (
+                  <label key={option} className="flex items-center">
+                    <input 
+                      type="radio" 
+                      name="dc_rectifier_condition" 
+                      value={option} 
+                      checked={formData.dc_rectifiers.dc_rectifier_condition === option} 
+                      onChange={(e) => handleChange('dc_rectifiers', 'dc_rectifier_condition', e.target.value)} 
+                      className="mr-2" 
+                    />
+                    {option}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+
           </div>
 
           <h2 className='text-2xl font-bold text-blue-700 mb-4'>DC Batteries</h2>
@@ -563,6 +629,59 @@ const DCPowerInformationForm = () => {
                   </label>
                 ))}
               </div>
+            </div>
+
+            <div>
+              <label className='block font-semibold mb-2'>Batteries condition</label>
+              <div className="flex gap-4">
+                {['Good', 'Satisfying', 'Bad', 'Not working'].map((option) => (
+                  <label key={option} className="flex items-center">
+                    <input 
+                      type="radio" 
+                      name="batteries_condition" 
+                      value={option} 
+                      checked={formData.batteries.batteries_condition === option} 
+                      onChange={(e) => handleChange('batteries', 'batteries_condition', e.target.value)} 
+                      className="mr-2" 
+                    />
+                    {option}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className='block font-semibold mb-2'>New battery type</label>
+              <input
+                type='text'
+                className='form-input'
+                value={formData.batteries.new_battery_type}
+                onChange={(e) => handleChange('batteries', 'new_battery_type', e.target.value)}
+                placeholder='Enter battery type'
+              />
+            </div>
+
+            <div>
+              <label className='block font-semibold mb-2'>New battery capacity (AH)</label>
+              <input
+                type='number'
+                step='0.1'
+                className='form-input'
+                value={formData.batteries.new_battery_capacity}
+                onChange={(e) => handleChange('batteries', 'new_battery_capacity', e.target.value)}
+                placeholder='100'
+              />
+            </div>
+
+            <div>
+              <label className='block font-semibold mb-2'>New battery QTY (string)</label>
+              <input
+                type='number'
+                className='form-input'
+                value={formData.batteries.new_battery_qty}
+                onChange={(e) => handleChange('batteries', 'new_battery_qty', e.target.value)}
+                placeholder='1'
+              />
             </div>
           </div>
 </div>

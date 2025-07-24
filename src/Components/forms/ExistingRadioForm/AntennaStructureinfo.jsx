@@ -20,6 +20,8 @@ const AntennaStructureForm = () => {
     lightningSystem: "No",
     earthingBusBar: "No",
     freeHoles: "",
+    emptyMounts: 0, // Default to 0
+    tower_manufacturer: "", // Default to empty string
   });
 
   // Function to save data via API
@@ -40,6 +42,8 @@ const AntennaStructureForm = () => {
       formPayload.append('lightening_system_installed', formData.lightningSystem);
       formPayload.append('earthing_bus_bars_exist', formData.earthingBusBar);
       formPayload.append('how_many_free_holes_bus_bars', formData.freeHoles);
+      formPayload.append('empty_mounts', formData.emptyMounts); // Append the new field
+      formPayload.append('tower_manufacturer', formData.tower_manufacturer); // Append the new field
 
       // Append any newly selected File objects under their category keys
       Object.entries(uploadedImages).forEach(([category, files]) => {
@@ -84,13 +88,61 @@ const AntennaStructureForm = () => {
     { label: 'Structure Legs Photo 4', name: 'structure_legs_photo_4' },
     { label: 'Building Photo', name: 'building_photo' },
     { label: 'North Direction View', name: 'north_direction_view' },
-    // { label: 'Cables route from tower top 1/2', name: 'cables_route_photo_from_tower_top_1' },
-    // { label: 'Cables route from tower top 2/2', name: 'cables_route_photo_from_tower_top_2' }
+    { label: 'Tower Ladder and Cables/Feeders1', name: 'tower_ladder_and_cables_feeders_1' },
+    { label: 'Tower Ladder and Cables/Feeders2', name: 'tower_ladder_and_cables_feeders_2' },
+    { label: 'Cable Tray showing all Cables, #1 Starting from tower side', name: 'cable_tray_showing_all_cables_1' },
+    { label: 'Cable Tray showing all Cables, #2 Starting from tower side', name: 'cable_tray_showing_all_cables_2' },
+    { label: 'Cable Tray showing all Cables, #3 Starting from tower side', name: 'cable_tray_showing_all_cables_3' },
+    { label: 'Cable Tray showing all Cables, #4 Starting from tower side', name: 'cable_tray_showing_all_cables_4' },
+    { label: 'Complete Tower Picture from different angles 1', name: 'complete_tower_picture_from_different_angles_1' },
+    { label: 'Complete Tower Picture from different angles 2', name: 'complete_tower_picture_from_different_angles_2' },
+    { label: 'Complete Tower Picture from different angles 3', name: 'complete_tower_picture_from_different_angles_3' },
+    { label: 'Tower Pic (Top of tower) shows measure tool with reading', name: 'tower_pic_top_of_tower_shows_measure_tool_with_reading' },
+    { label: 'Tower Pic (Bottom of tower) shows measure tool with reading', name: 'tower_pic_bottom_of_tower_shows_measure_tool_with_reading' },
+    { label: 'Tower Additional Picture 1', name: 'tower_additional_picture_1' },
+    { label: 'Tower Additional Picture 2', name: 'tower_additional_picture_2' },
+    { label: 'Tower Additional Picture 3', name: 'tower_additional_picture_3' },
+    { label: 'Tower Additional Picture 4', name: 'tower_additional_picture_4' },
+    { label: 'Tower manufactory/specification Picture', name: 'tower_manufactory_specification_picture' },
+    { label: 'Top of Building shows measure tool with reading Picture', name: 'top_of_building_shows_measure_tool_with_reading_picture' },
+    { label: 'Building Parapet Picture with measure tool & length Reading', name: 'building_parapet_picture_with_measure_tool_and_length_reading' },
+    { label: 'RF Panorama Photos (0 deg )', name: 'rf_panorama_photos_0_deg' },
+    { label: 'RF Panorama Photos (30 deg )', name: 'rf_panorama_photos_30_deg' },
+    { label: 'RF Panorama Photos (60 deg )', name: 'rf_panorama_photos_60_deg' },
+    { label: 'RF Panorama Photos (90 deg )', name: 'rf_panorama_photos_90_deg' },
+    { label: 'RF Panorama Photos (120 deg )', name: 'rf_panorama_photos_120_deg' },
+    { label: 'RF Panorama Photos (150 deg )', name: 'rf_panorama_photos_150_deg' },
+    { label: 'RF Panorama Photos (180 deg )', name: 'rf_panorama_photos_180_deg' },
+    { label: 'RF Panorama Photos (210 deg )', name: 'rf_panorama_photos_210_deg' },
+    { label: 'RF Panorama Photos (240 deg )', name: 'rf_panorama_photos_240_deg' },
+    { label: 'RF Panorama Photos (270 deg )', name: 'rf_panorama_photos_270_deg' },
+    { label: 'RF Panorama Photos (300 deg )', name: 'rf_panorama_photos_300_deg' },
+    { label: 'RF Panorama Photos (330 deg )', name: 'rf_panorama_photos_330_deg' },
+    { label: 'Night beacon picture', name: 'night_beacon_picture' },
+    { label: 'Lightening Rode', name: 'lightening_rods' }
   ];
 
+  // Generate dynamic empty mounts photo fields based on emptyMounts value
+  const generateEmptyMountsPhotos = () => {
+    const emptyMountsCount = parseInt(formData.emptyMounts) || 0;
+    const dynamicPhotos = [];
+    
+    for (let i = 1; i <= emptyMountsCount; i++) {
+      dynamicPhotos.push({
+        label: `Empty Mount (Side Arm) ${i} Photo`,
+        name: `empty_mount_side_arm_${i}_photo`
+      });
+    }
+    
+    return dynamicPhotos;
+  };
+
+  // Combine static images with dynamic empty mounts photos
+  const allImages = [...images, ...generateEmptyMountsPhotos()];
+
   // Add beforeunload event listener
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
+    useEffect(() => {
+      const handleBeforeUnload = (e) => {
       if (hasUnsavedChanges) {
         e.preventDefault();
         e.returnValue = '';
@@ -119,7 +171,9 @@ const AntennaStructureForm = () => {
           buildingHeight: data.rt_building_height || "",
           lightningSystem: data.lightening_system_installed || "",
           earthingBusBar: data.earthing_bus_bars_exist || "",
-          freeHoles: data.how_many_free_holes_bus_bars || ""
+          freeHoles: data.how_many_free_holes_bus_bars || "",
+          emptyMounts: data.empty_mounts || 0, // Populate the new field
+          tower_manufacturer: data.tower_manufacturer || "", // Populate the new field
         });
 
         // Populate existing images by category
@@ -185,6 +239,11 @@ const AntennaStructureForm = () => {
       setFormData((prev) => ({
         ...prev,
         rtHeights: updatedRtHeights,
+      }));
+    } else if (name === "emptyMounts") {
+      setFormData((prev) => ({
+        ...prev,
+        emptyMounts: parseInt(value) || 0,
       }));
     } else {
       setFormData((prev) => ({
@@ -357,10 +416,19 @@ const AntennaStructureForm = () => {
 
           {/* Earthing Bus Bars */}
           <div className="flex flex-col">
-            <label className="font-semibold mb-1">Earthing bus bars exist on towers?</label>
+            <label className="font-semibold mb-1">How many earthing bus bars exist on towers?</label>
             <div className="space-x-4">
-              <label><input type="radio" name="earthingBusBar" value="Yes" onChange={handleChange} checked={formData.earthingBusBar === "Yes"} /> Yes</label>
-              <label><input type="radio" name="earthingBusBar" value="No" onChange={handleChange} checked={formData.earthingBusBar === "No"} /> No</label>
+              {/* <label><input type="radio" name="earthingBusBar" value="Yes" onChange={handleChange} checked={formData.earthingBusBar === "Yes"} /> Yes</label>
+              <label><input type="radio" name="earthingBusBar" value="No" onChange={handleChange} checked={formData.earthingBusBar === "No"} /> No</label> */}
+            
+            <input
+              type="number"
+              name="earthingBusBar" 
+              value={formData.earthingBusBar}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="000"
+            />
             </div>
             <hr className='mt-8' /> 
           </div>
@@ -382,6 +450,34 @@ const AntennaStructureForm = () => {
             </select>
             <hr className='mt-2' /> 
               </div>
+
+          {/* Empty Mounts */}
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">How many empty mounts (Side Arms)?</label>
+            <input
+              type="number"
+              name="emptyMounts"
+              value={formData.emptyMounts || 0} // Default to 0
+              onChange={handleChange}
+              className="form-input"
+              placeholder="Enter number of empty mounts"
+            />
+            <hr className='mt-2' /> 
+          </div>
+
+          {/* Tower Manufacturer */}
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Tower Manufacturer</label>
+            <input
+              type="text"
+              name="tower_manufacturer"
+              value={formData.tower_manufacturer || ""}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="Enter tower manufacturer"
+            />
+            <hr className='mt-2' /> 
+          </div>
 </div>
 </div>
           {/* Submit Button */}
@@ -397,7 +493,7 @@ const AntennaStructureForm = () => {
       
       {/* Image Uploader */}
       <ImageUploader 
-        images={images} 
+        images={allImages} 
         onImageUpload={handleImageUpload}
         uploadedImages={uploadedImages}
       />
