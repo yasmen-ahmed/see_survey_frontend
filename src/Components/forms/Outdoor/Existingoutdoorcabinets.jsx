@@ -10,7 +10,7 @@ const OutdoorCabinetsForm = () => {
   const { sessionId } = useParams();
   const bgColorFillAuto = "bg-[#c6efce]"
   const colorFillAuto = 'text-[#006100]'
-  const [loadingApi,setLoadingApi] =useState(false)
+  const [loadingApi, setLoadingApi] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [formData, setFormData] = useState({
@@ -40,6 +40,11 @@ const OutdoorCabinetsForm = () => {
       pduCBsRatings: [],
       internalLayout: '',
       freeU: '',
+      airConditionStatus: '',
+      roxtecInsideCabinet: '',
+      roxtecOutsideCabinet: '',
+      roxtecInsideCabinetZoomed: '',
+      roxtecOutsideCabinetZoomed: '',
       images: []
     }))
   });
@@ -49,13 +54,13 @@ const OutdoorCabinetsForm = () => {
 
   // Function to save data via API
   const saveDataToAPI = async () => {
-    if (!hasUnsavedChanges) return true;
-    
+    if (!hasUnsavedChanges || isInitialLoading) return true;
+
     try {
       setLoadingApi(true);
       // Create FormData for multipart submission
       const submitFormData = new FormData();
-      
+
       // Add cabinet count
       submitFormData.append('numberOfCabinets', parseInt(formData.numberOfCabinets));
 
@@ -79,11 +84,11 @@ const OutdoorCabinetsForm = () => {
 
       // Get all possible image fields
       const allImageFields = getAllImages();
-      
+
       // Handle all image fields - including removed ones
       allImageFields.forEach(imageField => {
         const imageFiles = uploadedImages[imageField.name];
-        
+
         if (Array.isArray(imageFiles) && imageFiles.length > 0) {
           const file = imageFiles[0];
           if (file instanceof File) {
@@ -104,7 +109,7 @@ const OutdoorCabinetsForm = () => {
           },
         }
       );
-      
+
       setHasUnsavedChanges(false);
       showSuccess('Data saved successfully!');
       return true;
@@ -128,6 +133,11 @@ const OutdoorCabinetsForm = () => {
     { label: `Cabinet #${cabinetNumber} Photo 3/4`, name: `cabinet_${cabinetNumber}_photo_3_4` },
     { label: `Cabinet #${cabinetNumber} Photo 4/4`, name: `cabinet_${cabinetNumber}_photo_4_4` },
     { label: `Cabinet #${cabinetNumber} RAN equipment photo`, name: `cabinet_${cabinetNumber}_ran_equipment_photo` },
+    { label: `Cabinet #${cabinetNumber} Air-condition Photo`, name: `cabinet_${cabinetNumber}_air_condition_photo` },
+    { label: `Cabinet #${cabinetNumber} Roxtec Picture (Inside cabinet)`, name: `cabinet_${cabinetNumber}_roxtec_picture_inside_cabinet` },
+    { label: `Cabinet #${cabinetNumber} Roxtec Picture (Outside cabinet)`, name: `cabinet_${cabinetNumber}_roxtec_picture_outside_cabinet` },
+    { label: `Cabinet #${cabinetNumber} Roxtec Picture (Inside cabinet) Zoomed`, name: `cabinet_${cabinetNumber}_roxtec_picture_inside_cabinet_zoomed` },
+    { label: `Cabinet #${cabinetNumber} Roxtec Picture (Outside cabinet) Zoomed`, name: `cabinet_${cabinetNumber}_roxtec_picture_outside_cabinet_zoomed` },
   ];
 
   // Generate all image fields based on cabinet count
@@ -144,7 +154,7 @@ const OutdoorCabinetsForm = () => {
   // Process images from API response
   const processImagesFromResponse = (cabinets) => {
     const imagesByCategory = {};
-    
+
     cabinets.forEach(cabinet => {
       if (cabinet.images && Array.isArray(cabinet.images)) {
         cabinet.images.forEach(img => {
@@ -157,7 +167,7 @@ const OutdoorCabinetsForm = () => {
         });
       }
     });
-    
+
     return imagesByCategory;
   };
 
@@ -212,6 +222,11 @@ const OutdoorCabinetsForm = () => {
             pduCBsRatings: [],
             internalLayout: '',
             freeU: '',
+            airConditionStatus: '',
+            roxtecInsideCabinet: '',
+            roxtecOutsideCabinet: '',
+            roxtecInsideCabinetZoomed: '',
+            roxtecOutsideCabinetZoomed: '',
           };
 
           // Merge API data with default structure
@@ -279,7 +294,7 @@ const OutdoorCabinetsForm = () => {
   // Handle image uploads from ImageUploader component
   const handleImageUpload = (imageCategory, files) => {
     if (isInitialLoading) return; // Don't set unsaved changes during initial load
-    
+
     setHasUnsavedChanges(true);
     console.log(`Images uploaded for ${imageCategory}:`, files);
     setUploadedImages(prev => ({
@@ -290,9 +305,9 @@ const OutdoorCabinetsForm = () => {
 
   const handleChange = (cabinetIndex, fieldName, value) => {
     if (isInitialLoading) return; // Don't set unsaved changes during initial load
-    
+
     setHasUnsavedChanges(true);
-    
+
     setFormData(prevData => {
       const newCabinets = [...prevData.cabinets];
       newCabinets[cabinetIndex] = {
@@ -323,13 +338,13 @@ const OutdoorCabinetsForm = () => {
 
   const handleCheckboxChange = (cabinetIndex, fieldName, value, checked) => {
     if (isInitialLoading) return; // Don't set unsaved changes during initial load
-    
+
     setHasUnsavedChanges(true);
-    
+
     setFormData(prevData => {
       const newCabinets = [...prevData.cabinets];
       const currentValues = new Set((newCabinets[cabinetIndex][fieldName] || []).map(String));
-      
+
       if (checked) {
         currentValues.add(String(value));
       } else {
@@ -366,7 +381,7 @@ const OutdoorCabinetsForm = () => {
   const getCBRatingsTableData = useCallback((cabinetIndex, equipmentType) => {
     const cabinet = formData.cabinets[cabinetIndex];
     const ratings = cabinet?.[`${equipmentType}CBsRatings`] || [];
-    
+
     if (ratings && ratings.length > 0) {
       return ratings.map((item, index) => ({
         id: index + 1,
@@ -380,10 +395,10 @@ const OutdoorCabinetsForm = () => {
   // Handle CB ratings table data changes with proper data processing
   const handleCBRatingsChange = useCallback((cabinetIndex, equipmentType, newTableData) => {
     if (isInitialLoading) return; // Don't set unsaved changes during initial load
-    
+
     setHasUnsavedChanges(true);
     console.log(`Updating ${equipmentType} CB ratings for cabinet ${cabinetIndex}:`, newTableData);
-    
+
     if (!newTableData || newTableData.length === 0) {
       // If no data, keep empty array but don't return early
       setFormData(prev => ({
@@ -408,7 +423,7 @@ const OutdoorCabinetsForm = () => {
         rating: parseFloat(item.rating) || 0,
         connected_load: item.connected_load || ""
       }));
-    
+
     setFormData(prev => ({
       ...prev,
       cabinets: prev.cabinets.map((cabinet, index) =>
@@ -468,8 +483,8 @@ const OutdoorCabinetsForm = () => {
   return (
     <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
-       {/* Unsaved Changes Warning */}
-        {hasUnsavedChanges && (
+        {/* Unsaved Changes Warning */}
+        {hasUnsavedChanges && !isInitialLoading && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
             <div className="flex items-center">
               <div className="ml-3">
@@ -484,7 +499,7 @@ const OutdoorCabinetsForm = () => {
           </div>
         )}
 
-<form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
+        <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
 
           {/* Number of Cabinets Selection */}
           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -493,9 +508,13 @@ const OutdoorCabinetsForm = () => {
               name="numberOfCabinets"
               value={formData.numberOfCabinets}
               onChange={(e) => {
+                if (isInitialLoading) return; // Don't set unsaved changes during initial load
+                
                 console.log("Changing number of cabinets to:", e.target.value);
                 console.log("Current formData.cabinets length:", formData.cabinets.length);
                 console.log("First cabinet structure:", formData.cabinets[0]);
+                
+                setHasUnsavedChanges(true);
                 setFormData(prev => ({ ...prev, numberOfCabinets: e.target.value }));
               }}
               className="border p-3 rounded-md w-48"
@@ -660,6 +679,41 @@ const OutdoorCabinetsForm = () => {
                     </td>
                   ))}
                 </tr>
+
+                {/* Air-condition status */}
+                {
+                  formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
+                    cabinet.coolingType === 'Air-condition' && (
+
+
+                      <tr className="bg-gray-50">
+                        <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                          Air-condition status
+                        </td>
+                        {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
+                          <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.coolingTypeAutoFilled ? bgColorFillAuto : ''}`}>
+                            <div className="grid grid-cols-2 gap-1">
+                              {['Working', 'Not working'].map(option => (
+                                <label key={option} className="flex items-center gap-1 text-sm">
+                                  <input
+                                    type="radio"
+                                    name={`airConditionStatus-${cabinetIndex}`}
+                                    value={option}
+                                    checked={cabinet.airConditionStatus === option}
+                                    onChange={(e) => handleChange(cabinetIndex, 'airConditionStatus', e.target.value)}
+                                    className={`w-4 h-4 ${cabinet.airConditionStatusAutoFilled ? colorFillAuto : ''}`}
+                                  />
+                                  <span className={cabinet.airConditionStatusAutoFilled ? colorFillAuto : ''}>
+                                    {option}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  )}
 
                 {/* Cooling Capacity */}
                 <tr>
@@ -1166,22 +1220,134 @@ const OutdoorCabinetsForm = () => {
                     </td>
                   ))}
                 </tr>
+
+                {/* Roxtec Inside Cabinet */}
+                <tr>
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    Roxtec Picture (Inside cabinet)
+                  </td>
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.roxtecInsideCabinetAutoFilled ? bgColorFillAuto : ''}`}>
+                      <div className="flex gap-4">
+                        {['Yes', 'No'].map(option => (
+                          <label key={option} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="radio"
+                              name={`roxtecInsideCabinet-${cabinetIndex}`}
+                              value={option}
+                              checked={cabinet.roxtecInsideCabinet === option}
+                              onChange={(e) => handleChange(cabinetIndex, 'roxtecInsideCabinet', e.target.value)}
+                              className={`w-4 h-4 ${cabinet.roxtecInsideCabinetAutoFilled ? colorFillAuto : ''}`}
+                            />
+                            <span className={cabinet.roxtecInsideCabinetAutoFilled ? colorFillAuto : ''}>
+                              {option}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Roxtec Outside Cabinet */}
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    Roxtec Picture (Outside cabinet)
+                  </td>
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.roxtecOutsideCabinetAutoFilled ? bgColorFillAuto : ''}`}>
+                      <div className="flex gap-4">
+                        {['Yes', 'No'].map(option => (
+                          <label key={option} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="radio"
+                              name={`roxtecOutsideCabinet-${cabinetIndex}`}
+                              value={option}
+                              checked={cabinet.roxtecOutsideCabinet === option}
+                              onChange={(e) => handleChange(cabinetIndex, 'roxtecOutsideCabinet', e.target.value)}
+                              className={`w-4 h-4 ${cabinet.roxtecOutsideCabinetAutoFilled ? colorFillAuto : ''}`}
+                            />
+                            <span className={cabinet.roxtecOutsideCabinetAutoFilled ? colorFillAuto : ''}>
+                              {option}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Roxtec Inside Cabinet Zoomed */}
+                <tr>
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    Roxtec Picture (Inside cabinet) Zoomed
+                  </td>
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.roxtecInsideCabinetZoomedAutoFilled ? bgColorFillAuto : ''}`}>
+                      <div className="flex gap-4">
+                        {['Yes', 'No'].map(option => (
+                          <label key={option} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="radio"
+                              name={`roxtecInsideCabinetZoomed-${cabinetIndex}`}
+                              value={option}
+                              checked={cabinet.roxtecInsideCabinetZoomed === option}
+                              onChange={(e) => handleChange(cabinetIndex, 'roxtecInsideCabinetZoomed', e.target.value)}
+                              className={`w-4 h-4 ${cabinet.roxtecInsideCabinetZoomedAutoFilled ? colorFillAuto : ''}`}
+                            />
+                            <span className={cabinet.roxtecInsideCabinetZoomedAutoFilled ? colorFillAuto : ''}>
+                              {option}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Roxtec Outside Cabinet Zoomed */}
+                <tr className="bg-gray-50">
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    Roxtec Picture (Outside cabinet) Zoomed
+                  </td>
+                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
+                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.roxtecOutsideCabinetZoomedAutoFilled ? bgColorFillAuto : ''}`}>
+                      <div className="flex gap-4">
+                        {['Yes', 'No'].map(option => (
+                          <label key={option} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="radio"
+                              name={`roxtecOutsideCabinetZoomed-${cabinetIndex}`}
+                              value={option}
+                              checked={cabinet.roxtecOutsideCabinetZoomed === option}
+                              onChange={(e) => handleChange(cabinetIndex, 'roxtecOutsideCabinetZoomed', e.target.value)}
+                              className={`w-4 h-4 ${cabinet.roxtecOutsideCabinetZoomedAutoFilled ? colorFillAuto : ''}`}
+                            />
+                            <span className={cabinet.roxtecOutsideCabinetZoomedAutoFilled ? colorFillAuto : ''}>
+                              {option}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
               </tbody>
             </table>
           </div>
 
-           {/* Save Button at Bottom - Fixed */}
-           <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
+          {/* Save Button at Bottom - Fixed */}
+          <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
             <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
-              {loadingApi ? "loading...": "Save"}  
+              {loadingApi ? "loading..." : "Save"}
             </button>
           </div>
         </form>
       </div>
-      
+
       {/* Image Uploader */}
-      <ImageUploader 
-        images={getAllImages()} 
+      <ImageUploader
+        images={getAllImages()}
         onImageUpload={handleImageUpload}
         uploadedImages={uploadedImages}
       />

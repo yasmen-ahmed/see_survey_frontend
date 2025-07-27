@@ -19,13 +19,16 @@ const OutdoorForm = () => {
     spaceForNewCables: '',
     earthBusBars: '',
     freeHolesInBusBars: '',
-    hasSketch: Boolean,
+    hasSketch: false,
+    distanceFromEquipmentToTowerBase: '',
+    isEarthBusBarsConnectedToMainEarthSystem: '',
+    acElectricalSockets: '',
   });
 
   // Function to save data via API
   const saveDataToAPI = async () => {
     if (!hasUnsavedChanges) return true;
-    
+
     try {
       setLoadingApi(true);
       // Create FormData for multipart submission
@@ -55,6 +58,11 @@ const OutdoorForm = () => {
       const hasSketch = formData.hasSketch === true || formData.hasSketch === "true";
       submitFormData.append('has_site_sketch', hasSketch);
 
+      // Add new fields
+      submitFormData.append('distance_from_equipment_to_tower_base', parseFloat(formData.distanceFromEquipmentToTowerBase) || 0);
+      submitFormData.append('is_earth_bus_bars_connected_to_main_earth_system', formData.isEarthBusBarsConnectedToMainEarthSystem === true || formData.isEarthBusBarsConnectedToMainEarthSystem === "true");
+      submitFormData.append('ac_electrical_sockets', parseInt(formData.acElectricalSockets) || 0);
+
       // Get all possible image fields
       const allImageFields = getPositionImages();
 
@@ -82,7 +90,7 @@ const OutdoorForm = () => {
           },
         }
       );
-      
+
       setHasUnsavedChanges(false);
       showSuccess('Data saved successfully!');
       return true;
@@ -113,21 +121,66 @@ const OutdoorForm = () => {
 
   const [uploadedImages, setUploadedImages] = useState({});
 
-  // Generate image fields based on number of free positions
+  // Generate image fields based on number of free positions and earth bus bars
   const getPositionImages = () => {
-    if (!formData.freePositions || formData.freePositions === '0') return [];
-    const count = parseInt(formData.freePositions);
     let allImages = [];
+    
+    // Static photos (not dependent on any number)
     allImages.push({
       label: `Site outdoor location general photo`,
       name: `site_outdoor_location_general_photo`
     });
-    for (let i = 1; i <= count; i++) {
-
+    
+    // Dynamic Earth bus bar photos based on selected number
+    if (formData.earthBusBars && parseInt(formData.earthBusBars) > 0) {
+      const busBarCount = parseInt(formData.earthBusBars);
+      for (let i = 1; i <= busBarCount; i++) {
+        allImages.push({
+          label: `Grounding bus bar photo 1 (Bus bar ${i})`,
+          name: `grounding_bus_bar_photo_1_${i}`
+        });
+        allImages.push({
+          label: `Grounding bus bar photo 2 (Bus bar ${i})`,
+          name: `grounding_bus_bar_photo_2_${i}`
+        });
+      }
+    }
+    
+    // Additional static photos
+    allImages.push({
+      label: `Sketch layout Photo`,
+      name: `sketch_layout_photo`
+    });
+    
+    allImages.push({
+      label: `Surrounding Area Pictures 1`,
+      name: `surrounding_area_pictures_1`
+    });
+    
+    allImages.push({
+      label: `Surrounding Area Pictures 2`,
+      name: `surrounding_area_pictures_2`
+    });
+    
+    allImages.push({
+      label: `Surrounding Area Pictures 3`,
+      name: `surrounding_area_pictures_3`
+    });
+    
+    allImages.push({
+      label: `Surrounding Area Pictures 4`,
+      name: `surrounding_area_pictures_4`
+    });
+    
+    // Dynamic free position photos (existing functionality)
+    if (formData.freePositions && formData.freePositions !== '0') {
+      const count = parseInt(formData.freePositions);
+      for (let i = 1; i <= count; i++) {
       allImages.push({
         label: `Free Position ${i}`,
         name: `free_position_${i}`
       });
+      }
     }
 
     return allImages;
@@ -162,7 +215,7 @@ const OutdoorForm = () => {
   // Handle image uploads from ImageUploader component
   const handleImageUpload = (imageCategory, files) => {
     if (isInitialLoading) return; // Don't set unsaved changes during initial load
-    
+
     setHasUnsavedChanges(true);
     console.log(`Images uploaded for ${imageCategory}:`, files);
     setUploadedImages(prev => ({
@@ -170,7 +223,7 @@ const OutdoorForm = () => {
       [imageCategory]: files
     }));
   };
-  
+
   useEffect(() => {
     setIsInitialLoading(true);
     axios.get(`${import.meta.env.VITE_API_URL}/api/outdoor-general-layout/${sessionId}`)
@@ -193,7 +246,10 @@ const OutdoorForm = () => {
             freeHolesInBusBars: data.earth_bus_bar_config?.free_holes?.toString() || "",
             hasSketch: data.has_site_sketch === true ? true :
               data.has_site_sketch === false ? false :
-                data.has_site_sketch || "",
+                data.has_site_sketch || false,
+            distanceFromEquipmentToTowerBase: data.distance_from_equipment_to_tower_base?.toString() || "",
+            isEarthBusBarsConnectedToMainEarthSystem: data.is_earth_bus_bars_connected_to_main_earth_system || "",
+            acElectricalSockets: data.ac_electrical_sockets?.toString() || "",
           });
 
           // Process and set images from the response
@@ -218,10 +274,10 @@ const OutdoorForm = () => {
         setIsInitialLoading(false);
       });
   }, [sessionId]);
-  
+
   const handleChange = (e) => {
     if (isInitialLoading) return; // Don't set unsaved changes during initial load
-    
+
     const { name, value } = e.target;
     setHasUnsavedChanges(true);
     setFormData((prev) => ({
@@ -229,7 +285,7 @@ const OutdoorForm = () => {
       [name]: value,
     }));
   };
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -245,8 +301,8 @@ const OutdoorForm = () => {
 
   return (
     <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
-    <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
-     {/* Unsaved Changes Warning */}
+      <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
+        {/* Unsaved Changes Warning */}
         {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
             <div className="flex items-center">
@@ -261,9 +317,9 @@ const OutdoorForm = () => {
             </div>
           </div>
         )}
-              <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
-              <div className="flex-1 overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
+          <div className="flex-1 overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
 
               {/* Sunshade Field */}
@@ -305,6 +361,12 @@ const OutdoorForm = () => {
                   ))}
                 </select>
                 <hr className="my-4" />
+              </div>
+              <div>
+                <label className='block font-semibold mb-2'>Distance from equipment location to tower base (meter)</label>
+                <input type="number" name="distanceFromEquipmentToTowerBase" value={formData.distanceFromEquipmentToTowerBase} onChange={handleChange} className='form-input' />
+                <hr className="my-4" />
+
               </div>
 
               {/* Cable Tray Fields */}
@@ -380,7 +442,41 @@ const OutdoorForm = () => {
                 </select>
                 <hr className="my-4" />
               </div>
+              <div>
+                <label htmlFor="distanceFromEquipmentToTowerBase" className='block font-semibold mb-2'>Are the earth bus bars connected to the main earth system?</label>
+                <div className="flex gap-6">
+                  {[{ label: "Yes", value: true }, { label: "No", value: false }].map(({ label, value }) => (
+                    <label key={label} className="inline-flex items-center">
+                      <input
+                        type="radio"
+                        name="isEarthBusBarsConnectedToMainEarthSystem"
+                        value={value}
+                        checked={formData.isEarthBusBarsConnectedToMainEarthSystem === value}
+                        onChange={(e) =>
+                          handleChange({
+                            target: {
+                              name: "isEarthBusBarsConnectedToMainEarthSystem",
+                              value: e.target.value === "true", // convert string to boolean
+                            },
+                          })
+                        }
+                        className="mr-2"
+                        required
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+                <hr className="my-4" />
 
+              </div>
+
+              <div>
+                <label className='block font-semibold mb-2' htmlFor="acElectricalSockets">How many AC electrical sockets available?</label>
+                <input type="number" name="acElectricalSockets" value={formData.acElectricalSockets} onChange={handleChange} className='form-input' />
+                <hr className="my-4" />
+
+              </div>
               {/* Sketch with Measurements */}
               <div>
                 <label className='block font-semibold mb-2'>Do you have a sketch with measurements for the site including cabinets?</label>
@@ -414,7 +510,7 @@ const OutdoorForm = () => {
           </div>
           <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
             <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
-              {loadingApi ? "loading...": "Save"}  
+              {loadingApi ? "loading..." : "Save"}
             </button>
           </div>
 

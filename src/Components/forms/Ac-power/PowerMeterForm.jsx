@@ -368,7 +368,7 @@ const PowerMeterForm = () => {
             </div>
           </div>
 
-      
+  
 
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Length of Power Meter Cable (in meters)</label>
@@ -647,8 +647,8 @@ const PowerMeterForm = () => {
                     />
                   </div>
                 </div>
-              </div>
             </div>
+          </div>
           )}
 
 

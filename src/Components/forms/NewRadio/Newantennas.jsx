@@ -126,30 +126,30 @@ const NewAntennaForm = () => {
 
   return (
     <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
-      {/* Main form container - 80% width */}
+        {/* Main form container - 80% width */}
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
-        <DynamicFormTable
-          title=""
-          entityName="Antenna"
-          entityCount={antennaCount}
-          entities={antennaForms}
-          questions={antennaQuestions}
-          errors={errors}
-          onChange={handleChange}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
+          <DynamicFormTable
+            title=""
+            entityName="Antenna"
+            entityCount={antennaCount}
+            entities={antennaForms}
+            questions={antennaQuestions}
+            errors={errors}
+            onChange={handleChange}
+            onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
           maxHeight="calc(100vh - 200px)"
           submitButtonText="Save"
-          hasUnsavedChanges={hasUnsavedChanges}
+            hasUnsavedChanges={hasUnsavedChanges}
           saveDataToAPI={saveDataToAPI}
-        />
-      </div>
+          />
+        </div>
 
-      <ImageUploader
-        images={getAllImages()}
-        onImageUpload={handleImageUpload}
-        uploadedImages={uploadedImages}
-      />
+          <ImageUploader
+            images={getAllImages()}
+            onImageUpload={handleImageUpload}
+            uploadedImages={uploadedImages}
+          />
     </div>
   );
 };

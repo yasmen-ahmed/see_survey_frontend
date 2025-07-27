@@ -43,6 +43,13 @@ const RadioAntenasForm = () => {
       sideArmOffset: '',
       earthCableLength: '',
       includeInPlan: '',
+      actionPlanned: 'No action',
+      ports: Array(15).fill(null).map((_, portIndex) => ({
+        portType: [],
+        band: [],
+        portStatus: 'Free',
+        electricalTilt: '',
+      })),
     }))
   });
   const [uploadedImages, setUploadedImages] = useState({});
@@ -84,6 +91,13 @@ const RadioAntenasForm = () => {
             sideArmOffset: '',
             earthCableLength: '',
             includeInPlan: '',
+            actionPlanned: 'No action',
+            ports: Array(15).fill(null).map((_, portIndex) => ({
+              portType: [],
+              band: [],
+              portStatus: 'Free',
+              electricalTilt: '',
+            })),
           };
 
           const mergedAntennas = Array(15).fill(null).map((_, index) => {
@@ -124,6 +138,13 @@ const RadioAntenasForm = () => {
         sideArmOffset: apiAntenna.side_arm_offset || '',
         earthCableLength: apiAntenna.earth_cable_length || '',
         includeInPlan: apiAntenna.included_in_upgrade ? 'Yes' : 'No',
+        actionPlanned: apiAntenna.action_planned || 'No action',
+        ports: Array.isArray(apiAntenna.ports) ? apiAntenna.ports : Array(15).fill(null).map((_, portIndex) => ({
+          portType: [],
+          band: [],
+          portStatus: 'Free',
+          electricalTilt: '',
+        })),
             };
           });
 
@@ -156,7 +177,8 @@ const RadioAntenasForm = () => {
           side_arm_diameter: antenna.sideArmDiameter || "",
           side_arm_offset: antenna.sideArmOffset || "",
           earth_cable_length: antenna.earthCableLength || "",
-          included_in_upgrade: antenna.includeInPlan === "Yes"
+          included_in_upgrade: antenna.includeInPlan === "Yes",
+          action_planned: antenna.actionPlanned || "No action"
         };
 
         // Add operator only if shared site
@@ -214,6 +236,11 @@ const RadioAntenasForm = () => {
           }
           if (antenna.otherRadioUnits) {
             antennaData.other_connected_radio_units = parseInt(antenna.otherRadioUnits);
+          }
+          
+          // Add port configuration data if ports exist
+          if (antenna.ports && Array.isArray(antenna.ports)) {
+            antennaData.ports = antenna.ports.filter(port => port && (port.portType || port.band || port.portStatus || port.electricalTilt));
           }
         }
 
@@ -414,6 +441,13 @@ const RadioAntenasForm = () => {
         sideArmOffset: '',
         earthCableLength: '',
         includeInPlan: '',
+        actionPlanned: 'No action',
+        ports: Array(15).fill(null).map((_, portIndex) => ({
+          portType: [],
+          band: [],
+          portStatus: 'Free',
+          electricalTilt: '',
+        })),
       };
     });
 
@@ -532,7 +566,8 @@ const RadioAntenasForm = () => {
     { label: `Antenna #${antennaNumber} RET Photo`, name: `antenna_${antennaNumber}_ret_photo` },
     { label: `Antenna #${antennaNumber} Label Photo`, name: `antenna_${antennaNumber}_label_photo` },
     { label: `Antenna #${antennaNumber} Ports Photo`, name: `antenna_${antennaNumber}_ports_photo` },
-    { label: `Antenna #${antennaNumber} Free ports Photo`, name: `antenna_${antennaNumber}_free_ports_photo` }
+    { label: `Antenna #${antennaNumber} Free ports Photo`, name: `antenna_${antennaNumber}_free_ports_photo` },
+    { label: `Blocking View #${antennaNumber} if found ( Azimuth and Snap from Antenna Top ) `, name: `antenna_${antennaNumber}_blocking_view_photo` }
   ];
 
   // Generate all image fields based on antenna count
@@ -558,6 +593,85 @@ const RadioAntenasForm = () => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
+
+  const handlePortChange = (antennaIndex, portIndex, fieldName, value) => {
+    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+
+    setFormData(prev => {
+      const newFormData = { ...prev };
+      const currentAntenna = { ...newFormData.antennas[antennaIndex] };
+      const currentPorts = [...currentAntenna.ports];
+
+      if (currentPorts[portIndex]) {
+        // Handle multi-select dropdowns
+        if (fieldName === 'portType' || fieldName === 'band') {
+          // Get all selected options from the select element
+          const selectElement = event.target;
+          const selectedOptions = Array.from(selectElement.selectedOptions).map(option => option.value);
+          
+          currentPorts[portIndex] = {
+            ...currentPorts[portIndex],
+            [fieldName]: selectedOptions,
+            [`${fieldName}AutoFilled`]: false
+          };
+        } else {
+          // Handle single value fields
+          currentPorts[portIndex] = {
+            ...currentPorts[portIndex],
+            [fieldName]: value,
+            [`${fieldName}AutoFilled`]: false
+          };
+        }
+      }
+
+      // Auto-fill for ports only
+      if (fieldName === 'portType' && antennaIndex === 0) {
+        const numAntennas = parseInt(prev.numberOfAntennas) || 1;
+        for (let i = 1; i < numAntennas; i++) {
+            newFormData.antennas[i].ports[portIndex] = {
+              ...newFormData.antennas[i].ports[portIndex],
+              portType: currentPorts[portIndex].portType,
+              portTypeAutoFilled: true
+            };
+        }
+      }
+      if (fieldName === 'band' && antennaIndex === 0) {
+        const numAntennas = parseInt(prev.numberOfAntennas) || 1;
+        for (let i = 1; i < numAntennas; i++) {
+            newFormData.antennas[i].ports[portIndex] = {
+              ...newFormData.antennas[i].ports[portIndex],
+              band: currentPorts[portIndex].band,
+              bandAutoFilled: true
+            };
+        }
+      }
+      if (fieldName === 'portStatus' && antennaIndex === 0) {
+        const numAntennas = parseInt(prev.numberOfAntennas) || 1;
+        for (let i = 1; i < numAntennas; i++) {
+            newFormData.antennas[i].ports[portIndex] = {
+              ...newFormData.antennas[i].ports[portIndex],
+              portStatus: value,
+              portStatusAutoFilled: true
+            };
+        }
+      }
+      if (fieldName === 'electricalTilt' && antennaIndex === 0) {
+        const numAntennas = parseInt(prev.numberOfAntennas) || 1;
+        for (let i = 1; i < numAntennas; i++) {
+            newFormData.antennas[i].ports[portIndex] = {
+              ...newFormData.antennas[i].ports[portIndex],
+              electricalTilt: value,
+              electricalTiltAutoFilled: true
+            };
+        }
+      }
+
+      currentAntenna.ports = currentPorts;
+      newFormData.antennas[antennaIndex] = currentAntenna;
+      return newFormData;
+    });
+    setHasUnsavedChanges(true);
+  };
 
   return (
     <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
@@ -818,7 +932,7 @@ const RadioAntenasForm = () => {
                 )}
 
                 {/* Electrical Tilt */}
-                <tr className="bg-gray-50">
+                {/* <tr className="bg-gray-50">
                   <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
                     Electrical tilt (degree)
                   </td>
@@ -835,7 +949,7 @@ const RadioAntenasForm = () => {
                       />
                     </td>
                   ))}
-                </tr>
+                </tr> */}
 
                 {/* RET Connectivity */}
                 <tr>
@@ -1079,53 +1193,7 @@ const RadioAntenasForm = () => {
                     ))}
                   </tr>     
 
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                    If other vendor, Antenna port type 
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                    <td key={antennaIndex} className="border px-2 py-2">
-                      <div className="grid grid-cols-2 gap-1">
-                        {['7/16', '4.3-10', 'MQ4', 'MQ5'].map(port => (
-                          <label key={port} className="flex items-center gap-1 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={(antenna.otherPortType || []).includes(port)}
-                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherPortType', port, e.target.checked)}
-                              className="w-4 h-4"
-                              disabled={antenna.vendor == 'Nokia' && antenna.vendor}
-                            />
-                            {port}
-                          </label>
-                        ))}
-                      </div>
-                    </td>
-                  ))}
-                  </tr>
-
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                    If other vendor, antenna bands
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                    <td key={antennaIndex} className="border px-2 py-2">
-                      <div className="grid grid-cols-2 gap-1">
-                        {['700', '800', '900', '1800', '2100', '2600'].map(band => (
-                          <label key={band} className="flex items-center gap-1 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={(antenna.otherBands || []).includes(band)}
-                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherBands', band, e.target.checked)}
-                              className="w-4 h-4"
-                              disabled={antenna.vendor == 'Nokia' && antenna.vendor}
-                            />
-                            {band}
-                          </label>
-                        ))}
-                      </div>
-                    </td>
-                  ))}
-                  </tr>
+                 
 
                   <tr>
                     <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
@@ -1143,6 +1211,104 @@ const RadioAntenasForm = () => {
                           placeholder={antenna.vendor == 'Nokia' && antenna.vendor ? 'N/A' : '0000'}
                           disabled={antenna.vendor == 'Nokia' && antenna.vendor}
                         />
+                        
+                        {/* Nested Port Configuration Table */}
+                        {antenna.otherPortCount && parseInt(antenna.otherPortCount) > 0 && antenna.vendor !== 'Nokia' && (
+                          <div className="mt-3 border rounded-lg overflow-hidden">
+                            <div className="bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800 border-b">
+                              Port Configuration Table
+                            </div>
+                            <div className="overflow-x-auto max-h-60">
+                              <table className="w-full border-collapse text-xs table-fixed">
+                                <thead className="bg-blue-500 text-white sticky top-0">
+                                  <tr>
+                                    <th className="border px-1 py-1 text-center text-xs w-16">Port #</th>
+                                    <th className="border px-1 py-1 text-center text-xs w-20">Port Type</th>
+                                    <th className="border px-1 py-1 text-center text-xs w-20">Band</th>
+                                    <th className="border px-1 py-1 text-center text-xs w-16">Status</th>
+                                    <th className="border px-1 py-1 text-center text-xs w-16">Tilt</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {Array.from({ length: parseInt(antenna.otherPortCount) }, (_, portIndex) => (
+                                    <tr key={portIndex} className="hover:bg-gray-50 ">
+                                      <td className="border px-1 py-1 text-center font-semibold text-xs bg-gray-100 w-16">
+                                        Port #{portIndex + 1}
+                                      </td>
+                                      <td className="border px-1 py-1 w-20">
+                                        <select
+                                          value={Array.isArray(antenna.ports?.[portIndex]?.portType) ? antenna.ports[portIndex].portType : []}
+                                          onChange={(e) => handlePortChange(antennaIndex, portIndex, 'portType', e.target.value)}
+                                          className="w-full p-1 border rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                          multiple
+                                          size="3"
+                                        >
+                                          <option value="7/16">7/16</option>
+                                          <option value="4.310">4.310</option>
+                                          <option value="MQ4">MQ4</option>
+                                          <option value="MQ5">MQ5</option>
+                                          <option value="Other">Other</option>
+                                        </select>
+                                      </td>
+                                      <td className="border px-1 py-1 w-20">
+                                        <select
+                                          value={Array.isArray(antenna.ports?.[portIndex]?.band) ? antenna.ports[portIndex].band : []}
+                                          onChange={(e) => handlePortChange(antennaIndex, portIndex, 'band', e.target.value)}
+                                          className="w-full p-1 border rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                          multiple
+                                          size="3"
+                                        >
+                                          <option value="700">700</option>
+                                          <option value="800">800</option>
+                                          <option value="900">900</option>
+                                          <option value="1800">1800</option>
+                                          <option value="2100">2100</option>
+                                          <option value="2600">2600</option>
+                                        </select>
+                                      </td>
+                                      <td className="border px-1 py-1 w-16">
+                                        <div className="flex flex-col gap-1">
+                                          <label className="flex items-center gap-1">
+                                            <input
+                                              type="radio"
+                                              name={`portStatus-${antennaIndex}-${portIndex}`}
+                                              value="Free"
+                                              checked={antenna.ports?.[portIndex]?.portStatus === 'Free'}
+                                              onChange={(e) => handlePortChange(antennaIndex, portIndex, 'portStatus', e.target.value)}
+                                              className="w-3 h-3 text-blue-600"
+                                            />
+                                            <span className="text-xs">Free</span>
+                                          </label>
+                                          <label className="flex items-center gap-1">
+                                            <input
+                                              type="radio"
+                                              name={`portStatus-${antennaIndex}-${portIndex}`}
+                                              value="Busy"
+                                              checked={antenna.ports?.[portIndex]?.portStatus === 'Busy'}
+                                              onChange={(e) => handlePortChange(antennaIndex, portIndex, 'portStatus', e.target.value)}
+                                              className="w-3 h-3 text-blue-600"
+                                            />
+                                            <span className="text-xs">Busy</span>
+                                          </label>
+                                        </div>
+                                      </td>
+                                      <td className="border px-1 py-1 w-16">
+                                        <input
+                                          type="number"
+                                          value={antenna.ports?.[portIndex]?.electricalTilt || ''}
+                                          onChange={(e) => handlePortChange(antennaIndex, portIndex, 'electricalTilt', e.target.value)}
+                                          className="w-full p-1 border rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                          placeholder="0"
+                                          step="0.1"
+                                        />
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
                       </td>
                     ))}
                   </tr>
@@ -1166,8 +1332,54 @@ const RadioAntenasForm = () => {
                       </td>
                     ))}
                   </tr>
+ {/* <tr>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    If other vendor, Antenna port type 
+                    </td>
+                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <div className="grid grid-cols-2 gap-1">
+                        {['7/16', '4.3-10', 'MQ4', 'MQ5'].map(port => (
+                          <label key={port} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={(antenna.otherPortType || []).includes(port)}
+                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherPortType', port, e.target.checked)}
+                              className="w-4 h-4"
+                              disabled={antenna.vendor == 'Nokia' && antenna.vendor}
+                            />
+                            {port}
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                  ))}
+                  </tr> */}
 
-                  <tr>
+                  {/* <tr>
+                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                    If other vendor, antenna bands
+                    </td>
+                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <div className="grid grid-cols-2 gap-1">
+                        {['700', '800', '900', '1800', '2100', '2600'].map(band => (
+                          <label key={band} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={(antenna.otherBands || []).includes(band)}
+                              onChange={(e) => handleCheckboxChange(antennaIndex, 'otherBands', band, e.target.checked)}
+                              className="w-4 h-4"
+                              disabled={antenna.vendor == 'Nokia' && antenna.vendor}
+                            />
+                            {band}
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                  ))}
+                  </tr> */}
+                  {/* <tr>
                     <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
                     If other vendor, bands supported by free ports
                     </td>
@@ -1189,7 +1401,7 @@ const RadioAntenasForm = () => {
                       </div>
                     </td>
                   ))}
-                  </tr>
+                  </tr> */}
 
                   <tr>
                     <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
@@ -1306,12 +1518,12 @@ const RadioAntenasForm = () => {
                 {/* Include in Plan */}
                 <tr>
                   <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                    This antenna included in the swap or upgrade plan
+                  Is any action planned for Antenna unit ?
                   </td>
                   {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                     <td key={antennaIndex} className="border px-2 py-2">
                       <div className="flex gap-4">
-                        {['Yes', 'No'].map(option => (
+                      {['Swap / Dismantle', 'No action'].map(option => (
                           <label key={option} className="flex items-center gap-1 text-sm">
                             <input
                               type="radio"
