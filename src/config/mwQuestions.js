@@ -100,5 +100,12 @@ export const mwQuestions = [
     label: 'IDU proposed location',
     type: 'text',
     required: true
+  },  
+  {
+    id: 'antennaType',
+    label: 'MW antenna type',
+    type: 'radio',
+    options: ['Parabolic antenna with radome', 'Open parabolic antenna', 'Parabolic antenna with a cylindrical shroud '],
+    required: true
   }
 ]; 

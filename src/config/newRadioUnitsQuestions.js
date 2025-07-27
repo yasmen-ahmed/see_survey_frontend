@@ -58,6 +58,12 @@ export const radioUnitsQuestions = [
     required: true
   },
   {
+    key: 'bseHeight',
+    label: 'New radio base Hight from tower base level (meter)',
+    type: 'number',
+    placeholder: '000',
+  },
+  {
     key: 'feederLength',
     label: 'If on the ground, what is the feeder length until the antenna? (meter)',
     type: 'number',
@@ -159,7 +165,7 @@ export const radioUnitsQuestions = [
     required: true
   },
   {
-    key: 'earthCableLength',
+    key: 'earth_cable_length',
     label: 'If yes, what is the length of the earth cable from the proposed radio unit location to the earth bus bar? (m)',
     type: 'number',
     placeholder: '00',

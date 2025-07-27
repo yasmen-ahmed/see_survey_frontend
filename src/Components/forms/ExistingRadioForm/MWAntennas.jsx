@@ -298,7 +298,7 @@ const MwAntennasForm = () => {
           </div>
         )}
 
-<form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
+        <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
          
 
 
@@ -391,7 +391,7 @@ const MwAntennasForm = () => {
                                     className={`w-4 h-4 ${antenna.oduLocationAutoFilled ? colorFillAuto : ''}`}
                                   />
                                   <span className={antenna.oduLocationAutoFilled ? colorFillAuto : ''}>
-                                    {option}
+                                  {option}
                                   </span>
                                 </label>
                               ))}
@@ -592,12 +592,12 @@ const MwAntennasForm = () => {
               </div>
             )}
         
-             {/* Save Button at Bottom - Fixed */}
-             <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
+          {/* Save Button at Bottom - Fixed */}
+          <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
             <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
               {loadingApi ? "loading...": "Save"}     
             </button>
-            </div>
+          </div>
         </form>
       </div>
 

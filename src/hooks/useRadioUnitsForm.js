@@ -22,6 +22,7 @@ const initialRadioForm = {
   jumperLength: '',
   earthBusExists: '',
   earthCableLength: '',
+  bseHeight: '',
 };
 
 export const useRadioUnitsForm = (sessionId) => {
@@ -87,6 +88,7 @@ export const useRadioUnitsForm = (sessionId) => {
                 jumperLength: radioUnit.jumper_length ? radioUnit.jumper_length.toString() : '',
                 earthBusExists: radioUnit.earth_bus_bar_exists || '',
                 earthCableLength: radioUnit.earth_cable_length ? radioUnit.earth_cable_length.toString() : '',
+                bseHeight: radioUnit.bseHeight ? radioUnit.bseHeight.toString() : '',
               };
             }
             return { ...initialRadioForm };
@@ -105,8 +107,11 @@ export const useRadioUnitsForm = (sessionId) => {
                 // Determine the correct image key based on category
                 if (img.category === 'proposed_location') {
                   imageKey = `new_radio_unit_${unitNumber}_proposed_location`;
-                } else {
+                } else if (img.category === 'proposed_location_optional_photo') {
                   imageKey = `new_radio_unit_${unitNumber}_proposed_location_optional_photo`;
+                } else {
+                  // Handle any other categories by using the category name directly
+                  imageKey = `new_radio_unit_${unitNumber}_${img.category}`;
                 }
                 
                 // Initialize the array if it doesn't exist
@@ -211,7 +216,7 @@ export const useRadioUnitsForm = (sessionId) => {
       }
 
       if (field === 'earthBusExists' && value !== 'Yes') {
-        radioUnit.earthCableLength = '';
+        radioUnit.earthBusExists = '';
       }
 
       updated[radioUnitIndex] = radioUnit;
@@ -298,16 +303,9 @@ export const useRadioUnitsForm = (sessionId) => {
       e.preventDefault();
     }
 
-    if (!validateForm()) {
-      console.log('Form validation failed');
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      const formData = new FormData();
-
       // Prepare radio unit data
       const radioUnitsData = radioUnitsForms.slice(0, radioUnitsCount).map((radioUnit, index) => {
         const [l1, l2] = (radioUnit.angularDimensions || '').split('x').map(d => d.trim());
@@ -334,6 +332,7 @@ export const useRadioUnitsForm = (sessionId) => {
           jumper_length: radioUnit.jumperLength ? parseFloat(radioUnit.jumperLength) : null,
           earth_bus_bar_exists: radioUnit.earthBusExists,
           earth_cable_length: radioUnit.earthCableLength ? parseFloat(radioUnit.earthCableLength) : null,
+          bseHeight: radioUnit.bseHeight ? parseFloat(radioUnit.bseHeight) : null,
         };
       });
 
@@ -343,9 +342,14 @@ export const useRadioUnitsForm = (sessionId) => {
       };
 
       console.log('Sending radio units data:', dataToSend);
-      console.log('Current radioUnitsForms state:', radioUnitsForms.slice(0, radioUnitsCount));
 
-      formData.append('data', JSON.stringify(dataToSend));
+      // Check if there are any images to upload
+      const hasImages = Object.values(uploadedImages).some(files => files && files.length > 0);
+
+      if (hasImages) {
+        // Use FormData when images are present
+        const formData = new FormData();
+        formData.append('data', JSON.stringify(dataToSend));
 
       // Append images
       Object.entries(uploadedImages).forEach(([category, files]) => {
@@ -356,20 +360,32 @@ export const useRadioUnitsForm = (sessionId) => {
         });
       });
 
-      console.log('FormData entries:');
-      for (let [key, value] of formData.entries()) {
-        console.log(`${key}:`, value instanceof File ? `[File: ${value.name}]` : value);
-      }
-
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/new-radio-units/${sessionId}`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
+        console.log('FormData entries:');
+        for (let [key, value] of formData.entries()) {
+          console.log(`${key}:`, value instanceof File ? `[File: ${value.name}]` : value);
         }
-      );
+
+        await axios.put(
+          `${import.meta.env.VITE_API_URL}/api/new-radio-units/${sessionId}`,
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          }
+        );
+      } else {
+        // Use JSON when no images are present
+        await axios.put(
+          `${import.meta.env.VITE_API_URL}/api/new-radio-units/${sessionId}`,
+          dataToSend,
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+      }
 
       setHasUnsavedChanges(false);
       showSuccess('New radio units data saved successfully');

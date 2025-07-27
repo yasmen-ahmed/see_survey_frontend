@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import DynamicFormTable from '../../common/DynamicFormTable';
 import { useRadioUnitsForm } from '../../../hooks/useRadioUnitsForm';
-import { radioUnitsQuestions } from '../../../config/radioUnitsQuestions';
+import { radioUnitsQuestions } from '../../../config/newRadioUnitsQuestions';
 import ImageUploader from '../../GalleryComponent';
 import { showSuccess, showError } from '../../../utils/notifications';
 
@@ -39,10 +39,7 @@ const NewRadioUnitsForm = () => {
         });
       });
 
-      if (Object.keys(newErrors).length > 0) {
-        console.log('Form validation failed');
-        return false;
-      }
+    
 
       // Prepare radio units data
       const radioUnitsData = radioUnitsForms.slice(0, radioUnitsCount).map((radioUnit, index) => {
@@ -69,7 +66,7 @@ const NewRadioUnitsForm = () => {
           fiber_cable_length: radioUnit.fiberLength ? parseFloat(radioUnit.fiberLength) : null,
           jumper_length: radioUnit.jumperLength ? parseFloat(radioUnit.jumperLength) : null,
           earth_bus_bar_exists: radioUnit.earthBusExists,
-          earth_cable_length: radioUnit.earthCableLength ? parseFloat(radioUnit.earthCableLength) : null,
+          earth_cable_length: radioUnit.earth_cable_length ? parseFloat(radioUnit.earth_cable_length) : null,
         };
       });
 
