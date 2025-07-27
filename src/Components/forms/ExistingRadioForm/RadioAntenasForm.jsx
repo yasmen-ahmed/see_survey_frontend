@@ -43,7 +43,7 @@ const RadioAntenasForm = () => {
       sideArmOffset: '',
       earthCableLength: '',
       includeInPlan: '',
-      actionPlanned: 'No action',
+      actionPlanned: '',
       ports: Array(15).fill(null).map((_, portIndex) => ({
         portType: [],
         band: [],
@@ -91,7 +91,7 @@ const RadioAntenasForm = () => {
       sideArmOffset: '',
       earthCableLength: '',
       includeInPlan: '',
-      actionPlanned: 'No action',
+      actionPlanned: '',
       ports: Array(15).fill(null).map((_, portIndex) => ({
         portType: [],
         band: [],
@@ -112,7 +112,17 @@ const RadioAntenasForm = () => {
         baseHeight: apiAntenna.base_height || '',
         towerLeg: apiAntenna.tower_leg || '',
         sector: apiAntenna.sector || '',
-        technology: Array.isArray(apiAntenna.technology) ? apiAntenna.technology : [],
+        // technology: Array.isArray(apiAntenna.technology) ? apiAntenna.technology : [],
+        technology: (() => {
+          if (Array.isArray(apiAntenna.technology)) return apiAntenna.technology;
+          try {
+            const parsed = JSON.parse(apiAntenna.technology);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        })(),
+        
         azimuth: apiAntenna.azimuth_angle || '',
         mechanicalTiltExist: apiAntenna.mechanical_tilt_exist ? 'Yes' : 'No',
         mechanicalTilt: apiAntenna.mechanical_tilt || '',
@@ -138,11 +148,11 @@ const RadioAntenasForm = () => {
         sideArmOffset: apiAntenna.side_arm_offset || '',
         earthCableLength: apiAntenna.earth_cable_length || '',
         includeInPlan: apiAntenna.included_in_upgrade ? 'Yes' : 'No',
-        actionPlanned: apiAntenna.action_planned || 'No action',
+        actionPlanned: apiAntenna.action_planned || '',
         ports: Array.isArray(apiAntenna.ports) ? apiAntenna.ports : Array(15).fill(null).map(() => ({
             portType: [],
             band: [],
-            portStatus: 'Free',
+            portStatus: '',
             electricalTilt: '',
         })),
       };
@@ -178,7 +188,7 @@ const RadioAntenasForm = () => {
           side_arm_offset: antenna.sideArmOffset || "",
           earth_cable_length: antenna.earthCableLength || "",
           included_in_upgrade: antenna.includeInPlan === "Yes",
-          action_planned: antenna.actionPlanned || "No action"
+          action_planned: antenna.actionPlanned || ""
         };
 
         // Add operator only if shared site
@@ -441,7 +451,7 @@ const RadioAntenasForm = () => {
         sideArmOffset: '',
         earthCableLength: '',
         includeInPlan: '',
-        actionPlanned: 'No action',
+        actionPlanned: '',
         ports: Array(15).fill(null).map((_, portIndex) => ({
           portType: [],
           band: [],
@@ -1559,10 +1569,10 @@ const RadioAntenasForm = () => {
                           <label key={option} className="flex items-center gap-1 text-sm">
                             <input
                               type="radio"
-                              name={`includeInPlan-${antennaIndex}`}
+                              name={`actionPlanned-${antennaIndex}`}
                               value={option}
-                              checked={antenna.includeInPlan === option}
-                              onChange={(e) => handleChange(antennaIndex, 'includeInPlan', e.target.value)}
+                              checked={antenna.actionPlanned === option}
+                              onChange={(e) => handleChange(antennaIndex, 'actionPlanned', e.target.value)}
                               className="w-4 h-4"
                             />
                             {option}
