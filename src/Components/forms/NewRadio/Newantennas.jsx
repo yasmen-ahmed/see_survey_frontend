@@ -37,10 +37,10 @@ const NewAntennaForm = () => {
         });
       });
 
-      if (Object.keys(newErrors).length > 0) {
-        console.log('Form validation failed');
-        return false;
-      }
+      // if (Object.keys(newErrors).length > 0) {
+      //   console.log('Form validation failed');
+      //   return false;
+      // }
 
       // Prepare antenna data
       const antennaData = antennaForms.slice(0, antennaCount).map((antenna, index) => ({
@@ -61,6 +61,11 @@ const NewAntennaForm = () => {
         side_arm_offset: antenna.sideArmOffset,
         earth_bus_bar_exists: antenna.earthBusExists,
         earth_cable_length: antenna.earthCableLength,
+        antennaVendor: antenna.antennaVendor,
+        antennaVendorOther: antenna.antennaVendorOther,
+        antennaHeight: antenna.antennaHeight,
+        antennaWeight: antenna.antennaWeight,
+        antennaDiameter: antenna.antennaDiameter
       }));
 
       const dataToSend = {

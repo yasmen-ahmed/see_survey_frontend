@@ -29,6 +29,23 @@ export const antennaQuestions = [
     required: true
   },
   {
+    key: 'antennaVendor',
+    label: 'Antenna vendor',
+    type: 'radio',
+    options: ['Nokia', 'PROS', 'COMMSCOPE', 'Kathrine', 'Huawei', 'Andrew', 'Other'],
+  
+    showOtherInput: true,  
+    otherKey: 'antennaVendorOther'  
+  },  
+  {
+    key: 'antennaPhysicalSpecs',
+    label: 'Antenna Dimensions (Height, Weight, Diameter)',
+    type: 'group',
+    fields: ['antennaHeight', 'antennaWeight', 'antennaDiameter'],
+  
+    isGrouped: true
+  },  
+  {
     key: 'azimuth',
     label: 'Azimuth, angle shift from zero north direction (degree)',
     type: 'number',

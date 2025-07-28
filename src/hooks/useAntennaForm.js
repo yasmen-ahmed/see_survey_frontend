@@ -21,6 +21,11 @@ const initialAntennaForm = {
   sideArmOffset: '',
   earthBusExists: '',
   earthCableLength: '',
+  antennaVendor: '',
+  antennaVendorOther: '',
+  antennaHeight: '',
+  antennaWeight: '',
+  antennaDiameter: '',
 };
 
 export const useAntennaForm = (sessionId) => {
@@ -81,6 +86,11 @@ export const useAntennaForm = (sessionId) => {
                 sideArmOffset: antenna.side_arm_offset || '',
                 earthBusExists: antenna.earth_bus_bar_exists || '',
                 earthCableLength: antenna.earth_cable_length || '',
+                antennaVendor: antenna.antennaVendor || '',
+                antennaVendorOther: antenna.antennaVendorOther || '',
+                antennaHeight: antenna.antennaHeight || '',
+                antennaWeight: antenna.antennaWeight || '',
+                antennaDiameter: antenna.antennaDiameter || '',
               };
             }
             return { ...initialAntennaForm };
@@ -90,16 +100,42 @@ export const useAntennaForm = (sessionId) => {
 
           // Initialize uploaded images from existing data
           const initialImages = {};
-          data.antennas.forEach(antenna => {
+          console.log("Processing antennas for images:", data.antennas);
+          data.antennas.forEach((antenna, antennaIndex) => {
+            console.log(`Antenna ${antennaIndex}:`, antenna);
             if (antenna.images && antenna.images.length > 0) {
-              antenna.images.forEach(image => {
-                initialImages[image.category] = [{
-                  file_url: `/${image.path}`,
-                  id: image.id
-                }];
+              console.log(`Antenna ${antennaIndex} has ${antenna.images.length} images:`, antenna.images);
+              antenna.images.forEach(img => {
+                console.log(`Processing image:`, img);
+                const unitNumber = antenna.antenna_index || antennaIndex + 1;
+                let imageKey;
+                
+                // Determine the correct image key based on category
+                if (img.category === 'proposed_location') {
+                  imageKey = `new_antenna_${unitNumber}_proposed_location`;
+                } else if (img.category === 'proposed_location_optional_photo') {
+                  imageKey = `new_antenna_${unitNumber}_proposed_location_optional_photo`;
+                } else {
+                  // Handle any other categories by using the category name directly
+                  imageKey = `new_antenna_${unitNumber}_${img.category}`;
+                }
+                
+                console.log(`Mapped image to key: ${imageKey}`);
+                
+                // Initialize the array if it doesn't exist
+                initialImages[imageKey] = initialImages[imageKey] || [];
+                
+                // Add the image with the full URL
+                initialImages[imageKey].push({
+                  id: img.id,
+                  url: `${import.meta.env.VITE_API_URL}/${img.path}`,
+                  file_url: img.path,
+                  preview: `${import.meta.env.VITE_API_URL}/${img.path}`
+                });
               });
             }
           });
+          console.log("Final initialImages:", initialImages);
           setUploadedImages(initialImages);
         }
       } catch (err) {
@@ -141,14 +177,8 @@ export const useAntennaForm = (sessionId) => {
       const updated = [...prev];
       const antenna = { ...updated[antennaIndex] };
 
-      if (field === 'technologies') {
-        const currentTechs = antenna.technologies || [];
-        antenna.technologies = currentTechs.includes(value)
-          ? currentTechs.filter(t => t !== value)
-          : [...currentTechs, value];
-      } else {
-        antenna[field] = value;
-      }
+      // Handle all fields directly - DynamicFormTable handles arrays properly
+      antenna[field] = value;
 
       updated[antennaIndex] = antenna;
       return updated;
@@ -255,39 +285,35 @@ export const useAntennaForm = (sessionId) => {
   };
 
   const handleSubmit = async (e) => {
-    if (e) {
-      e.preventDefault();
-    }
-
-    if (!validateForm()) {
-      console.log('Form validation failed');
-      return;
-    }
-
+    if (e) e.preventDefault();
+  
     setIsSubmitting(true);
-
+  
     try {
-      const formData = new FormData();
-
       // Prepare antenna data
       const antennaData = antennaForms.slice(0, antennaCount).map((antenna, index) => ({
         antenna_index: index + 1,
-        base_height_from_tower: antenna.baseHeight,
-        tower_leg_location: antenna.towerLeg,
-        sector_number: antenna.sectorNumber,
-        new_or_swap: antenna.newOrSwap,
-        antenna_technology: antenna.technologies,
-        azimuth_angle_shift: antenna.azimuth,
-        angular_l1_dimension: antenna.angularL1Dimension,
-        angular_l2_dimension: antenna.angularL2Dimension,
-        tubular_cross_section: antenna.tubularCrossSection,
-        tower_leg_section: antenna.towerSection,
-        side_arm_type: antenna.sideArmOption,
-        side_arm_length: antenna.sideArmLength,
-        side_arm_cross_section: antenna.sideArmCrossSection,
-        side_arm_offset: antenna.sideArmOffset,
-        earth_bus_bar_exists: antenna.earthBusExists,
-        earth_cable_length: antenna.earthCableLength,
+        sector_number: antenna.sectorNumber || '',
+        new_or_swap: antenna.newOrSwap || '',
+        antenna_technology: antenna.technologies || [],
+        antennaVendor: antenna.antennaVendor || '',
+        antennaVendorOther: antenna.antennaVendorOther || '',
+        antennaHeight: antenna.antennaHeight || '',
+        antennaWeight: antenna.antennaWeight || '',
+        antennaDiameter: antenna.antennaDiameter || '',
+        azimuth_angle_shift: antenna.azimuth || '',
+        base_height_from_tower: antenna.baseHeight || '',
+        tower_leg_location: antenna.towerLeg || '',
+        tower_leg_section: antenna.towerSection || '',
+        angular_l1_dimension: antenna.angularL1Dimension || '',
+        angular_l2_dimension: antenna.angularL2Dimension || '',
+        tubular_cross_section: antenna.tubularCrossSection || '',
+        side_arm_type: antenna.sideArmOption || '',
+        side_arm_length: antenna.sideArmLength || '',
+        side_arm_cross_section: antenna.sideArmCrossSection || '',
+        side_arm_offset: antenna.sideArmOffset || '',
+        earth_bus_bar_exists: antenna.earthBusExists || '',
+        earth_cable_length: antenna.earthCableLength || '',
       }));
 
       const dataToSend = {
@@ -296,34 +322,46 @@ export const useAntennaForm = (sessionId) => {
       };
 
       console.log('Sending antenna data:', dataToSend);
-      console.log('Current antennaForms state:', antennaForms.slice(0, antennaCount));
 
-      formData.append('data', JSON.stringify(dataToSend));
-
-      // Append images
-      Object.entries(uploadedImages).forEach(([category, files]) => {
-        files.forEach(file => {
-          if (file instanceof File) {
-            formData.append(category, file);
-          }
+      // Check if there are any images to upload
+      const hasImages = Object.values(uploadedImages).some(files => files && files.length > 0);
+      
+      if (hasImages) {
+        // Use FormData when images are present
+        const formData = new FormData();
+        formData.append('data', JSON.stringify(dataToSend));
+      
+        // Append images
+        Object.entries(uploadedImages).forEach(([category, files]) => {
+          files.forEach(file => {
+            if (file instanceof File) {
+              formData.append(category, file);
+            }
+          });
         });
-      });
-
-      console.log('FormData entries:');
-      for (let [key, value] of formData.entries()) {
-        console.log(`${key}:`, value instanceof File ? `[File: ${value.name}]` : value);
-      }
-
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/new-antennas/${sessionId}`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
+      
+        await axios.put(
+          `${import.meta.env.VITE_API_URL}/api/new-antennas/${sessionId}`,
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
           }
-        }
-      );
-
+        );
+      } else {
+        // Use JSON when no images are present
+        await axios.put(
+          `${import.meta.env.VITE_API_URL}/api/new-antennas/${sessionId}`,
+          dataToSend,
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+      }
+  
       setHasUnsavedChanges(false);
       showSuccess('New antennas data saved successfully');
     } catch (err) {
@@ -333,6 +371,7 @@ export const useAntennaForm = (sessionId) => {
       setIsSubmitting(false);
     }
   };
+  
 
   return {
     antennaCount,

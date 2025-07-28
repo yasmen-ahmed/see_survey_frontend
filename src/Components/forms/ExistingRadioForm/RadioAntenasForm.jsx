@@ -7,7 +7,7 @@ import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
 
 const RadioAntenasForm = () => {
   const { sessionId } = useParams();
-  const [loadingApi,setLoadingApi] =useState(false)
+  const [loadingApi, setLoadingApi] = useState(false)
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [formData, setFormData] = useState({
     numberOfAntennas: 1,
@@ -43,7 +43,7 @@ const RadioAntenasForm = () => {
       sideArmOffset: '',
       earthCableLength: '',
       includeInPlan: '',
-      actionPlanned: 'No action',
+      actionPlanned: '',
       ports: Array(15).fill(null).map((_, portIndex) => ({
         portType: [],
         band: [],
@@ -60,59 +60,69 @@ const RadioAntenasForm = () => {
 
   // Helper function to map API data to form data
   const mapApiToFormData = (apiData) => {
-          const defaultAntenna = {
-            operator: '',
-            baseHeight: '',
-            towerLeg: '',
-            sector: '',
-            technology: [],
-            azimuth: '',
-            mechanicalTiltExist: '',
-            mechanicalTilt: '',
-            electricalTilt: '',
-            retConnectivity: '',
-            vendor: '',
-            isNokiaActive: '',
-            nokiaModuleName: '',
-            nokiaFiberCount: '',
+    const defaultAntenna = {
+      operator: '',
+      baseHeight: '',
+      towerLeg: '',
+      sector: '',
+      technology: [],
+      azimuth: '',
+      mechanicalTiltExist: '',
+      mechanicalTilt: '',
+      electricalTilt: '',
+      retConnectivity: '',
+      vendor: '',
+      isNokiaActive: '',
+      nokiaModuleName: '',
+      nokiaFiberCount: '',
       nokiaFiberLength: '',
-            otherModelNumber: '',
-            otherLength: '',
-            otherWidth: '',
-            otherDepth: '',
-            otherPortType: [],
-            otherBands: [],
-            otherPortCount: '',
+      otherModelNumber: '',
+      otherLength: '',
+      otherWidth: '',
+      otherDepth: '',
+      otherPortType: [],
+      otherBands: [],
+      otherPortCount: '',
       otherFreePorts: '',
       otherFreeBands: [],
-            otherRadioUnits: '',
-            sideArmLength: '',
-            sideArmDiameter: '',
-            sideArmOffset: '',
-            earthCableLength: '',
-            includeInPlan: '',
-            actionPlanned: 'No action',
-            ports: Array(15).fill(null).map((_, portIndex) => ({
-              portType: [],
-              band: [],
-              portStatus: 'Free',
-              electricalTilt: '',
-            })),
-          };
+      otherRadioUnits: '',
+      sideArmLength: '',
+      sideArmDiameter: '',
+      sideArmOffset: '',
+      earthCableLength: '',
+      includeInPlan: '',
+      actionPlanned: '',
+      ports: Array(15).fill(null).map((_, portIndex) => ({
+        portType: [],
+        band: [],
+        portStatus: 'Free',
+        electricalTilt: '',
+      })),
+    };
 
-          const mergedAntennas = Array(15).fill(null).map((_, index) => {
+    const mergedAntennas = Array(15).fill(null).map((_, index) => {
       const apiAntenna = apiData.antennas?.[index];
       if (!apiAntenna) {
         return { id: index + 1, ...defaultAntenna };
       }
 
-            return {
-              id: index + 1,
+      return {
+        id: index + 1,
         operator: apiAntenna.operator || '',
         baseHeight: apiAntenna.base_height || '',
         towerLeg: apiAntenna.tower_leg || '',
         sector: apiAntenna.sector || '',
-              technology: Array.isArray(apiAntenna.technology) ? apiAntenna.technology : [],
+        // technology: Array.isArray(apiAntenna.technology) ? apiAntenna.technology : [],
+        technology: (() => {
+          if (Array.isArray(apiAntenna.technology)) return apiAntenna.technology;
+          try {
+            const parsed = JSON.parse(apiAntenna.technology);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        })(),
+        
         azimuth: apiAntenna.azimuth_angle || '',
         mechanicalTiltExist: apiAntenna.mechanical_tilt_exist ? 'Yes' : 'No',
         mechanicalTilt: apiAntenna.mechanical_tilt || '',
@@ -138,15 +148,15 @@ const RadioAntenasForm = () => {
         sideArmOffset: apiAntenna.side_arm_offset || '',
         earthCableLength: apiAntenna.earth_cable_length || '',
         includeInPlan: apiAntenna.included_in_upgrade ? 'Yes' : 'No',
-        actionPlanned: apiAntenna.action_planned || 'No action',
-        ports: Array.isArray(apiAntenna.ports) ? apiAntenna.ports : Array(15).fill(null).map((_, portIndex) => ({
-          portType: [],
-          band: [],
-          portStatus: 'Free',
-          electricalTilt: '',
+        actionPlanned: apiAntenna.action_planned || '',
+        ports: Array.isArray(apiAntenna.ports) ? apiAntenna.ports : Array(15).fill(null).map(() => ({
+            portType: [],
+            band: [],
+            portStatus: '',
+            electricalTilt: '',
         })),
-            };
-          });
+      };
+    });
 
     return {
       numberOfAntennas: (apiData.antenna_count && apiData.antenna_count > 0) ? apiData.antenna_count.toString() : '1',
@@ -157,7 +167,7 @@ const RadioAntenasForm = () => {
   // Helper function to map form data to API format
   const mapFormToApiData = (formData) => {
     const activeAntennas = formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 0);
-    
+
     return {
       antenna_count: parseInt(formData.numberOfAntennas) || 1,
       antennas: activeAntennas.map((antenna, index) => {
@@ -178,7 +188,7 @@ const RadioAntenasForm = () => {
           side_arm_offset: antenna.sideArmOffset || "",
           earth_cable_length: antenna.earthCableLength || "",
           included_in_upgrade: antenna.includeInPlan === "Yes",
-          action_planned: antenna.actionPlanned || "No action"
+          action_planned: antenna.actionPlanned || ""
         };
 
         // Add operator only if shared site
@@ -237,7 +247,7 @@ const RadioAntenasForm = () => {
           if (antenna.otherRadioUnits) {
             antennaData.other_connected_radio_units = parseInt(antenna.otherRadioUnits);
           }
-          
+
           // Add port configuration data if ports exist
           if (antenna.ports && Array.isArray(antenna.ports)) {
             antennaData.ports = antenna.ports.filter(port => port && (port.portType || port.band || port.portStatus || port.electricalTilt));
@@ -252,10 +262,10 @@ const RadioAntenasForm = () => {
   // Process images from API response
   const processImagesFromResponse = (antennas) => {
     const imagesByCategory = {};
-    
+
     antennas.forEach((antenna, antennaIndex) => {
       const antennaNumber = antenna.antenna_number || (antennaIndex + 1);
-      
+
       if (antenna.images && Array.isArray(antenna.images)) {
         antenna.images.forEach(img => {
           const category = img.image_category || `antenna_${antennaNumber}_photo`;
@@ -268,7 +278,7 @@ const RadioAntenasForm = () => {
         });
       }
     });
-    
+
     console.log('Processed images:', imagesByCategory);
     return imagesByCategory;
   };
@@ -276,7 +286,7 @@ const RadioAntenasForm = () => {
   // Handle image uploads from ImageUploader component
   const handleImageUpload = (imageCategory, files) => {
     if (isInitialLoading) return; // Don't set unsaved changes during initial load
-    
+
     console.log(`Images uploaded for ${imageCategory}:`, files);
     setUploadedImages(prev => ({
       ...prev,
@@ -293,9 +303,9 @@ const RadioAntenasForm = () => {
         setIsLoading(true);
         const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/antenna-configuration/${sessionId}`);
         const apiData = response.data.data || response.data;
-        
+
         console.log("Fetched antenna configuration data:", apiData);
-        
+
         if (apiData) {
           const mappedData = mapApiToFormData(apiData);
           setFormData(mappedData);
@@ -331,10 +341,10 @@ const RadioAntenasForm = () => {
 
   const handleChange = (antennaIndex, fieldName, value) => {
     if (isInitialLoading) return; // Don't set unsaved changes during initial load
-    
+
     setFormData(prev => {
       const newFormData = { ...prev };
-      
+
       if (antennaIndex === 0) {
         const numAntennas = parseInt(prev.numberOfAntennas) || 1;
         for (let i = 1; i < numAntennas; i++) {
@@ -347,13 +357,13 @@ const RadioAntenasForm = () => {
           }
         }
       }
-      
+
       newFormData.antennas[antennaIndex] = {
         ...newFormData.antennas[antennaIndex],
         [fieldName]: value,
         [`${fieldName}AutoFilled`]: false
       };
-      
+
       return newFormData;
     });
     setHasUnsavedChanges(true);
@@ -361,7 +371,7 @@ const RadioAntenasForm = () => {
 
   const handleCheckboxChange = (antennaIndex, fieldName, value, checked) => {
     if (isInitialLoading) return; // Don't set unsaved changes during initial load
-    
+
     setFormData(prev => {
       const newFormData = { ...prev };
       const currentAntenna = { ...newFormData.antennas[antennaIndex] };
@@ -380,14 +390,14 @@ const RadioAntenasForm = () => {
       if (fieldName === 'technology' && antennaIndex === 0) {
         const numAntennas = parseInt(prev.numberOfAntennas) || 1;
         for (let i = 1; i < numAntennas; i++) {
-            newFormData.antennas[i] = {
-              ...newFormData.antennas[i],
+          newFormData.antennas[i] = {
+            ...newFormData.antennas[i],
             technology: arr,
             technologyAutoFilled: true
-            };
+          };
         }
       }
-      
+
       newFormData.antennas[antennaIndex] = currentAntenna;
       return newFormData;
     });
@@ -396,7 +406,7 @@ const RadioAntenasForm = () => {
 
   const handleNumberOfAntennasChange = (e) => {
     if (isInitialLoading) return; // Don't set unsaved changes during initial load
-    
+
     const count = parseInt(e.target.value);
     if (!count || count < 1) {
       setFormData({ numberOfAntennas: "", antennas: [] });
@@ -441,7 +451,7 @@ const RadioAntenasForm = () => {
         sideArmOffset: '',
         earthCableLength: '',
         includeInPlan: '',
-        actionPlanned: 'No action',
+        actionPlanned: '',
         ports: Array(15).fill(null).map((_, portIndex) => ({
           portType: [],
           band: [],
@@ -472,7 +482,7 @@ const RadioAntenasForm = () => {
   // Function to save data via API
   const saveDataToAPI = async () => {
     if (!hasUnsavedChanges) return true;
-    
+
     try {
       setLoadingApi(true);
       // Create FormData for multipart submission
@@ -480,7 +490,7 @@ const RadioAntenasForm = () => {
 
       // Map form data to API format
       const apiData = mapFormToApiData(formData);
-      
+
       // Add antenna count
       submitFormData.append('antenna_count', apiData.antenna_count);
 
@@ -500,11 +510,11 @@ const RadioAntenasForm = () => {
 
       // Get all possible image fields
       const allImageFields = getAllImages();
-      
+
       // Handle all image fields - including removed ones
       allImageFields.forEach(imageField => {
         const imageFiles = uploadedImages[imageField.name];
-        
+
         if (Array.isArray(imageFiles) && imageFiles.length > 0) {
           const file = imageFiles[0];
           if (file instanceof File) {
@@ -521,7 +531,7 @@ const RadioAntenasForm = () => {
         submitFormData,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       );
-      
+
       setHasUnsavedChanges(false);
       showSuccess('Data saved successfully!');
       return true;
@@ -594,84 +604,108 @@ const RadioAntenasForm = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
-  const handlePortChange = (antennaIndex, portIndex, fieldName, value) => {
-    if (isInitialLoading) return; // Don't set unsaved changes during initial load
-
+  const handlePortChange = (antennaIndex, portIndex, fieldName, value, event = null) => {
+    if (isInitialLoading) return;
+  
     setFormData(prev => {
       const newFormData = { ...prev };
+  
+      // Ensure antenna exists
       const currentAntenna = { ...newFormData.antennas[antennaIndex] };
-      const currentPorts = [...currentAntenna.ports];
-
-      if (currentPorts[portIndex]) {
-        // Handle multi-select dropdowns
-        if (fieldName === 'portType' || fieldName === 'band') {
-          // Get all selected options from the select element
-          const selectElement = event.target;
-          const selectedOptions = Array.from(selectElement.selectedOptions).map(option => option.value);
-          
-          currentPorts[portIndex] = {
-            ...currentPorts[portIndex],
-            [fieldName]: selectedOptions,
-            [`${fieldName}AutoFilled`]: false
-          };
-        } else {
-          // Handle single value fields
-          currentPorts[portIndex] = {
-            ...currentPorts[portIndex],
-            [fieldName]: value,
-            [`${fieldName}AutoFilled`]: false
-          };
-        }
+  
+      // Initialize ports if missing
+      if (!Array.isArray(currentAntenna.ports)) {
+        currentAntenna.ports = [];
       }
-
-      // Auto-fill for ports only
-      if (fieldName === 'portType' && antennaIndex === 0) {
+  
+      // Clone existing ports or initialize with default
+      const currentPorts = [...currentAntenna.ports];
+      if (!currentPorts[portIndex]) {
+        currentPorts[portIndex] = {
+          portType: [],
+          band: [],
+          portStatus: '',
+          electricalTilt: ''
+        };
+      }
+  
+      // Multi-select case (from select element)
+      if ((fieldName === 'portType' || fieldName === 'band') && event && event.target && event.target.selectedOptions) {
+        const selectElement = event.target;
+        const selectedOptions = Array.from(selectElement.selectedOptions).map(opt => opt.value);
+        currentPorts[portIndex] = {
+          ...currentPorts[portIndex],
+          [fieldName]: selectedOptions,
+          [`${fieldName}AutoFilled`]: false
+        };
+      } else {
+        // Normal update
+        currentPorts[portIndex] = {
+          ...currentPorts[portIndex],
+          [fieldName]: value,
+          [`${fieldName}AutoFilled`]: false
+        };
+      }
+  
+      // === Auto-fill logic for Antenna 0 ===
+      if (antennaIndex === 0) {
         const numAntennas = parseInt(prev.numberOfAntennas) || 1;
         for (let i = 1; i < numAntennas; i++) {
+          // Ensure ports exist
+          if (!Array.isArray(newFormData.antennas[i].ports)) {
+            newFormData.antennas[i].ports = [];
+          }
+          if (!newFormData.antennas[i].ports[portIndex]) {
+            newFormData.antennas[i].ports[portIndex] = {
+              portType: [],
+              band: [],
+              portStatus: '',
+              electricalTilt: ''
+            };
+          }
+  
+          if (fieldName === 'portType') {
             newFormData.antennas[i].ports[portIndex] = {
               ...newFormData.antennas[i].ports[portIndex],
               portType: currentPorts[portIndex].portType,
               portTypeAutoFilled: true
             };
-        }
-      }
-      if (fieldName === 'band' && antennaIndex === 0) {
-        const numAntennas = parseInt(prev.numberOfAntennas) || 1;
-        for (let i = 1; i < numAntennas; i++) {
+          }
+  
+          if (fieldName === 'band') {
             newFormData.antennas[i].ports[portIndex] = {
               ...newFormData.antennas[i].ports[portIndex],
               band: currentPorts[portIndex].band,
               bandAutoFilled: true
             };
-        }
-      }
-      if (fieldName === 'portStatus' && antennaIndex === 0) {
-        const numAntennas = parseInt(prev.numberOfAntennas) || 1;
-        for (let i = 1; i < numAntennas; i++) {
+          }
+  
+          if (fieldName === 'portStatus') {
             newFormData.antennas[i].ports[portIndex] = {
               ...newFormData.antennas[i].ports[portIndex],
               portStatus: value,
               portStatusAutoFilled: true
             };
-        }
-      }
-      if (fieldName === 'electricalTilt' && antennaIndex === 0) {
-        const numAntennas = parseInt(prev.numberOfAntennas) || 1;
-        for (let i = 1; i < numAntennas; i++) {
+          }
+  
+          if (fieldName === 'electricalTilt') {
             newFormData.antennas[i].ports[portIndex] = {
               ...newFormData.antennas[i].ports[portIndex],
               electricalTilt: value,
               electricalTiltAutoFilled: true
             };
+          }
         }
       }
-
+  
       currentAntenna.ports = currentPorts;
       newFormData.antennas[antennaIndex] = currentAntenna;
       return newFormData;
     });
+  
     setHasUnsavedChanges(true);
   };
+  
 
   return (
     <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
@@ -693,9 +727,9 @@ const RadioAntenasForm = () => {
         )}
 
         <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
-          
-          
-             
+
+
+
           {/* Number of Antennas Selection */}
           <div className="p-4 bg-gray-50 rounded-lg">
             <label className="block font-semibold mb-2">How many antennas on site?</label>
@@ -706,7 +740,7 @@ const RadioAntenasForm = () => {
               className="form-input"
               required
             >
-          
+
               {Array.from({ length: 15 }, (_, i) => i + 1).map((num) => (
                 <option key={num} value={num}>{num}</option>
               ))}
@@ -727,7 +761,7 @@ const RadioAntenasForm = () => {
                   {Array.from({ length: parseInt(formData.numberOfAntennas) || 1 }, (_, i) => (
                     <th
                       key={i}
-                      className="border px-4 py-3 text-center font-semibold min-w-[300px] sticky top-0 bg-blue-500 z-10"
+                      className="border px-4 py-3 text-center font-semibold min-w-[500px] sticky top-0 bg-blue-500 z-10"
                     >
                       Antenna #{i + 1}
                     </th>
@@ -746,9 +780,8 @@ const RadioAntenasForm = () => {
                       <select
                         value={antenna.operator}
                         onChange={(e) => handleChange(antennaIndex, 'operator', e.target.value)}
-                        className={`w-full p-2 border rounded text-sm ${
-                          antenna.operatorAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                        }`}
+                        className={`w-full p-2 border rounded text-sm ${antenna.operatorAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
                       >
                         <option value="">-- Select --</option>
                         <option value="Operator 1">Operator 1</option>
@@ -771,9 +804,8 @@ const RadioAntenasForm = () => {
                         type="number"
                         value={antenna.baseHeight}
                         onChange={(e) => handleChange(antennaIndex, 'baseHeight', e.target.value)}
-                        className={`w-full p-2 border rounded text-sm ${
-                          antenna.baseHeightAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                        }`}
+                        className={`w-full p-2 border rounded text-sm ${antenna.baseHeightAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
                         placeholder="Enter height..."
                         required
                       />
@@ -817,9 +849,8 @@ const RadioAntenasForm = () => {
                       <select
                         value={antenna.sector}
                         onChange={(e) => handleChange(antennaIndex, 'sector', e.target.value)}
-                        className={`w-full p-2 border rounded text-sm ${
-                          antenna.sectorAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                        }`}
+                        className={`w-full p-2 border rounded text-sm ${antenna.sectorAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
                       >
                         <option value="">-- Select --</option>
                         {[1, 2, 3, 4, 5].map(sector => (
@@ -837,9 +868,8 @@ const RadioAntenasForm = () => {
                   </td>
                   {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                     <td key={antennaIndex} className="border px-2 py-2">
-                      <div className={`grid grid-cols-2 gap-1 ${
-                        antenna.technologyAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                      }`}>
+                      <div className={`grid grid-cols-2 gap-1 ${antenna.technologyAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}>
                         {['2G', '3G', '4G', '5G'].map(tech => (
                           <label key={tech} className="flex items-center gap-1 text-sm cursor-pointer">
                             <input
@@ -869,9 +899,8 @@ const RadioAntenasForm = () => {
                         type="number"
                         value={antenna.azimuth}
                         onChange={(e) => handleChange(antennaIndex, 'azimuth', e.target.value)}
-                        className={`w-full p-2 border rounded text-sm ${
-                          antenna.azimuthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                        }`}
+                        className={`w-full p-2 border rounded text-sm ${antenna.azimuthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
                         placeholder="0000"
                         min="0"
                         max="360"
@@ -920,9 +949,8 @@ const RadioAntenasForm = () => {
                           type="number"
                           value={antenna.mechanicalTilt}
                           onChange={(e) => handleChange(antennaIndex, 'mechanicalTilt', e.target.value)}
-                          className={`w-full p-2 border rounded text-sm ${
-                            antenna.mechanicalTiltAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                          }`}
+                          className={`w-full p-2 border rounded text-sm ${antenna.mechanicalTiltAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                            }`}
                           placeholder={antenna.mechanicalTiltExist === 'Yes' ? '0000' : 'N/A'}
                           disabled={antenna.mechanicalTiltExist !== 'Yes'}
                         />
@@ -961,9 +989,8 @@ const RadioAntenasForm = () => {
                       <select
                         value={antenna.retConnectivity}
                         onChange={(e) => handleChange(antennaIndex, 'retConnectivity', e.target.value)}
-                        className={`w-full p-2 border rounded text-sm ${
-                          antenna.retConnectivityAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                        }`}
+                        className={`w-full p-2 border rounded text-sm ${antenna.retConnectivityAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
                       >
                         <option value="">-- Select --</option>
                         <option value="Chaining">Chaining</option>
@@ -1003,336 +1030,212 @@ const RadioAntenasForm = () => {
                 {/* Nokia Active Antenna - Only show if Nokia is selected */}
                 {hasNokiaVendor() && (
                   <>
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                      If Nokia, is it active antenna?
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <div className="flex gap-4">
-                          {['Yes', 'No'].map(option => (
-                            <label key={option} className="flex items-center gap-1 text-sm">
-                              <input
-                                type="radio"
-                                name={`isNokiaActive-${antennaIndex}`}
+                    <tr>
+                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                        If Nokia, is it active antenna?
+                      </td>
+                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                        <td key={antennaIndex} className="border px-2 py-2">
+                          <div className="flex gap-4">
+                            {['Yes', 'No'].map(option => (
+                              <label key={option} className="flex items-center gap-1 text-sm">
+                                <input
+                                  type="radio"
+                                  name={`isNokiaActive-${antennaIndex}`}
                                   value={antenna.vendor !== 'Nokia' ? ' ' : option}
-                                checked={antenna.isNokiaActive === option}
-                                onChange={(e) => handleChange(antennaIndex, 'isNokiaActive', e.target.value)}
-                                className="w-4 h-4"
-                                disabled={antenna.vendor !== 'Nokia'}
-                              />
-                               
+                                  checked={antenna.isNokiaActive === option}
+                                  onChange={(e) => handleChange(antennaIndex, 'isNokiaActive', e.target.value)}
+                                  className="w-4 h-4"
+                                  disabled={antenna.vendor !== 'Nokia'}
+                                />
+
                                 {option}
-                           
-                            </label>
-                          ))}
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
 
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                    If Nokia active antenna, what is the module name?
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <div className="flex gap-4">
-                        <select
-                        value={antenna.nokiaModuleName}
-                        onChange={(e) => handleChange(antennaIndex, 'nokiaModuleName', e.target.value)}
-                        className={`w-full p-2 border rounded text-sm ${antenna.vendor !== 'Nokia' ? 'bg-[#e5e7eb] ' : ''} ${
-                          antenna.nokiaModuleNameAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                        }`}
-                        disabled={antenna.vendor !== 'Nokia'}
-                      >
-                        <option value=""> {antenna.vendor !== 'Nokia' ? 'N/A' : '-- Select --'}</option> 
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
-                      </select>
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
+                              </label>
+                            ))}
+                          </div>
+                        </td>
+                      ))}
+                    </tr>
 
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                    If Nokia active antenna, how many fiber connected to base band?
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <div className="flex gap-4">
-                          {['1', '2', '3', '4'].map(option => (
-                            <label key={option} className="flex items-center gap-1 text-sm">
-                              <input
-                                type="radio"
-                                name={`nokiaFiberCount-${antennaIndex}`}
-                                value={option}
-                                checked={antenna.nokiaFiberCount === option}
-                                onChange={(e) => handleChange(antennaIndex, 'nokiaFiberCount', e.target.value)}
-                                className="w-4 h-4"
-                                disabled={antenna.vendor !== 'Nokia'}
-                              />
-                              
+                    <tr>
+                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                        If Nokia active antenna, what is the module name?
+                      </td>
+                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                        <td key={antennaIndex} className="border px-2 py-2">
+                          <div className="flex gap-4">
+                            <select
+                              value={antenna.nokiaModuleName}
+                              onChange={(e) => handleChange(antennaIndex, 'nokiaModuleName', e.target.value)}
+                              className={`w-full p-2 border rounded text-sm ${antenna.vendor !== 'Nokia' ? 'bg-[#e5e7eb] ' : ''} ${antenna.nokiaModuleNameAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                                }`}
+                              disabled={antenna.vendor !== 'Nokia'}
+                            >
+                              <option value=""> {antenna.vendor !== 'Nokia' ? 'N/A' : '-- Select --'}</option>
+                              <option value="A">A</option>
+                              <option value="B">B</option>
+                              <option value="C">C</option>
+                              <option value="D">D</option>
+                            </select>
+                          </div>
+                        </td>
+                      ))}
+                    </tr>
+
+                    <tr>
+                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                        If Nokia active antenna, how many fiber connected to base band?
+                      </td>
+                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                        <td key={antennaIndex} className="border px-2 py-2">
+                          <div className="flex gap-4">
+                            {['1', '2', '3', '4'].map(option => (
+                              <label key={option} className="flex items-center gap-1 text-sm">
+                                <input
+                                  type="radio"
+                                  name={`nokiaFiberCount-${antennaIndex}`}
+                                  value={option}
+                                  checked={antenna.nokiaFiberCount === option}
+                                  onChange={(e) => handleChange(antennaIndex, 'nokiaFiberCount', e.target.value)}
+                                  className="w-4 h-4"
+                                  disabled={antenna.vendor !== 'Nokia'}
+                                />
+
                                 {option}
-                             
-                            </label>
-                          ))}
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
 
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                    If Nokia active antenna, length of fiber to base band? (meter)
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <input
-                          type="number"
-                          value={antenna.nokiaFiberLength}
-                          onChange={(e) => handleChange(antennaIndex, 'nokiaFiberLength', e.target.value)}
-                          className={`w-full p-2 border rounded text-sm ${
-                            antenna.nokiaFiberLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                          }`}
-                          placeholder={antenna.vendor !== 'Nokia' ? 'N/A' : '0000'}
-                          disabled={antenna.vendor !== 'Nokia'}
-                        />
+                              </label>
+                            ))}
+                          </div>
+                        </td>
+                      ))}
+                    </tr>
+
+                    <tr>
+                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                        If Nokia active antenna, length of fiber to base band? (meter)
                       </td>
-                    ))}
-                  </tr>
+                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                        <td key={antennaIndex} className="border px-2 py-2">
+                          <input
+                            type="number"
+                            value={antenna.nokiaFiberLength}
+                            onChange={(e) => handleChange(antennaIndex, 'nokiaFiberLength', e.target.value)}
+                            className={`w-full p-2 border rounded text-sm ${antenna.nokiaFiberLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                              }`}
+                            placeholder={antenna.vendor !== 'Nokia' ? 'N/A' : '0000'}
+                            disabled={antenna.vendor !== 'Nokia'}
+                          />
+                        </td>
+                      ))}
+                    </tr>
                   </>
                 )}
 
-              
+
 
 
                 {/* Other Vendor Model - Only show if other vendor */}
                 {hasOtherVendor() && (
                   <>
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                      If other vendor, antenna model Number
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <input
-                          type="text"
-                          value={antenna.otherModelNumber}
-                          onChange={(e) => handleChange(antennaIndex, 'otherModelNumber', e.target.value)}
-                          className={`w-full p-2 border rounded text-sm ${
-                            antenna.otherModelNumberAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                          }`}
-                          placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? 'Xxxx' : 'N/A'}
-                          disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
-                        />
+                    <tr>
+                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                        If other vendor, antenna model Number
                       </td>
-                    ))}
-                  </tr>
-
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                    If other vendor, antenna dimensions, length (cm)
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <input
-                          type="number"
-                          value={antenna.otherLength}
-                          onChange={(e) => handleChange(antennaIndex, 'otherLength', e.target.value)}
-                              className={`w-full p-2 border rounded text-sm ${
-                                antenna.otherLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                        <td key={antennaIndex} className="border px-2 py-2">
+                          <input
+                            type="text"
+                            value={antenna.otherModelNumber}
+                            onChange={(e) => handleChange(antennaIndex, 'otherModelNumber', e.target.value)}
+                            className={`w-full p-2 border rounded text-sm ${antenna.otherModelNumberAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
                               }`}
-                          placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? '0000' : 'N/A'}
-                          disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
-                        />
-                      </td>
-                    ))}
-                  </tr>
+                            placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? 'Xxxx' : 'N/A'}
+                            disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
+                          />
+                        </td>
+                      ))}
+                    </tr>
 
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                      If other vendor, antenna dimensions, width (cm)
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <input
-                          type="number"
-                          value={antenna.otherWidth}
-                          onChange={(e) => handleChange(antennaIndex, 'otherWidth', e.target.value)}
-                          className={`w-full p-2 border rounded text-sm ${
-                            antenna.otherWidthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                          }`}
-                          placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? '0000' : 'N/A'}
-                          disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
-                        />
+                    <tr>
+                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                        If other vendor, antenna dimensions, length (cm)
                       </td>
-                    ))}
-                  </tr>   
+                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                        <td key={antennaIndex} className="border px-2 py-2">
+                          <input
+                            type="number"
+                            value={antenna.otherLength}
+                            onChange={(e) => handleChange(antennaIndex, 'otherLength', e.target.value)}
+                            className={`w-full p-2 border rounded text-sm ${antenna.otherLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                              }`}
+                            placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? '0000' : 'N/A'}
+                            disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
+                          />
+                        </td>
+                      ))}
+                    </tr>
 
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                      If other vendor, antenna dimensions, depth (cm)
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <input
-                          type="number"
-                          value={antenna.otherDepth}
-                          onChange={(e) => handleChange(antennaIndex, 'otherDepth', e.target.value)}
-                          className={`w-full p-2 border rounded text-sm ${
-                            antenna.otherDepthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                          }`}
-                          placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? '0000' : 'N/A'}
-                          disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
-                        />
+                    <tr>
+                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                        If other vendor, antenna dimensions, width (cm)
                       </td>
-                    ))}
-                  </tr>     
+                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                        <td key={antennaIndex} className="border px-2 py-2">
+                          <input
+                            type="number"
+                            value={antenna.otherWidth}
+                            onChange={(e) => handleChange(antennaIndex, 'otherWidth', e.target.value)}
+                            className={`w-full p-2 border rounded text-sm ${antenna.otherWidthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                              }`}
+                            placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? '0000' : 'N/A'}
+                            disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
+                          />
+                        </td>
+                      ))}
+                    </tr>
 
-                 
-
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                    If other vendor, total number of antenna ports
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <input
-                          type="number"
-                          value={antenna.otherPortCount}
-                          onChange={(e) => handleChange(antennaIndex, 'otherPortCount', e.target.value)}
-                          className={`w-full p-2 border rounded text-sm ${
-                            antenna.otherPortCountAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                          }`}
-                          placeholder={antenna.vendor == 'Nokia' && antenna.vendor ? 'N/A' : '0000'}
-                          disabled={antenna.vendor == 'Nokia' && antenna.vendor}
-                        />
-                        
-                        {/* Nested Port Configuration Table */}
-                        {antenna.otherPortCount && parseInt(antenna.otherPortCount) > 0 && antenna.vendor !== 'Nokia' && (
-                          <div className="mt-3 border rounded-lg overflow-hidden">
-                            <div className="bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800 border-b">
-                              Port Configuration Table
-                            </div>
-                            <div className="overflow-x-auto max-h-60">
-                              <table className="w-full border-collapse text-xs table-fixed">
-                                <thead className="bg-blue-500 text-white sticky top-0">
-                                  <tr>
-                                    <th className="border px-1 py-1 text-center text-xs w-16">Port #</th>
-                                    <th className="border px-1 py-1 text-center text-xs w-20">Port Type</th>
-                                    <th className="border px-1 py-1 text-center text-xs w-20">Band</th>
-                                    <th className="border px-1 py-1 text-center text-xs w-16">Status</th>
-                                    <th className="border px-1 py-1 text-center text-xs w-16">Tilt</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {Array.from({ length: parseInt(antenna.otherPortCount) }, (_, portIndex) => (
-                                    <tr key={portIndex} className="hover:bg-gray-50 ">
-                                      <td className="border px-1 py-1 text-center font-semibold text-xs bg-gray-100 w-16">
-                                        Port #{portIndex + 1}
-                                      </td>
-                                      <td className="border px-1 py-1 w-20">
-                                        <select
-                                          value={Array.isArray(antenna.ports?.[portIndex]?.portType) ? antenna.ports[portIndex].portType : []}
-                                          onChange={(e) => handlePortChange(antennaIndex, portIndex, 'portType', e.target.value)}
-                                          className="w-full p-1 border rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                          multiple
-                                          size="3"
-                                        >
-                                          <option value="7/16">7/16</option>
-                                          <option value="4.310">4.310</option>
-                                          <option value="MQ4">MQ4</option>
-                                          <option value="MQ5">MQ5</option>
-                                          <option value="Other">Other</option>
-                                        </select>
-                                      </td>
-                                      <td className="border px-1 py-1 w-20">
-                                        <select
-                                          value={Array.isArray(antenna.ports?.[portIndex]?.band) ? antenna.ports[portIndex].band : []}
-                                          onChange={(e) => handlePortChange(antennaIndex, portIndex, 'band', e.target.value)}
-                                          className="w-full p-1 border rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                          multiple
-                                          size="3"
-                                        >
-                                          <option value="700">700</option>
-                                          <option value="800">800</option>
-                                          <option value="900">900</option>
-                                          <option value="1800">1800</option>
-                                          <option value="2100">2100</option>
-                                          <option value="2600">2600</option>
-                                        </select>
-                                      </td>
-                                      <td className="border px-1 py-1 w-16">
-                                        <div className="flex flex-col gap-1">
-                                          <label className="flex items-center gap-1">
-                                            <input
-                                              type="radio"
-                                              name={`portStatus-${antennaIndex}-${portIndex}`}
-                                              value="Free"
-                                              checked={antenna.ports?.[portIndex]?.portStatus === 'Free'}
-                                              onChange={(e) => handlePortChange(antennaIndex, portIndex, 'portStatus', e.target.value)}
-                                              className="w-3 h-3 text-blue-600"
-                                            />
-                                            <span className="text-xs">Free</span>
-                                          </label>
-                                          <label className="flex items-center gap-1">
-                                            <input
-                                              type="radio"
-                                              name={`portStatus-${antennaIndex}-${portIndex}`}
-                                              value="Busy"
-                                              checked={antenna.ports?.[portIndex]?.portStatus === 'Busy'}
-                                              onChange={(e) => handlePortChange(antennaIndex, portIndex, 'portStatus', e.target.value)}
-                                              className="w-3 h-3 text-blue-600"
-                                            />
-                                            <span className="text-xs">Busy</span>
-                                          </label>
-                                        </div>
-                                      </td>
-                                      <td className="border px-1 py-1 w-16">
-                                        <input
-                                          type="number"
-                                          value={antenna.ports?.[portIndex]?.electricalTilt || ''}
-                                          onChange={(e) => handlePortChange(antennaIndex, portIndex, 'electricalTilt', e.target.value)}
-                                          className="w-full p-1 border rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                          placeholder="0"
-                                          step="0.1"
-                                        />
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        )}
+                    <tr>
+                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                        If other vendor, antenna dimensions, depth (cm)
                       </td>
-                    ))}
-                  </tr>
+                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                        <td key={antennaIndex} className="border px-2 py-2">
+                          <input
+                            type="number"
+                            value={antenna.otherDepth}
+                            onChange={(e) => handleChange(antennaIndex, 'otherDepth', e.target.value)}
+                            className={`w-full p-2 border rounded text-sm ${antenna.otherDepthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                              }`}
+                            placeholder={antenna.vendor !== 'Nokia' && antenna.vendor ? '0000' : 'N/A'}
+                            disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
+                          />
+                        </td>
+                      ))}
+                    </tr>
 
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                    If other vendor, antenna free ports
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <input
-                          type="number"
-                          value={antenna.otherFreePorts}
-                          onChange={(e) => handleChange(antennaIndex, 'otherFreePorts', e.target.value)}
-                          className={`w-full p-2 border rounded text-sm ${
-                            antenna.otherFreePortsAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                          }`}
-                          placeholder={antenna.vendor == 'Nokia' && antenna.vendor ? 'N/A' : '0000'}
-                          disabled={antenna.vendor == 'Nokia' && antenna.vendor}
-                        />
+
+
+
+                    <tr>
+                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                        If other vendor, antenna free ports
                       </td>
-                    ))}
-                  </tr>
- {/* <tr>
+                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                        <td key={antennaIndex} className="border px-2 py-2">
+                          <input
+                            type="number"
+                            value={antenna.otherFreePorts}
+                            onChange={(e) => handleChange(antennaIndex, 'otherFreePorts', e.target.value)}
+                            className={`w-full p-2 border rounded text-sm ${antenna.otherFreePortsAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                              }`}
+                            placeholder={antenna.vendor == 'Nokia' && antenna.vendor ? 'N/A' : '0000'}
+                            disabled={antenna.vendor == 'Nokia' && antenna.vendor}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                    {/* <tr>
                     <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
                     If other vendor, Antenna port type 
                     </td>
@@ -1356,7 +1259,7 @@ const RadioAntenasForm = () => {
                   ))}
                   </tr> */}
 
-                  {/* <tr>
+                    {/* <tr>
                     <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
                     If other vendor, antenna bands
                     </td>
@@ -1379,7 +1282,7 @@ const RadioAntenasForm = () => {
                     </td>
                   ))}
                   </tr> */}
-                  {/* <tr>
+                    {/* <tr>
                     <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
                     If other vendor, bands supported by free ports
                     </td>
@@ -1403,38 +1306,181 @@ const RadioAntenasForm = () => {
                   ))}
                   </tr> */}
 
-                  <tr>
-                    <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                    If other vendor, how many radio units connected with this antenna?
-                    </td>
-                    {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                      <td key={antennaIndex} className="border px-2 py-2">
-                        <div className="flex gap-4">
-                          {['1', '2', '3', '4', '5', '6'].map(option => (
-                            <label key={option} className="flex items-center gap-1 text-sm">
-                              <input
-                                type="radio"
-                                name={`otherRadioUnits-${antennaIndex}`}
-                                value={option}
-                                checked={antenna.otherRadioUnits === option}
-                                onChange={(e) => handleChange(antennaIndex, 'otherRadioUnits', e.target.value)}
-                                className="w-4 h-4"
-                                disabled={antenna.vendor == 'Nokia' && antenna.vendor}
-                               
-                              />
-                             
-                                {option}
-                           
-                            </label>
-                          ))}
-                        </div>
+                    <tr>
+                      <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+                        If other vendor, how many radio units connected with this antenna?
                       </td>
-                    ))}
+                      {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                        <td key={antennaIndex} className="border px-2 py-2">
+                          <div className="flex gap-4">
+                            {['1', '2', '3', '4', '5', '6'].map(option => (
+                              <label key={option} className="flex items-center gap-1 text-sm">
+                                <input
+                                  type="radio"
+                                  name={`otherRadioUnits-${antennaIndex}`}
+                                  value={option}
+                                  checked={antenna.otherRadioUnits === option}
+                                  onChange={(e) => handleChange(antennaIndex, 'otherRadioUnits', e.target.value)}
+                                  className="w-4 h-4"
+                                  disabled={antenna.vendor == 'Nokia' && antenna.vendor}
 
-                  </tr>
+                                />
 
-                  </> 
+                                {option}
+
+                              </label>
+                            ))}
+                          </div>
+                        </td>
+                      ))}
+
+                    </tr>
+
+                  </>
                 )}
+
+
+                <tr>
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    Total number of antenna ports
+                  </td>
+                  {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2">
+                      <input
+                        type="number"
+                        value={antenna.otherPortCount}
+                        onChange={(e) => handleChange(antennaIndex, 'otherPortCount', e.target.value)}
+                        className={`w-full p-2 border rounded text-sm ${antenna.otherPortCountAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
+                        placeholder={antenna.vendor == 'Nokia' && antenna.vendor ? 'N/A' : '0000'}
+                        disabled={antenna.vendor == 'Nokia' && antenna.vendor}
+                      />
+
+
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Port Config Header Row */}
+                <tr>
+                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
+                    Port Configuration
+                  </td>
+
+                  {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
+                    <td key={antennaIndex} className="border px-2 py-2 align-top">
+                      {antenna.otherPortCount && parseInt(antenna.otherPortCount) > 0 && (
+                        <div className="mt-3 border rounded-lg overflow-hidden">
+
+                          <div className="overflow-x-auto max-h-60">
+                            <table className="w-full border-collapse text-xs table-fixed">
+                              <thead className="bg-blue-500 text-white sticky top-0">
+                                <tr>
+                                  <th className="border px-1 py-1 text-center text-xs w-16">Port #</th>
+                                  <th className="border px-1 py-1 text-center text-xs w-20">Port Type</th>
+                                  <th className="border px-1 py-1 text-center text-xs w-20">Band</th>
+                                  <th className="border px-1 py-1 text-center text-xs w-16">Status</th>
+                                  <th className="border px-1 py-1 text-center text-xs w-16">Tilt</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {Array.from({ length: parseInt(antenna.otherPortCount) }, (_, portIndex) => (
+                                  <tr key={portIndex} className="hover:bg-gray-50">
+                                    <td className="border px-1 py-1 text-center font-semibold text-xs bg-gray-100">
+                                      Port #{portIndex + 1}
+                                    </td>
+
+                                    {/* Port Type */}
+                                    <td className="border px-1 py-1 align-top">
+                                      <div className="grid grid-cols-2 text-xs gap-1">
+                                        {["7/16", "4.310", "MQ4", "MQ5", "Other"].map((type) => (
+                                          <label key={type} className="flex items-center gap-1">
+                                            <input
+                                              type="checkbox"
+                                              checked={Array.isArray(antenna.ports) && antenna.ports[portIndex]?.portType?.includes(type) || false}
+                                              onChange={(e) => {
+                                                const checked = e.target.checked;
+                                                const current = Array.isArray(antenna.ports) && antenna.ports[portIndex]?.portType || [];
+                                                const updated = checked
+                                                  ? [...current, type]
+                                                  : current.filter((val) => val !== type);
+                                                handlePortChange(antennaIndex, portIndex, "portType", updated);
+                                              }}
+                                            />
+                                            {type}
+                                          </label>
+                                        ))}
+                                      </div>
+                                    </td>
+
+                                    {/* Band */}
+                                    <td className="border px-1 py-1 align-top">
+                                      <div className="grid grid-cols-2 text-xs gap-1">
+                                        {["700", "800", "900", "1800", "2100", "2600"].map((band) => (
+                                          <label key={band} className="flex items-center gap-1">
+                                            <input
+                                              type="checkbox"
+                                              checked={Array.isArray(antenna.ports) && antenna.ports[portIndex]?.band?.includes(band) || false}
+                                              onChange={(e) => {
+                                                const checked = e.target.checked;
+                                                const current = Array.isArray(antenna.ports) && antenna.ports[portIndex]?.band || [];
+                                                const updated = checked
+                                                  ? [...current, band]
+                                                  : current.filter((val) => val !== band);
+                                                handlePortChange(antennaIndex, portIndex, "band", updated);
+                                              }}
+                                            />
+                                            {band}
+                                          </label>
+                                        ))}
+                                      </div>
+                                    </td>
+
+                                    {/* Status */}
+                                    <td className="border px-1 py-1 w-16">
+                                      <div className="flex flex-col gap-1">
+                                        {["Free", "Busy"].map((status) => (
+                                          <label key={status} className="flex items-center gap-1">
+                                            <input
+                                              type="radio"
+                                              name={`portStatus-${antennaIndex}-${portIndex}`}
+                                              value={status}
+                                              checked={Array.isArray(antenna.ports) && antenna.ports[portIndex]?.portStatus === status}
+                                              onChange={(e) =>
+                                                handlePortChange(antennaIndex, portIndex, "portStatus", e.target.value)
+                                              }
+                                              className="w-3 h-3 text-blue-600"
+                                            />
+                                            <span className="text-xs">{status}</span>
+                                          </label>
+                                        ))}
+                                      </div>
+                                    </td>
+
+                                    {/* Tilt */}
+                                    <td className="border px-1 py-1 w-16">
+                                      <input
+                                        type="number"
+                                        value={Array.isArray(antenna.ports) && antenna.ports[portIndex]?.electricalTilt || ""}
+                                        onChange={(e) =>
+                                          handlePortChange(antennaIndex, portIndex, "electricalTilt", e.target.value)
+                                        }
+                                        className="w-full p-1 border rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="0"
+                                        step="0.1"
+                                      />
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+
 
                 {/* Continue with other conditional fields... */}
                 {/* Side Arm Length */}
@@ -1448,9 +1494,8 @@ const RadioAntenasForm = () => {
                         type="number"
                         value={antenna.sideArmLength}
                         onChange={(e) => handleChange(antennaIndex, 'sideArmLength', e.target.value)}
-                        className={`w-full p-2 border rounded text-sm ${
-                          antenna.sideArmLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                        }`}
+                        className={`w-full p-2 border rounded text-sm ${antenna.sideArmLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
                         placeholder="000"
                       />
                     </td>
@@ -1459,7 +1504,7 @@ const RadioAntenasForm = () => {
 
                 <tr className="bg-gray-50">
                   <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                  Antenna side arm diameter (cm)
+                    Antenna side arm diameter (cm)
                   </td>
                   {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                     <td key={antennaIndex} className="border px-2 py-2">
@@ -1467,9 +1512,8 @@ const RadioAntenasForm = () => {
                         type="number"
                         value={antenna.sideArmDiameter}
                         onChange={(e) => handleChange(antennaIndex, 'sideArmDiameter', e.target.value)}
-                        className={`w-full p-2 border rounded text-sm ${
-                          antenna.sideArmDiameterAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                        }`}
+                        className={`w-full p-2 border rounded text-sm ${antenna.sideArmDiameterAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
                         placeholder="000"
                       />
                     </td>
@@ -1478,7 +1522,7 @@ const RadioAntenasForm = () => {
 
                 <tr className="bg-gray-50">
                   <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                  Antenna side arm offset from tower leg (cm)
+                    Antenna side arm offset from tower leg (cm)
                   </td>
                   {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                     <td key={antennaIndex} className="border px-2 py-2">
@@ -1486,19 +1530,18 @@ const RadioAntenasForm = () => {
                         type="number"
                         value={antenna.sideArmOffset}
                         onChange={(e) => handleChange(antennaIndex, 'sideArmOffset', e.target.value)}
-                        className={`w-full p-2 border rounded text-sm ${
-                          antenna.sideArmOffsetAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                        }`}
+                        className={`w-full p-2 border rounded text-sm ${antenna.sideArmOffsetAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
                         placeholder="000"
                       />
                     </td>
                   ))}
                 </tr>
 
-                
+
                 <tr className="bg-gray-50">
                   <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                  Length of earth cable connected to the earth bus bar (m)
+                    Length of earth cable connected to the earth bus bar (m)
                   </td>
                   {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                     <td key={antennaIndex} className="border px-2 py-2">
@@ -1506,9 +1549,8 @@ const RadioAntenasForm = () => {
                         type="number"
                         value={antenna.earthCableLength}
                         onChange={(e) => handleChange(antennaIndex, 'earthCableLength', e.target.value)}
-                        className={`w-full p-2 border rounded text-sm ${
-                          antenna.earthCableLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                        }`}
+                        className={`w-full p-2 border rounded text-sm ${antenna.earthCableLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                          }`}
                         placeholder="000"
                       />
                     </td>
@@ -1518,19 +1560,19 @@ const RadioAntenasForm = () => {
                 {/* Include in Plan */}
                 <tr>
                   <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                  Is any action planned for Antenna unit ?
+                    Is any action planned for Antenna unit ?
                   </td>
                   {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                     <td key={antennaIndex} className="border px-2 py-2">
                       <div className="flex gap-4">
-                      {['Swap / Dismantle', 'No action'].map(option => (
+                        {['Swap / Dismantle', 'No action'].map(option => (
                           <label key={option} className="flex items-center gap-1 text-sm">
                             <input
                               type="radio"
-                              name={`includeInPlan-${antennaIndex}`}
+                              name={`actionPlanned-${antennaIndex}`}
                               value={option}
-                              checked={antenna.includeInPlan === option}
-                              onChange={(e) => handleChange(antennaIndex, 'includeInPlan', e.target.value)}
+                              checked={antenna.actionPlanned === option}
+                              onChange={(e) => handleChange(antennaIndex, 'actionPlanned', e.target.value)}
                               className="w-4 h-4"
                             />
                             {option}
@@ -1550,19 +1592,19 @@ const RadioAntenasForm = () => {
             </div>
           )}
 
-          
-   {/* Save Button at Bottom - Fixed */}
-   <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
+
+          {/* Save Button at Bottom - Fixed */}
+          <div className="flex-shrink-0 pt-6 pb-4 flex justify-center border-t bg-white">
             <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
-              {isSubmitting ? "loading...": "Save"}     
+              {isSubmitting ? "loading..." : "Save"}
             </button>
           </div>
 
 
         </form>
       </div>
-      <ImageUploader 
-        images={getAllImages()} 
+      <ImageUploader
+        images={getAllImages()}
         onImageUpload={handleImageUpload}
         uploadedImages={uploadedImages}
       />
