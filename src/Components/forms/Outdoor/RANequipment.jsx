@@ -493,7 +493,7 @@ const RANBaseBandForm = () => {
                 </div>
           </div>
 
-              <div>
+              {/* <div>
                 <label className='block font-semibold mb-2'>Length of Transmission cable (Optical / Electrical) from new Nokia base band to MW IDU/ODF (meter)</label>
             <input
               type='number'
@@ -502,7 +502,7 @@ const RANBaseBandForm = () => {
               onChange={(e) => handleChange('length_of_transmission_cable', e.target.value)}
               placeholder='000'
             />
-              </div>
+              </div> */}
             </div>
 
             {/* BTS Table Section */}

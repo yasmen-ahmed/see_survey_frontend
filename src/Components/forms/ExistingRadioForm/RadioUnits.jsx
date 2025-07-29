@@ -979,7 +979,7 @@ const RadioUnitsForm = () => {
                   {Array.from({ length: formData.numberOfRadioUnits }, (_, i) => (
                     <th
                       key={i}
-                      className="border px-4 py-3 text-center font-semibold min-w-[300px] sticky top-0 bg-blue-500 z-10"
+                    className="border px-4 py-3 text-center font-semibold min-w-[400px] sticky top-0 bg-blue-500 z-10"
                     >
                       Radio Unit #{i + 1}
                     </th>

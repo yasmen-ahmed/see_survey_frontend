@@ -230,27 +230,7 @@ function SiteAccessForm() {
             <hr className="mt-2" />
           </div>
 
-          <div>
-            <label className="block font-medium mb-1">Preferred Time Slot for Crane Access</label>
-            <div className="flex  gap-2">
-              {["Morning", "Afternoon", "Evening", "Night"].map((slot) => (
-                <label key={slot} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="preferred_time_slot_crane_access"
-                    value={slot}
-                    checked={formData.preferred_time_slot_crane_access.includes(slot)}
-                    onChange={handleChange}
-                    className="mr-2"
-                  />
-                  {slot}
-                </label>
-              ))}
-            </div>
-            <hr className="mt-2" />
-
-          </div>
-
+         
 
 
           <div>
@@ -545,6 +525,26 @@ function SiteAccessForm() {
                     </label>
                   </div>
                 </div>
+                <div>
+            <label className="block font-medium mb-1">Preferred Time Slot for Crane Access</label>
+            <div className="flex  gap-2">
+              {["Morning", "Afternoon", "Evening", "Night"].map((slot) => (
+                <label key={slot} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="preferred_time_slot_crane_access"
+                    value={slot}
+                    checked={formData.preferred_time_slot_crane_access.includes(slot)}
+                    onChange={handleChange}
+                    className="mr-2"
+                  />
+                  {slot}
+                </label>
+              ))}
+            </div>
+            <hr className="mt-2" />
+
+          </div>
 
               </div>
 
