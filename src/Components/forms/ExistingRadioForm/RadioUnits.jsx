@@ -1348,7 +1348,8 @@ const RadioUnitsForm = () => {
                   </td>
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-2 py-2">
-                      <div className="space-y-1">
+                      <div className={`space-y-1 ${unit.sideArmTypeAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                        }`}>
                         {[
                           'Same antenna side arm',
                           'Separate side arm only for the radio unit',

@@ -553,41 +553,38 @@ function SiteAccessForm() {
           }
 
           <div>
-            <label className="block font-medium mb-1">Stair/Lift Height (meter)</label>
+            <label className="block font-medium mb-1">Stair/Lift H /W /D (meter)</label>
+            <div className="flex gap-4">
             <input
               type="number"
               name="stair_lift_height"
               value={formData.stair_lift_height}
               onChange={handleChange}
               className="form-input"
+              placeholder="Height"
             />
-            <hr className="mt-2" />
-          </div>
-
-          <div>
-            <label className="block font-medium mb-1">Stair/Lift Width (meter)</label>
-            <input
+                <input
               type="number"
               name="stair_lift_width"
               value={formData.stair_lift_width}
               onChange={handleChange}
               className="form-input"
+              placeholder="Width"
             />
-            <hr className="mt-2" />
-          </div>
-
-
-          <div>
-            <label className="block font-medium mb-1">Stair/Lift Depth (meter)</label>
             <input
               type="number"
               name="stair_lift_depth"
               value={formData.stair_lift_depth}
               onChange={handleChange}
               className="form-input"
+              placeholder="Depth"
             />
+            </div>
+         
             <hr className="mt-2" />
           </div>
+
+         
 
 
 

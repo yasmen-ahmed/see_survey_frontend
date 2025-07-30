@@ -103,7 +103,7 @@ const ACPanelForm = () => {
 
   // Handle table data changes
   const handleTableDataChange = useCallback((newTableData) => {
-    setHasUnsavedChanges(true);
+    // setHasUnsavedChanges(true);
     if (!newTableData) {
       setFormData(prev => ({
         ...prev,
@@ -196,6 +196,9 @@ const ACPanelForm = () => {
             console.log("Processed images:", processedImages);
             setUploadedImages(processedImages);
           }
+
+          // Reset unsaved changes flag after loading data
+          setHasUnsavedChanges(false);
         }
       })
       .catch(err => {
@@ -203,6 +206,8 @@ const ACPanelForm = () => {
         if (err.response?.status !== 404) {
           showError('Error loading existing data');
         }
+        // Reset unsaved changes flag even on error
+        setHasUnsavedChanges(false);
       });
   }, [sessionId]);
 

@@ -8,14 +8,30 @@ const SurveyCardList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [userRole, setUserRole] = useState(null);
+  const [statusHistory, setStatusHistory] = useState({});
+  const [showHistory, setShowHistory] = useState({});
   const navigate = useNavigate();
   const { updateSurveyData } = useSurveyContext();
 
   // Get user role from localStorage
   useEffect(() => {
     const role = localStorage.getItem('role');
+    const token = localStorage.getItem('token');
     setUserRole(role);
     console.log('Current user role:', role);
+    console.log('Current token exists:', !!token);
+    
+    // Test the token by making a simple request
+    if (token) {
+      console.log('Testing token with test endpoint...');
+      axios.get(`${import.meta.env.VITE_API_URL}/api/surveys/test`)
+        .then(response => {
+          console.log('Test endpoint response:', response.data);
+        })
+        .catch(error => {
+          console.error('Test endpoint error:', error);
+        });
+    }
   }, []);
 
   // Function to get available status options based on user role
@@ -90,7 +106,25 @@ const SurveyCardList = () => {
   };
 
   useEffect(() => {
-    axios.get(`${import.meta.env.VITE_API_URL}/api/surveys`)
+    const token = localStorage.getItem('token');
+    
+    console.log('Token from localStorage:', token);
+    console.log('Token type:', typeof token);
+    console.log('Token length:', token ? token.length : 0);
+    
+    if (!token) {
+      setError('Authentication token not found. Please login again.');
+      setLoading(false);
+      return;
+    }
+
+    console.log('Making API request with token:', `Bearer ${token}`);
+
+    axios.get(`${import.meta.env.VITE_API_URL}/api/surveys`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
       .then((res) => {
         let fetchedSurveys = [];
   
@@ -111,7 +145,11 @@ const SurveyCardList = () => {
       })
       .catch((err) => {
         console.error('Error fetching surveys:', err);
-        setError('Failed to fetch surveys.');
+        if (err.response?.status === 401) {
+          setError('Authentication failed. Please login again.');
+        } else {
+          setError('Failed to fetch surveys.');
+        }
       })
       .finally(() => setLoading(false));
   }, []);
@@ -126,7 +164,13 @@ const SurveyCardList = () => {
         return;
       }
 
-      await updateSurveyStatus(surveyId, newStatus);
+      // Optional: Prompt for notes when changing status
+      let notes = '';
+      if (newStatus === 'review' || newStatus === 'rework') {
+        notes = prompt(`Please provide a reason for changing status to "${newStatus}":`) || '';
+      }
+
+      await updateSurveyStatus(surveyId, newStatus, notes);
       setSurveys(prevSurveys =>
         prevSurveys.map(survey =>
           survey.session_id === surveyId
@@ -146,24 +190,64 @@ const SurveyCardList = () => {
     console.log('Generating report for session:', sessionId);
   };
 
-  const updateSurveyStatus = async (surveyId, newStatus) => {
+  const fetchStatusHistory = async (sessionId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Authentication token not found');
+        return;
+      }
+
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/surveys/${sessionId}/status-history`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      setStatusHistory(prev => ({
+        ...prev,
+        [sessionId]: response.data
+      }));
+    } catch (error) {
+      console.error('Error fetching status history:', error);
+      alert('Failed to fetch status history');
+    }
+  };
+
+  const toggleHistory = (sessionId) => {
+    if (!statusHistory[sessionId]) {
+      fetchStatusHistory(sessionId);
+    }
+    setShowHistory(prev => ({
+      ...prev,
+      [sessionId]: !prev[sessionId]
+    }));
+  };
+
+  const updateSurveyStatus = async (surveyId, newStatus, notes = '') => {
     const token = localStorage.getItem('token');
 
     console.log('Updating survey status:', { surveyId, newStatus });
 
-    // Try different API endpoint format - might need just session_id
+    console.log('Updating survey status:', { surveyId, newStatus, notes });
+
     const apiUrl = `${import.meta.env.VITE_API_URL}/api/surveys/${surveyId}/status`;
     console.log('API URL:', apiUrl);
-    console.log('Token exists:', !!token);
 
-    const requestBody = { TSSR_Status: newStatus };
+    const requestBody = { 
+      TSSR_Status: newStatus,
+      notes: notes
+    };
     console.log('Request body:', requestBody);
 
     const response = await fetch(apiUrl, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` })
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify(requestBody),
     });
@@ -228,6 +312,7 @@ const SurveyCardList = () => {
             <th className="px-6 py-3">Assigned To</th>
             <th className="px-6 py-3">Project</th>
             <th className="px-6 py-3">TSSR Status</th>
+            {/* <th className="px-6 py-3">Status History</th> */}
             <th className="px-6 py-3">Action</th>
             <th className="px-6 py-3">Report</th>
           </tr>
@@ -265,7 +350,7 @@ const SurveyCardList = () => {
                     Continue
                   </button>
                 </td>
-                {survey.TSSR_Status === 'submitted' && (
+                {survey.TSSR_Status === 'done' && (
                   <td className="px-6 py-4">
                     <button
                       onClick={() => generateReport(survey.session_id)}

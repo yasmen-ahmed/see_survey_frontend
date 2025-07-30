@@ -396,7 +396,7 @@ const OutdoorCabinetsForm = () => {
   const handleCBRatingsChange = useCallback((cabinetIndex, equipmentType, newTableData) => {
     if (isInitialLoading) return; // Don't set unsaved changes during initial load
 
-    setHasUnsavedChanges(true);
+    // setHasUnsavedChanges(true);
     console.log(`Updating ${equipmentType} CB ratings for cabinet ${cabinetIndex}:`, newTableData);
 
     if (!newTableData || newTableData.length === 0) {
@@ -681,39 +681,48 @@ const OutdoorCabinetsForm = () => {
                 </tr>
 
                 {/* Air-condition status */}
-                {
-                  formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    cabinet.coolingType === 'Air-condition' && (
+                <tr className="bg-gray-50">
+  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
+    Air-condition status
+  </td>
+  {formData.cabinets
+    .slice(0, parseInt(formData.numberOfCabinets) || 1)
+    .map((cabinet, cabinetIndex) =>
+      cabinet.coolingType === 'Air-condition' ? (
+        <td
+          key={cabinetIndex}
+          className={`border px-2 py-2 ${cabinet.coolingTypeAutoFilled ? bgColorFillAuto : ''}`}
+        >
+          <div className="grid grid-cols-2 gap-1">
+            {['Working', 'Not working'].map((option) => (
+              <label key={option} className="flex items-center gap-1 text-sm">
+                <input
+                  type="radio"
+                  name={`airConditionStatus-${cabinetIndex}`}
+                  value={option}
+                  checked={cabinet.airConditionStatus === option}
+                  onChange={(e) =>
+                    handleChange(cabinetIndex, 'airConditionStatus', e.target.value)
+                  }
+                  className={`w-4 h-4 ${cabinet.airConditionStatusAutoFilled ? colorFillAuto : ''}`}
+                />
+                <span
+                  className={cabinet.airConditionStatusAutoFilled ? colorFillAuto : ''}
+                >
+                  {option}
+                </span>
+              </label>
+            ))}
+          </div>
+        </td>
+      ) : (
+        <td key={cabinetIndex} className="border px-2 py-2 text-sm text-center text-gray-400">
+          N/A
+        </td>
+      )
+    )}
+</tr>
 
-
-                      <tr className="bg-gray-50">
-                        <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-300 text-white z-10">
-                          Air-condition status
-                        </td>
-                        {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                          <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.coolingTypeAutoFilled ? bgColorFillAuto : ''}`}>
-                            <div className="grid grid-cols-2 gap-1">
-                              {['Working', 'Not working'].map(option => (
-                                <label key={option} className="flex items-center gap-1 text-sm">
-                                  <input
-                                    type="radio"
-                                    name={`airConditionStatus-${cabinetIndex}`}
-                                    value={option}
-                                    checked={cabinet.airConditionStatus === option}
-                                    onChange={(e) => handleChange(cabinetIndex, 'airConditionStatus', e.target.value)}
-                                    className={`w-4 h-4 ${cabinet.airConditionStatusAutoFilled ? colorFillAuto : ''}`}
-                                  />
-                                  <span className={cabinet.airConditionStatusAutoFilled ? colorFillAuto : ''}>
-                                    {option}
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
-                          </td>
-                        ))}
-                      </tr>
-                    ))
-                  )}
 
                 {/* Cooling Capacity */}
                 <tr>
@@ -822,11 +831,11 @@ const OutdoorCabinetsForm = () => {
                       what is the CB number in the AC panel?
                     </td>
                     {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                      <td key={cabinetIndex} className="border px-2 py-2">
+                      <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.cbNumberAutoFilled ? bgColorFillAuto : ''}`}> 
                         <select
                           value={cabinet.cbNumber}
                           onChange={(e) => handleChange(cabinetIndex, 'cbNumber', e.target.value)}
-                          className="w-full p-2 border rounded text-sm"
+                          className={`w-full p-2 border rounded text-sm ${cabinet.cbNumberAutoFilled ? colorFillAuto : ''}`}
                           disabled={cabinet.acPowerFeed !== 'Yes'}
                         >
                           <option value="">Select</option>
@@ -846,7 +855,7 @@ const OutdoorCabinetsForm = () => {
                       Length of power cable from the AC panel to the CB inside the cabinet (meter)
                     </td>
                     {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                      <td key={cabinetIndex} className="border px-2 py-2">
+                      <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.powerCableLengthAutoFilled ? bgColorFillAuto : ''}`}>
                         <input
                           type="number"
                           value={cabinet.powerCableLength}
@@ -870,7 +879,7 @@ const OutdoorCabinetsForm = () => {
                       Cross section of power cable from the AC panel to the CB inside the cabinet (mm)
                     </td>
                     {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                      <td key={cabinetIndex} className="border px-2 py-2">
+                      <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.powerCableCrossSectionAutoFilled ? bgColorFillAuto : ''}`}>
                         <input
                           type="number"
                           value={cabinet.powerCableCrossSection}
@@ -894,7 +903,7 @@ const OutdoorCabinetsForm = () => {
                   </td>
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.blvdAutoFilled ? bgColorFillAuto : ''}`}>
-                      <div className="flex gap-4">
+                      <div  className={`flex gap-4 ${cabinet.blvdAutoFilled ? bgColorFillAuto : ''}`}>   
                         {['Yes', 'No'].map(option => (
                           <label key={option} className="flex items-center gap-1 text-sm">
                             <input
@@ -1221,117 +1230,7 @@ const OutdoorCabinetsForm = () => {
                   ))}
                 </tr>
 
-                {/* Roxtec Inside Cabinet */}
-                <tr>
-                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                    Roxtec Picture (Inside cabinet)
-                  </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.roxtecInsideCabinetAutoFilled ? bgColorFillAuto : ''}`}>
-                      <div className="flex gap-4">
-                        {['Yes', 'No'].map(option => (
-                          <label key={option} className="flex items-center gap-1 text-sm">
-                            <input
-                              type="radio"
-                              name={`roxtecInsideCabinet-${cabinetIndex}`}
-                              value={option}
-                              checked={cabinet.roxtecInsideCabinet === option}
-                              onChange={(e) => handleChange(cabinetIndex, 'roxtecInsideCabinet', e.target.value)}
-                              className={`w-4 h-4 ${cabinet.roxtecInsideCabinetAutoFilled ? colorFillAuto : ''}`}
-                            />
-                            <span className={cabinet.roxtecInsideCabinetAutoFilled ? colorFillAuto : ''}>
-                              {option}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </td>
-                  ))}
-                </tr>
-
-                {/* Roxtec Outside Cabinet */}
-                <tr className="bg-gray-50">
-                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                    Roxtec Picture (Outside cabinet)
-                  </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.roxtecOutsideCabinetAutoFilled ? bgColorFillAuto : ''}`}>
-                      <div className="flex gap-4">
-                        {['Yes', 'No'].map(option => (
-                          <label key={option} className="flex items-center gap-1 text-sm">
-                            <input
-                              type="radio"
-                              name={`roxtecOutsideCabinet-${cabinetIndex}`}
-                              value={option}
-                              checked={cabinet.roxtecOutsideCabinet === option}
-                              onChange={(e) => handleChange(cabinetIndex, 'roxtecOutsideCabinet', e.target.value)}
-                              className={`w-4 h-4 ${cabinet.roxtecOutsideCabinetAutoFilled ? colorFillAuto : ''}`}
-                            />
-                            <span className={cabinet.roxtecOutsideCabinetAutoFilled ? colorFillAuto : ''}>
-                              {option}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </td>
-                  ))}
-                </tr>
-
-                {/* Roxtec Inside Cabinet Zoomed */}
-                <tr>
-                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                    Roxtec Picture (Inside cabinet) Zoomed
-                  </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.roxtecInsideCabinetZoomedAutoFilled ? bgColorFillAuto : ''}`}>
-                      <div className="flex gap-4">
-                        {['Yes', 'No'].map(option => (
-                          <label key={option} className="flex items-center gap-1 text-sm">
-                            <input
-                              type="radio"
-                              name={`roxtecInsideCabinetZoomed-${cabinetIndex}`}
-                              value={option}
-                              checked={cabinet.roxtecInsideCabinetZoomed === option}
-                              onChange={(e) => handleChange(cabinetIndex, 'roxtecInsideCabinetZoomed', e.target.value)}
-                              className={`w-4 h-4 ${cabinet.roxtecInsideCabinetZoomedAutoFilled ? colorFillAuto : ''}`}
-                            />
-                            <span className={cabinet.roxtecInsideCabinetZoomedAutoFilled ? colorFillAuto : ''}>
-                              {option}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </td>
-                  ))}
-                </tr>
-
-                {/* Roxtec Outside Cabinet Zoomed */}
-                <tr className="bg-gray-50">
-                  <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                    Roxtec Picture (Outside cabinet) Zoomed
-                  </td>
-                  {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
-                    <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.roxtecOutsideCabinetZoomedAutoFilled ? bgColorFillAuto : ''}`}>
-                      <div className="flex gap-4">
-                        {['Yes', 'No'].map(option => (
-                          <label key={option} className="flex items-center gap-1 text-sm">
-                            <input
-                              type="radio"
-                              name={`roxtecOutsideCabinetZoomed-${cabinetIndex}`}
-                              value={option}
-                              checked={cabinet.roxtecOutsideCabinetZoomed === option}
-                              onChange={(e) => handleChange(cabinetIndex, 'roxtecOutsideCabinetZoomed', e.target.value)}
-                              className={`w-4 h-4 ${cabinet.roxtecOutsideCabinetZoomedAutoFilled ? colorFillAuto : ''}`}
-                            />
-                            <span className={cabinet.roxtecOutsideCabinetZoomedAutoFilled ? colorFillAuto : ''}>
-                              {option}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </td>
-                  ))}
-                </tr>
+            
               </tbody>
             </table>
           </div>

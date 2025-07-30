@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { showSuccess, showError } from "../../../utils/notifications";
@@ -18,7 +18,7 @@ const DcDistributionForm = () => {
   const [cbOptions, setCbOptions] = useState({});
   const [loadingCbOptions, setLoadingCbOptions] = useState({});
   // Add state to track auto-filled fields
-  const [autoFilledFields, setAutoFilledFields] = useState({});
+
   
   // Add state to track form changes
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -56,7 +56,8 @@ const DcDistributionForm = () => {
             pdu_height_from_base: pdu.location === "On ground level" ? null : (parseFloat(pdu.towerBaseHeight) || null),
             dc_feed_cabinet: pdu.feedCabinet || null,
             dc_feed_distribution_type: pdu.feedDistribution ? pdu.feedDistribution.toLowerCase() : null,
-            feeding_dc_cbs: pdu.cbFuse || null,
+            feeding_dc_cbs: pdu.model === "Nokia FPFH" ? (Array.isArray(pdu.cbFuse) ? pdu.cbFuse : [pdu.cbFuse].filter(Boolean)) : (pdu.cbFuse || null),
+            dc_feed_cabinet_source: pdu.dcFeedCabinet || null,
             dc_cable_length: parseFloat(pdu.dc_cable_length) || null,
             dc_cable_cross_section: parseFloat(pdu.cableCrossSection) || null,
             has_free_cbs_fuses: pdu.hasFreeCbs || null,
@@ -69,7 +70,7 @@ const DcDistributionForm = () => {
       };
 
       // Check if we have any images to upload
-      const allImageFields = getAllImages();
+      const allImageFields = getAllImages;
       const hasImages = allImageFields.some(imageField => {
         const imageFiles = uploadedImages[imageField.name];
         return Array.isArray(imageFiles) && imageFiles.length > 0 && imageFiles[0] instanceof File;
@@ -277,11 +278,7 @@ const DcDistributionForm = () => {
   }, [loadingCbOptions]);
 
   // Function to check if a field is auto-filled
-  const isFieldAutoFilled = useCallback((pduIndex, fieldName) => {
-    const isAutoFilled = autoFilledFields[pduIndex]?.[fieldName] === true;
-    console.log(`Checking auto-fill for PDU ${pduIndex}, field ${fieldName}:`, isAutoFilled);
-    return isAutoFilled;
-  }, [autoFilledFields]);
+
 
   const handlePduCountChange = (count) => {
     const countValue = count.toString();
@@ -347,50 +344,41 @@ const DcDistributionForm = () => {
 
   const updatePdu = (index, field, value) => {
     const updated = [...pdus];
-    const newAutoFilledFields = { ...autoFilledFields };
     
-    // If this is the first PDU (index 0), check other PDUs
-    if (index === 0) {
+    // Update the changed PDU first
+    updated[index] = {
+      ...updated[index],
+      [field]: value,
+      [`${field}AutoFilled`]: false // The changed field is not auto-filled
+    };
+    
+    // Auto-fill logic for all PDUs (skip cbFuse and dcFeedCabinet)
+    if (field !== 'cbFuse' && field !== 'dcFeedCabinet') {
       const numPdus = parseInt(pduCount) || 1;
-      for (let i = 1; i < numPdus; i++) {
-        // Only auto-fill if the current value is empty
-        const currentValue = updated[i][field];
-        const isEmpty = currentValue === "" || currentValue === null || currentValue === undefined;
-        
-        // Skip if the field already has a value
-        if (!isEmpty) continue;
-        
-        // Update the value since it's empty
-        updated[i] = {
-          ...updated[i],
-          [field]: value
-        };
-        
-        // Mark as auto-filled only for empty fields that we're filling
-        if (!newAutoFilledFields[i]) {
-          newAutoFilledFields[i] = {};
-        }
-        newAutoFilledFields[i][field] = true;
-      }
-    } else {
-      // If user is manually changing a field, remove auto-fill status
-      if (newAutoFilledFields[index] && newAutoFilledFields[index][field]) {
-        delete newAutoFilledFields[index][field];
-        if (Object.keys(newAutoFilledFields[index]).length === 0) {
-          delete newAutoFilledFields[index];
+      
+      // Auto-fill empty fields in other PDUs
+      for (let i = 0; i < numPdus; i++) {
+        if (i !== index) { // Skip the PDU that was manually changed
+          // Only auto-fill if the field is empty or was previously auto-filled
+          if (!updated[i][field] || updated[i][`${field}AutoFilled`]) {
+            updated[i] = {
+              ...updated[i],
+              [field]: value,
+              [`${field}AutoFilled`]: true
+            };
+          }
         }
       }
     }
     
-    // Always update the current PDU
-    updated[index] = {
-      ...updated[index],
-      [field]: value
-    };
+    // Clear cbFuse if model is not Nokia FPFH
+    if (field === 'model' && value !== "Nokia FPFH") {
+      updated[index].cbFuse = [];
+    }
     
     // Clear CB selection and fetch new options when cabinet or distribution changes
     if (field === 'feedCabinet' || field === 'feedDistribution') {
-      updated[index].cbFuse = ""; // Clear current CB selection
+      updated[index].cbFuse = []; // Clear current CB selection (now an array)
       
       const cabinet = field === 'feedCabinet' ? value : updated[index].feedCabinet;
       const distribution = field === 'feedDistribution' ? value : updated[index].feedDistribution;
@@ -408,7 +396,33 @@ const DcDistributionForm = () => {
     }
     
     setPdus(updated);
-    setAutoFilledFields(newAutoFilledFields);
+    setHasUnsavedChanges(true);
+  };
+
+  const updatePduCheckbox = (index, field, value, checked) => {
+    setHasUnsavedChanges(true);
+    setPdus(prevPdus => {
+      const newPdus = [...prevPdus];
+      const currentValues = newPdus[index][field] || [];
+      
+      if (checked) {
+        // Add value if not already present
+        if (!currentValues.includes(value)) {
+          newPdus[index] = { 
+            ...newPdus[index], 
+            [field]: [...currentValues, value] 
+          };
+        }
+      } else {
+        // Remove value if present
+        newPdus[index] = { 
+          ...newPdus[index], 
+          [field]: currentValues.filter(v => v !== value) 
+        };
+      }
+      
+      return newPdus;
+    });
   };
 
   // Update handleTableDataChange to follow the same pattern
@@ -429,63 +443,62 @@ const DcDistributionForm = () => {
       }));
 
     const updated = [...pdus];
-    const newAutoFilledFields = { ...autoFilledFields };
     
-    // If this is the first PDU, auto-fill empty table data to other PDUs
-    if (pduIndex === 0) {
-      const numPdus = parseInt(pduCount) || 1;
-      for (let i = 1; i < numPdus; i++) {
-        // Only auto-fill if the current PDU has no table data
+    // Update the current PDU first
+    updated[pduIndex] = {
+      ...updated[pduIndex],
+      cbDetails: processedData,
+      cbDetailsAutoFilled: false // The changed field is not auto-filled
+    };
+    
+    // Auto-fill empty table data to other PDUs
+    const numPdus = parseInt(pduCount) || 1;
+    for (let i = 0; i < numPdus; i++) {
+      if (i !== pduIndex) { // Skip the PDU that was manually changed
+        // Only auto-fill if the field is empty or was previously auto-filled
         const currentDetails = updated[i].cbDetails || [];
         const isEmpty = currentDetails.length === 0 || currentDetails.every(detail => 
           isEmptyValue(detail.rating) && isEmptyValue(detail.connected_module)
         );
         
-        if (isEmpty) {
+        if (isEmpty || updated[i].cbDetailsAutoFilled) {
           updated[i] = {
             ...updated[i],
-            cbDetails: [...processedData]
+            cbDetails: [...processedData],
+            cbDetailsAutoFilled: true
           };
-          
-          // Mark as auto-filled only if we actually filled it
-          if (!newAutoFilledFields[i]) {
-            newAutoFilledFields[i] = {};
-          }
-          newAutoFilledFields[i].cbDetails = true;
-        }
-      }
-    } else {
-      // If user is manually changing table data, remove auto-fill status
-      if (newAutoFilledFields[pduIndex] && newAutoFilledFields[pduIndex].cbDetails) {
-        delete newAutoFilledFields[pduIndex].cbDetails;
-        if (Object.keys(newAutoFilledFields[pduIndex]).length === 0) {
-          delete newAutoFilledFields[pduIndex];
         }
       }
     }
     
-    // Always update the current PDU
-    updated[pduIndex].cbDetails = processedData;
     setPdus(updated);
-    setAutoFilledFields(newAutoFilledFields);
-  }, [pdus, pduCount, autoFilledFields, isEmptyValue]);
-
-  // Add a useEffect to log autoFilledFields changes
-  useEffect(() => {
-    console.log('Auto-filled fields updated:', autoFilledFields);
-  }, [autoFilledFields]);
+    setHasUnsavedChanges(true);
+  }, [pdus, pduCount, isEmptyValue]);
 
   // Generate image fields for a single PDU
-  const getPduImages = (pduNumber) => [
-    { label: `PDU #${pduNumber} photo`, name: `pdu_${pduNumber}_photo` },
-    { label: `PDU #${pduNumber} fuses photo`, name: `pdu_${pduNumber}_fuses` },
-    { label: `PDU #${pduNumber} existing PDU Power cables photo`, name: `pdu_${pduNumber}_existing_pdu_power_cables_photo` },
-    { label: `PDU #${pduNumber} Cables route photo from tower top 1/2`, name: `pdu_${pduNumber}_cables_route_photo_from_tower_top_1` },
-    { label: `PDU #${pduNumber} Cables route photo from tower top 2/2`, name: `pdu_${pduNumber}_cables_route_photo_from_tower_top_2` },
-  ];
+  const getPduImages = (pduNumber) => {
+    const pduIndex = pduNumber - 1; // Convert to 0-based index
+    const pdu = pdus[pduIndex];
+    
+    const baseImages = [
+      { label: `PDU #${pduNumber} photo`, name: `pdu_${pduNumber}_photo` },
+      { label: `PDU #${pduNumber} fuses photo`, name: `pdu_${pduNumber}_fuses` },
+      { label: `PDU #${pduNumber} existing PDU Power cables photo`, name: `pdu_${pduNumber}_existing_pdu_power_cables_photo` },
+    ];
+
+    // Only include tower-related images if location is "On tower"
+    if (pdu && pdu.location === "On tower") {
+      baseImages.push(
+        { label: `PDU #${pduNumber} Cables route photo from tower top 1/2`, name: `pdu_${pduNumber}_cables_route_photo_from_tower_top_1` },
+        { label: `PDU #${pduNumber} Cables route photo from tower top 2/2`, name: `pdu_${pduNumber}_cables_route_photo_from_tower_top_2` }
+      );
+    }
+
+    return baseImages;
+  };
 
   // Generate all image fields based on PDU count
-  const getAllImages = () => {
+  const getAllImages = useMemo(() => {
     if (!pduCount) return [];
     const count = parseInt(pduCount);
     let allImages = [];
@@ -493,7 +506,7 @@ const DcDistributionForm = () => {
       allImages = [...allImages, ...getPduImages(i)];
     }
     return allImages;
-  };
+  }, [pduCount, pdus]); // Depend on pdus to react to location changes
 
   // Process images from API response
   const processImagesFromResponse = (pdus) => {
@@ -555,7 +568,10 @@ const DcDistributionForm = () => {
               feedDistribution: pdu.dc_feed_distribution_type 
                 ? mapDistributionTypeFromApi(pdu.dc_feed_distribution_type) 
                 : "",
-              cbFuse: pdu.feeding_dc_cbs || "",
+              cbFuse: pdu.dc_distribution_model === "Nokia FPFH" 
+                ? (Array.isArray(pdu.feeding_dc_cbs) ? pdu.feeding_dc_cbs : (pdu.feeding_dc_cbs ? [pdu.feeding_dc_cbs] : []))
+                : (pdu.feeding_dc_cbs || ""),
+              dcFeedCabinet: pdu.dc_feed_cabinet_source || "",
               dc_cable_length: pdu.dc_cable_length?.toString() || "",
               cableCrossSection: pdu.dc_cable_cross_section || "",
               hasFreeCbs: pdu.has_free_cbs_fuses || "",
@@ -662,7 +678,7 @@ const DcDistributionForm = () => {
       if (saved) {
         showSuccess('External DC Distribution data submitted successfully!');
         setError(""); // Clear any previous errors
-        setAutoFilledFields({}); // Clear auto-filled status after successful save
+
         
         // Update initial form state
         setInitialFormState(getCurrentFormState());
@@ -789,8 +805,8 @@ const DcDistributionForm = () => {
                         Is this a shared panel with other operator?
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'shared') ? bgColorFillAuto : ''}`}>
-                          <div className={`flex gap-4 mt-1 ${isFieldAutoFilled(pduIndex, 'shared') ? colorFillAuto : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${pdu.sharedAutoFilled ? bgColorFillAuto : ''}`}>
+                          <div className={`flex gap-4 mt-1 ${pdu.sharedAutoFilled ? colorFillAuto : ''}`}>
                             {["Yes", "No"].map((opt) => (
                               <label key={opt} className="flex items-center gap-2">
                                 <input
@@ -812,8 +828,8 @@ const DcDistributionForm = () => {
                         What is the model of this DC distribution module?
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'model') ? bgColorFillAuto : ''}`}>
-                          <div className={`grid grid-cols-2 gap-1 ${isFieldAutoFilled(pduIndex, 'model') ? colorFillAuto : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${pdu.modelAutoFilled ? bgColorFillAuto : ''}`}>
+                          <div className={`grid grid-cols-2 gap-1 ${pdu.modelAutoFilled ? colorFillAuto : ''}`}>
                             {["Nokia FPFH", "Nokia FPFD", "DC panel", "Other"].map((model) => (
                               <label key={model} className="flex items-center gap-2">
                                 <input
@@ -835,8 +851,8 @@ const DcDistributionForm = () => {
                         Where is this DC module located?
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'location') ? bgColorFillAuto : ''}`}>
-                          <div className={`flex gap-4 mt-1 ${isFieldAutoFilled(pduIndex, 'location') ? colorFillAuto : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${pdu.locationAutoFilled ? bgColorFillAuto : ''}`}>
+                          <div className={`flex gap-4 mt-1 ${pdu.locationAutoFilled ? colorFillAuto : ''}`}>
                             {["On ground level", "On tower"].map((loc) => (
                               <label key={loc} className="flex items-center gap-2">
                                 <input
@@ -858,11 +874,11 @@ const DcDistributionForm = () => {
                         DC PDU base height from tower base level (meter)
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'towerBaseHeight') ? bgColorFillAuto : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${pdu.towerBaseHeightAutoFilled ? bgColorFillAuto : ''}`}>
                           {pdu.location === "On tower" ? (
                             <input
                               type="number"
-                              className={`w-full p-2 border rounded text-sm ${isFieldAutoFilled(pduIndex, 'towerBaseHeight') ? colorFillAuto : ''}`}
+                              className={`w-full p-2 border rounded text-sm ${pdu.towerBaseHeightAutoFilled ? colorFillAuto : ''}`}
                               value={pdu.towerBaseHeight}
                               onChange={(e) => updatePdu(pduIndex, "towerBaseHeight", e.target.value)}
                               placeholder="Enter height..."
@@ -880,11 +896,11 @@ const DcDistributionForm = () => {
                         DC feed is coming from which cabinet?
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'feedCabinet') ? bgColorFillAuto : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${pdu.feedCabinetAutoFilled ? bgColorFillAuto : ''}`}>
                           <select
                             value={pdu.feedCabinet}
                             onChange={(e) => updatePdu(pduIndex, "feedCabinet", e.target.value)}
-                            className={`w-full p-2 border rounded text-sm ${isFieldAutoFilled(pduIndex, 'feedCabinet') ? colorFillAuto : ''}`}
+                            className={`w-full p-2 border rounded text-sm ${pdu.feedCabinetAutoFilled ? colorFillAuto : ''}`}
                           >
                             <option value="">-- Select --</option>
                             {cabinetOptions.map((cabinet) => (
@@ -902,8 +918,8 @@ const DcDistributionForm = () => {
                         DC feed is coming from which DC distribution inside the cabinet?
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'feedDistribution') ? bgColorFillAuto : ''}`}>
-                          <div className={`flex gap-4 mt-1 ${isFieldAutoFilled(pduIndex, 'feedDistribution') ? colorFillAuto : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${pdu.feedDistributionAutoFilled ? bgColorFillAuto : ''}`}>
+                          <div className={`flex gap-4 mt-1 ${pdu.feedDistributionAutoFilled ? colorFillAuto : ''}`}>
                             {["BLVD", "LLVD", "PDU"].map((dist) => (
                               <label key={dist} className="flex items-center gap-2">
                                 <input
@@ -929,35 +945,60 @@ const DcDistributionForm = () => {
                         const isLoading = isCbOptionsLoading(pduIndex);
                         const hasOptions = cbOptionsForPdu.length > 0;
                         const canShowOptions = pdu.feedCabinet && pdu.feedDistribution;
+                        const isNokiaFpfh = pdu.model === "Nokia FPFH";
                         
                         return (
-                          <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'cbFuse') ? bgColorFillAuto : ''}`}>
-                            <select
-                              value={pdu.cbFuse}
-                              onChange={(e) => updatePdu(pduIndex, "cbFuse", e.target.value)}
-                              className={`w-full p-2 border rounded text-sm ${isFieldAutoFilled(pduIndex, 'cbFuse') ? colorFillAuto : ''}`}
-                              disabled={isLoading || !canShowOptions}
-                            >
-                              <option value="" >
-                              {pdu.cbFuse || "-- Select --"}
-                              </option>
-                              
-                              {hasOptions && cbOptionsForPdu.map((option) => (
-                                <option 
-                                  key={option.id} 
-                                  value={option.value}
-                                  className={option.recommended ? "font-semibold" : ""}
-                                >
-                                  {option.display_text}
-                                </option>
-                              ))}
-                              
-                              {!hasOptions && canShowOptions && !isLoading && (
-                                <option value="custom">No options available</option>
-                              )}
-                            </select>
-                            
-                            
+                          <td key={pduIndex} className="border px-2 py-2">
+                            {isNokiaFpfh ? (
+                              <div className="space-y-2">
+                                {hasOptions && cbOptionsForPdu.map((option) => (
+                                  <label key={option.id} className="flex items-center gap-2 text-sm">
+                                    <input
+                                      type="checkbox"
+                                      checked={Array.isArray(pdu.cbFuse) && pdu.cbFuse.includes(option.value)}
+                                      onChange={(e) => updatePduCheckbox(pduIndex, "cbFuse", option.value, e.target.checked)}
+                                      disabled={isLoading || !canShowOptions}
+                                    />
+                                    <span className={`${option.recommended ? "font-semibold" : ""}`}>
+                                      {option.display_text}
+                                    </span>
+                                  </label>
+                                ))}
+                                
+                                {!hasOptions && canShowOptions && !isLoading && (
+                                  <div className="text-gray-500 text-sm">No options available</div>
+                                )}
+                                
+                                {!canShowOptions && (
+                                  <div className="text-gray-400 text-sm">Select cabinet and distribution first</div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                {hasOptions && cbOptionsForPdu.map((option) => (
+                                  <label key={option.id} className="flex items-center gap-2 text-sm">
+                                    <input
+                                      type="radio"
+                                      name={`cbFuse-${pduIndex}`}
+                                      checked={pdu.cbFuse === option.value}
+                                      onChange={() => updatePdu(pduIndex, "cbFuse", option.value)}
+                                      disabled={isLoading || !canShowOptions}
+                                    />
+                                    <span className={`${option.recommended ? "font-semibold" : ""}`}>
+                                      {option.display_text}
+                                    </span>
+                                  </label>
+                                ))}
+                                
+                                {!hasOptions && canShowOptions && !isLoading && (
+                                  <div className="text-gray-500 text-sm">No options available</div>
+                                )}
+                                
+                                {!canShowOptions && (
+                                  <div className="text-gray-400 text-sm">Select cabinet and distribution first</div>
+                                )}
+                              </div>
+                            )}
                           </td>
                         );
                       })}
@@ -969,10 +1010,10 @@ const DcDistributionForm = () => {
                         Length of DC power cable (m)
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'dc_cable_length') ? bgColorFillAuto : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${pdu.dc_cable_lengthAutoFilled ? bgColorFillAuto : ''}`}>
                           <input
                             type="number"
-                            className={`w-full p-2 border rounded text-sm ${isFieldAutoFilled(pduIndex, 'dc_cable_length') ? colorFillAuto : ''}`}
+                            className={`w-full p-2 border rounded text-sm ${pdu.dc_cable_lengthAutoFilled ? colorFillAuto : ''}`}
                             value={pdu.dc_cable_length}
                             onChange={(e) => updatePdu(pduIndex, "dc_cable_length", e.target.value)}
                             placeholder="Enter length..."
@@ -987,10 +1028,10 @@ const DcDistributionForm = () => {
                         Cross section of DC cable (mm²)
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'cableCrossSection') ? bgColorFillAuto : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${pdu.cableCrossSectionAutoFilled ? bgColorFillAuto : ''}`}>
                           <input
                             type="number"
-                            className={`w-full p-2 border rounded text-sm ${isFieldAutoFilled(pduIndex, 'cableCrossSection') ? colorFillAuto : ''}`}
+                            className={`w-full p-2 border rounded text-sm ${pdu.cableCrossSectionAutoFilled ? colorFillAuto : ''}`}
                             value={pdu.cableCrossSection}
                             onChange={(e) => updatePdu(pduIndex, "cableCrossSection", e.target.value)}
                             placeholder="Enter cross section..."
@@ -1005,8 +1046,8 @@ const DcDistributionForm = () => {
                         Does the DC PDU have free CBs/Fuses?
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'hasFreeCbs') ? bgColorFillAuto : ''}`}>
-                          <div className={`flex gap-4 mt-1 ${isFieldAutoFilled(pduIndex, 'hasFreeCbs') ? colorFillAuto : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${pdu.hasFreeCbsAutoFilled ? bgColorFillAuto : ''}`}>
+                          <div className={`flex gap-4 mt-1 ${pdu.hasFreeCbsAutoFilled ? colorFillAuto : ''}`}>
                             {["Yes", "No"].map((opt) => (
                               <label key={opt} className="flex items-center gap-2">
                                 <input
@@ -1028,7 +1069,7 @@ const DcDistributionForm = () => {
                       Ratings of DC CBs/Fuses in the PDU
                       </td>
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
-                        <td key={pduIndex} className={`border px-2 py-2 ${isFieldAutoFilled(pduIndex, 'cbDetails') ? bgColorFillAuto : ''}`}>
+                        <td key={pduIndex} className={`border px-2 py-2 ${pdu.cbDetailsAutoFilled ? bgColorFillAuto : ''}`}>
                           <DynamicTable
                             title=""
                             rows={tableRows}
@@ -1064,7 +1105,7 @@ const DcDistributionForm = () => {
         </form>
       </div>
       <ImageUploader 
-        images={getAllImages()} 
+        images={getAllImages} 
         onImageUpload={handleImageUpload}
         uploadedImages={uploadedImages}
       />

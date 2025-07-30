@@ -7,6 +7,8 @@ import ImageUploader from '../../GalleryComponent';
 
 const RANBaseBandForm = () => {
   const { sessionId } = useParams();
+  const bgColorFillAuto = "bg-[#c6efce]"
+  const colorFillAuto = 'text-[#006100]'
   const [numberOfCabinets, setNumberOfCabinets] = useState(0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loadingApi, setLoadingApi] = useState(false)
@@ -25,6 +27,8 @@ const RANBaseBandForm = () => {
     how_many_base_band_onsite: '',
     bts_table: [] // Array to store BTS data for each BTS
   });
+
+
 
   // Function to save data via API
   const saveDataToAPI = async () => {
@@ -293,7 +297,16 @@ const RANBaseBandForm = () => {
           base_band_status: '',
           transmission_cable_type: '',
           length_of_transmission_cable: '',
-          backhauling_destination: ''
+          backhauling_destination: '',
+          // AutoFilled flags
+          base_band_technologyAutoFilled: false,
+          existing_base_band_located_in_cabinetAutoFilled: false,
+          base_band_vendorAutoFilled: false,
+          base_band_modelAutoFilled: false,
+          base_band_statusAutoFilled: false,
+          transmission_cable_typeAutoFilled: false,
+          length_of_transmission_cableAutoFilled: false,
+          backhauling_destinationAutoFilled: false
         });
       }
       setFormData(prev => ({ ...prev, bts_table: newBtsTable }));
@@ -305,6 +318,8 @@ const RANBaseBandForm = () => {
       }));
     }
   }, [formData.how_many_base_band_onsite]);
+
+
 
   const handleChange = (name, value) => {
     if (isInitialLoading) return; // Don't set unsaved changes during initial load
@@ -329,10 +344,32 @@ const RANBaseBandForm = () => {
     if (isInitialLoading) return;
 
     setHasUnsavedChanges(true);
-    setFormData(prev => {
-      const newBtsTable = [...prev.bts_table];
-      newBtsTable[btsIndex] = { ...newBtsTable[btsIndex], [field]: value };
-      return { ...prev, bts_table: newBtsTable };
+
+    setFormData(prevData => {
+      const newBtsTable = [...prevData.bts_table];
+      newBtsTable[btsIndex] = {
+        ...newBtsTable[btsIndex],
+        [field]: value,
+        [`${field}AutoFilled`]: false // Reset auto-fill flag when manually changed
+      };
+
+      // If this is the first BTS and the field has a value, auto-fill other BTS
+      if (btsIndex === 0 && value) {
+        for (let i = 1; i < parseInt(prevData.how_many_base_band_onsite || 0); i++) {
+          if (!newBtsTable[i][field] || newBtsTable[i][`${field}AutoFilled`]) { // Only auto-fill if field is empty or was previously auto-filled
+            newBtsTable[i] = {
+              ...newBtsTable[i],
+              [field]: value,
+              [`${field}AutoFilled`]: true // Mark as auto-filled
+            };
+          }
+        }
+      }
+
+      return {
+        ...prevData,
+        bts_table: newBtsTable
+      };
     });
   };
 
@@ -340,16 +377,40 @@ const RANBaseBandForm = () => {
     if (isInitialLoading) return;
 
     setHasUnsavedChanges(true);
-    setFormData(prev => {
-      const newBtsTable = [...prev.bts_table];
-      const currentValues = newBtsTable[btsIndex][field] || [];
+
+    setFormData(prevData => {
+      const newBtsTable = [...prevData.bts_table];
+      const currentValues = new Set((newBtsTable[btsIndex][field] || []).map(String));
+
+      if (currentValues.has(String(value))) {
+        currentValues.delete(String(value));
+      } else {
+        currentValues.add(String(value));
+      }
+
       newBtsTable[btsIndex] = {
         ...newBtsTable[btsIndex],
-        [field]: currentValues.includes(value)
-          ? currentValues.filter(v => v !== value)
-          : [...currentValues, value]
+        [field]: Array.from(currentValues),
+        [`${field}AutoFilled`]: false // Reset auto-fill flag when manually changed
       };
-      return { ...prev, bts_table: newBtsTable };
+
+      // If this is the first BTS, auto-fill other BTS
+      if (btsIndex === 0) {
+        for (let i = 1; i < parseInt(prevData.how_many_base_band_onsite || 0); i++) {
+          if (!newBtsTable[i][field]?.length || newBtsTable[i][`${field}AutoFilled`]) { // Only auto-fill if field is empty or was previously auto-filled
+            newBtsTable[i] = {
+              ...newBtsTable[i],
+              [field]: Array.from(currentValues),
+              [`${field}AutoFilled`]: true // Mark as auto-filled
+            };
+          }
+        }
+      }
+
+      return {
+        ...prevData,
+        bts_table: newBtsTable
+      };
     });
   };
 
@@ -418,100 +479,13 @@ const RANBaseBandForm = () => {
         <form className="flex-1 flex flex-col min-h-0" onSubmit={handleSubmit}>
         <div className="flex-1 overflow-y-auto">
 
-            {/* Existing RAN Equipment Section */}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 bg-gray-100 p-4 rounded-lg">
-             
-              {/* <div>
-                <label className='block font-semibold mb-2'>Existing RAN base band located in?</label>
-            <select
-              className='form-input' 
-              value={formData.existing_location}
-              onChange={(e) => handleChange('existing_location', e.target.value)}
-            >
-              <option value=''>Select Location</option>
-              {cabinetOptions.map((cabinet) => (
-                <option key={cabinet} value={cabinet}>{cabinet}</option>
-              ))}
-              <option value='Other'>Other</option>
-            </select>
-          </div>
-
-              <div>
-                <label className='block font-semibold mb-2'>Existing RAN base band vendor</label>
-            <select
-              className='form-input' 
-              value={formData.existing_vendor}
-              onChange={(e) => handleChange('existing_vendor', e.target.value)}
-            >
-              <option value=''>Select Vendor</option>
-              <option value='Nokia'>Nokia</option>
-              <option value='Ericsson'>Ericsson</option>
-              <option value='Huawei'>Huawei</option>
-              <option value='ZTE'>ZTE</option>
-              <option value='Other'>Other</option>
-            </select>
-          </div>
-
-              <div>
-                <label className='block font-semibold mb-2'>Existing RAN base band type/model</label>
-                <div className='grid grid-cols-3 gap-2'>
-              {['Nokia Air Scale', 'Nokia Felix', 'Other'].map((type) => (
-                    <label key={type} className="flex items-center gap-2">
-                  <input
-                        type="checkbox"
-                    value={type}
-                    checked={formData.existing_type_model.includes(type)}
-                    onChange={(e) => handleCheckboxChange('existing_type_model', e.target.value)}
-                        className="w-4 h-4"
-                  />
-                      {type}
-                    </label>
-                  ))}
-                </div>
-              </div> */}
-
-              <div>
-                <label className='block font-semibold mb-2'>Where new Nokia base band can be installed? Choose all applicable</label>
-                <div className='grid grid-cols-3 gap-2'>
-              {[
-                ...cabinetOptions,
-                'New Nokia cabinet',
-                'Other',
-              ].map((location) => (
-                    <label key={location} className="flex items-center gap-2">
-                  <input
-                        type="checkbox"
-                    value={location}
-                    checked={formData.new_installation_location.includes(location)}
-                    onChange={(e) => handleCheckboxChange('new_installation_location', e.target.value)}
-                        className="w-4 h-4"
-                  />
-                      {location}
-                    </label>
-                  ))}
-                </div>
-          </div>
-
-              {/* <div>
-                <label className='block font-semibold mb-2'>Length of Transmission cable (Optical / Electrical) from new Nokia base band to MW IDU/ODF (meter)</label>
-            <input
-              type='number'
-              className='form-input' 
-              value={formData.length_of_transmission_cable}
-              onChange={(e) => handleChange('length_of_transmission_cable', e.target.value)}
-              placeholder='000'
-            />
-              </div> */}
-            </div>
-
+          
             {/* BTS Table Section */}
 
             <div className="mb-8  p-4 rounded-lg">
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <label className='block font-semibold mb-2'>How many Base Band onsite (BTS)</label>
-             
                 </div>
                 <select
                   className='form-input'
@@ -549,17 +523,19 @@ const RANBaseBandForm = () => {
                       <tr>
                         <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">Base band technology</td>
                         {formData.bts_table.map((bts, index) => (
-                          <td key={index} className="border border-gray-300 px-4 py-2">
-                              <div className="grid grid-cols-1 md:grid-cols-5 gap-1">
+                          <td key={index} className={`border px-4 py-2 ${bts.base_band_technologyAutoFilled ? bgColorFillAuto : ''}`}>
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-1">
                               {technologyOptions.map((tech) => (
                                 <label key={tech}className="flex items-center gap-1 text-sm">
                                   <input
                                     type="checkbox"
                                     checked={(bts.base_band_technology || []).includes(tech)}
                                     onChange={(e) => handleBTSCheckboxChange(index, 'base_band_technology', tech)}
-                                    className="mr-1"
+                                    className={`mr-1 ${bts.base_band_technologyAutoFilled ? colorFillAuto : ''}`}
                                   />
-                                  {tech}
+                                  <span className={bts.base_band_technologyAutoFilled ? colorFillAuto : ''}>
+                                    {tech}
+                                  </span>
                                 </label>
                               ))}
                             </div>
@@ -573,11 +549,11 @@ const RANBaseBandForm = () => {
     Existing Base Band located in cabinet
   </td>
   {formData.bts_table.map((bts, index) => (
-    <td key={index} className="border border-gray-300 px-4 py-2">
+    <td key={index} className={`border px-4 py-2 ${bts.existing_base_band_located_in_cabinetAutoFilled ? bgColorFillAuto : ''}`}>
       <div className="flex flex-col gap-2 relative">
         {/* Dropdown */}
         <select
-          className="w-full text-sm p-2 border rounded"
+          className={`w-full text-sm p-2 border rounded ${bts.existing_base_band_located_in_cabinetAutoFilled ? colorFillAuto : ''}`}
           value={bts.existing_base_band_located_in_cabinet}
           onChange={(e) => handleBTSChange(index, 'existing_base_band_located_in_cabinet', e.target.value)}
         >
@@ -600,7 +576,7 @@ const RANBaseBandForm = () => {
             placeholder="Enter cabinet name"
             value={bts.existing_base_band_located_in_cabinet_other || ''}
             onChange={(e) => handleBTSChange(index, 'existing_base_band_located_in_cabinet_other', e.target.value)}
-            className="border rounded px-2 py-1 text-sm"
+            className={`border rounded px-2 py-1 text-sm ${bts.existing_base_band_located_in_cabinetAutoFilled ? colorFillAuto : ''}`}
           />
         )}
       </div>
@@ -615,13 +591,13 @@ const RANBaseBandForm = () => {
     Base band vendor
   </td>
   {formData.bts_table.map((bts, index) => (
-    <td key={index} className="border border-gray-300 px-4 py-2">
+    <td key={index} className={`border px-4 py-2 ${bts.base_band_vendorAutoFilled ? bgColorFillAuto : ''}`}>
       <div className="flex flex-col gap-2">
         {/* Dropdown */}
         <select
           value={bts.base_band_vendor}
           onChange={(e) => handleBTSChange(index, 'base_band_vendor', e.target.value)}
-          className="border rounded px-2 py-1"
+          className={`border rounded px-2 py-1 ${bts.base_band_vendorAutoFilled ? colorFillAuto : ''}`}
         >
           {vendorOptions.map((vendor) => (
             <option key={vendor} value={vendor}>
@@ -638,7 +614,7 @@ const RANBaseBandForm = () => {
             placeholder="Enter other vendor"
             value={bts.base_band_vendor_other || ''}
             onChange={(e) => handleBTSChange(index, 'base_band_vendor_other', e.target.value)}
-            className="border rounded px-2 py-1"
+            className={`border rounded px-2 py-1 ${bts.base_band_vendorAutoFilled ? colorFillAuto : ''}`}
           />
         )}
       </div>
@@ -651,10 +627,10 @@ const RANBaseBandForm = () => {
                       <tr>
                         <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">Base band model</td>
                         {formData.bts_table.map((bts, index) => (
-                          <td key={index} className="border border-gray-300 px-4 py-2">
+                          <td key={index} className={`border px-4 py-2 ${bts.base_band_modelAutoFilled ? bgColorFillAuto : ''}`}>
                             <input
                               type="text"
-                              className="border rounded px-2 py-1"
+                              className={`border rounded px-2 py-1 ${bts.base_band_modelAutoFilled ? colorFillAuto : ''}`}
                               value={bts.base_band_model}
                               onChange={(e) => handleBTSChange(index, 'base_band_model', e.target.value)}
                               placeholder="Enter model"
@@ -667,7 +643,7 @@ const RANBaseBandForm = () => {
                       <tr>
                         <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">Base band status</td>
                         {formData.bts_table.map((bts, index) => (
-                          <td key={index} className="border border-gray-300 px-4 py-2">
+                          <td key={index} className={`border px-4 py-2 ${bts.base_band_statusAutoFilled ? bgColorFillAuto : ''}`}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
                               {statusOptions.map((status) => (
                                 <label key={status} className="flex items-center">
@@ -677,9 +653,11 @@ const RANBaseBandForm = () => {
                                     value={status}
                                     checked={bts.base_band_status === status}
                                     onChange={(e) => handleBTSChange(index, 'base_band_status', e.target.value)}
-                                    className="mr-1"
+                                    className={`mr-1 ${bts.base_band_statusAutoFilled ? colorFillAuto : ''}`}
                                   />
-                                  {status}
+                                  <span className={bts.base_band_statusAutoFilled ? colorFillAuto : ''}>
+                                    {status}
+                                  </span>
                                 </label>
                               ))}
                             </div>
@@ -691,7 +669,7 @@ const RANBaseBandForm = () => {
                       <tr>
                         <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">Transmission cable (backhauling) type</td>
                         {formData.bts_table.map((bts, index) => (
-                          <td key={index} className="border border-gray-300 px-4 py-2">
+                          <td key={index} className={`border px-4 py-2 ${bts.transmission_cable_typeAutoFilled ? bgColorFillAuto : ''}`}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
                               {transmissionCableOptions.map((type) => (
                                 <label key={type} className="flex items-center">
@@ -701,9 +679,11 @@ const RANBaseBandForm = () => {
                                     value={type}
                                     checked={bts.transmission_cable_type === type}
                                     onChange={(e) => handleBTSChange(index, 'transmission_cable_type', e.target.value)}
-                                    className="mr-1"
+                                    className={`mr-1 ${bts.transmission_cable_typeAutoFilled ? colorFillAuto : ''}`}
                                   />
-                                  {type}
+                                  <span className={bts.transmission_cable_typeAutoFilled ? colorFillAuto : ''}>
+                                    {type}
+                                  </span>
                                 </label>
                               ))}
                             </div>
@@ -715,11 +695,11 @@ const RANBaseBandForm = () => {
                       <tr>
                         <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">Length of Transmission cable</td>
                         {formData.bts_table.map((bts, index) => (
-                          <td key={index} className="border border-gray-300 px-4 py-2">
+                          <td key={index} className={`border px-4 py-2 ${bts.length_of_transmission_cableAutoFilled ? bgColorFillAuto : ''}`}>
                             <input
                               type="number"
                               step="0.1"
-                              className="border rounded px-2 py-1"
+                              className={`border rounded px-2 py-1 ${bts.length_of_transmission_cableAutoFilled ? colorFillAuto : ''}`}
                               value={bts.length_of_transmission_cable}
                               onChange={(e) => handleBTSChange(index, 'length_of_transmission_cable', e.target.value)}
                               placeholder="0.0"
@@ -732,7 +712,7 @@ const RANBaseBandForm = () => {
                       <tr>
                         <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">Backhauling destination</td>
                         {formData.bts_table.map((bts, index) => (
-                          <td key={index} className="border border-gray-300 px-4 py-2">
+                          <td key={index} className={`border px-4 py-2 ${bts.backhauling_destinationAutoFilled ? bgColorFillAuto : ''}`}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
                               {generateBackhaulingOptions(index).map((option) => (
                                 <label key={option} className="flex items-center">
@@ -742,9 +722,11 @@ const RANBaseBandForm = () => {
                                     value={option}
                                     checked={bts.backhauling_destination === option}
                                     onChange={(e) => handleBTSChange(index, 'backhauling_destination', e.target.value)}
-                                    className="mr-1"
+                                    className={`mr-1 ${bts.backhauling_destinationAutoFilled ? colorFillAuto : ''}`}
                                   />
-                                  {option}
+                                  <span className={bts.backhauling_destinationAutoFilled ? colorFillAuto : ''}>
+                                    {option}
+                                  </span>
                                 </label>
                               ))}
                             </div>
@@ -755,6 +737,96 @@ const RANBaseBandForm = () => {
                   </table>
           </div>
               )}
+
+         
+
+                {/* Existing RAN Equipment Section */}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 bg-gray-100 p-4 rounded-lg mt-10">
+             
+             {/* <div>
+               <label className='block font-semibold mb-2'>Existing RAN base band located in?</label>
+           <select
+             className='form-input' 
+             value={formData.existing_location}
+             onChange={(e) => handleChange('existing_location', e.target.value)}
+           >
+             <option value=''>Select Location</option>
+             {cabinetOptions.map((cabinet) => (
+               <option key={cabinet} value={cabinet}>{cabinet}</option>
+             ))}
+             <option value='Other'>Other</option>
+           </select>
+         </div>
+
+             <div>
+               <label className='block font-semibold mb-2'>Existing RAN base band vendor</label>
+           <select
+             className='form-input' 
+             value={formData.existing_vendor}
+             onChange={(e) => handleChange('existing_vendor', e.target.value)}
+           >
+             <option value=''>Select Vendor</option>
+             <option value='Nokia'>Nokia</option>
+             <option value='Ericsson'>Ericsson</option>
+             <option value='Huawei'>Huawei</option>
+             <option value='ZTE'>ZTE</option>
+             <option value='Other'>Other</option>
+           </select>
+         </div>
+
+             <div>
+               <label className='block font-semibold mb-2'>Existing RAN base band type/model</label>
+               <div className='grid grid-cols-3 gap-2'>
+             {['Nokia Air Scale', 'Nokia Felix', 'Other'].map((type) => (
+                   <label key={type} className="flex items-center gap-2">
+                 <input
+                       type="checkbox"
+                   value={type}
+                   checked={formData.existing_type_model.includes(type)}
+                   onChange={(e) => handleCheckboxChange('existing_type_model', e.target.value)}
+                       className="w-4 h-4"
+                 />
+                     {type}
+                   </label>
+                 ))}
+               </div>
+             </div> */}
+
+             <div>
+               <label className='block font-semibold mb-2'>Where new Nokia base band can be installed? Choose all applicable</label>
+               <div className='grid grid-cols-3 gap-2'>
+             {[
+               ...cabinetOptions,
+               'New Nokia cabinet',
+               'Other',
+             ].map((location) => (
+                   <label key={location} className="flex items-center gap-2">
+                 <input
+                       type="checkbox"
+                   value={location}
+                   checked={formData.new_installation_location.includes(location)}
+                   onChange={(e) => handleCheckboxChange('new_installation_location', e.target.value)}
+                       className="w-4 h-4"
+                 />
+                     {location}
+                   </label>
+                 ))}
+               </div>
+         </div>
+
+             <div>
+               <label className='block font-semibold mb-2'>Length of Transmission cable (Optical / Electrical) from new Nokia base band to MW IDU/ODF (meter)</label>
+           <input
+             type='number'
+             className='form-input' 
+             value={formData.length_of_transmission_cable}
+             onChange={(e) => handleChange('length_of_transmission_cable', e.target.value)}
+             placeholder='000'
+           />
+             </div>
+           </div>
+
 </div>
 </div>
 

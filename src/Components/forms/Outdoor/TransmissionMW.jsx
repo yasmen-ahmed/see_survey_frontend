@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { showSuccess, showError } from '../../../utils/notifications';
@@ -52,7 +52,7 @@ const TransmissionInformationForm = () => {
       submitFormData.append('data', JSON.stringify(payload));
 
       // Add images if they exist
-      const allImageFields = generateMWImages();
+      const allImageFields = generateMWImages;
       allImageFields.forEach(imageField => {
         const imageFiles = uploadedImages[imageField.name];
         if (Array.isArray(imageFiles) && imageFiles.length > 0) {
@@ -96,24 +96,37 @@ const TransmissionInformationForm = () => {
   };
 
   // Generate MW equipment-based image categories
-  const generateMWImages = () => {
-    const baseImages = [
-      { label: 'ODF photo', name: 'odf_photo' },
-      { label: 'ODF free port photo', name: 'odf_free_port' }
-    ];
+  const generateMWImages = useMemo(() => {
+    const baseImages = [];
     
-    const mwCount = parseInt(formData.how_many_mw_link_exist) || 0;
+    // Always include ODF images (common for both Fiber and MW)
+    baseImages.push(
+     
+    );
     
-    // Add MW-specific images for each link
-    for (let i = 1; i <= mwCount; i++) {
+    // Only add MW-specific images if transmission type is "MW"
+    if (formData.type_of_transmission === 'MW') {
+      const mwCount = parseInt(formData.how_many_mw_link_exist) || 0;
+      
+      // Add MW-specific images for each link
+      for (let i = 1; i <= mwCount; i++) {
+        baseImages.push(
+          { label: `MW IDU photo ${i}`, name: `mw_idu_photo_${i}` },
+          { label: `MW IDU cards photo ${i}`, name: `mw_idu_cards_photo_${i}` }
+        );
+      }
+    }
+    
+    // Add Fiber-specific images if transmission type is "Fiber"
+    if (formData.type_of_transmission === 'Fiber') {
       baseImages.push(
-        { label: `MW IDU photo ${i}`, name: `mw_idu_photo_${i}` },
-        { label: `MW IDU cards photo ${i}`, name: `mw_idu_cards_photo_${i}` }
+        { label: 'ODF photo', name: 'odf_photo' },
+      { label: 'ODF free port photo', name: 'odf_free_port' }
       );
     }
     
     return baseImages;
-  };
+  }, [formData.type_of_transmission, formData.how_many_mw_link_exist]);
 
   // Process images from API response
   const processImagesFromResponse = (data) => {
@@ -387,7 +400,7 @@ const TransmissionInformationForm = () => {
                 </div>
                 <hr className='mt-6' />
               </div>
-
+{/* 
               <div className='mb-4'>
                 <label className='block font-semibold mb-2'>Existing Transmission base band located in?</label>
                 <select
@@ -402,7 +415,7 @@ const TransmissionInformationForm = () => {
                   <option value='Other'>Other</option>
                 </select>
                 <hr className='mt-2' />
-              </div>
+              </div> */}
 
               <div className='mb-4'>
                 <label className='block font-semibold mb-2'>Existing Transmission equipment vendor</label>
@@ -622,7 +635,7 @@ const TransmissionInformationForm = () => {
                           Card type/model
                         </td>
                         {formData.mw_links.slice(0, parseInt(formData.how_many_mw_link_exist)).map((link, linkIndex) => (
-                          <td key={linkIndex} className="border px-2 py-2">
+                          <td key={linkIndex} className={`border px-2 py-2 ${isFieldAutoFilled(linkIndex, 'card_type_model') ? bgColorFillAuto : ''}`}  >
                             <input
                               type="text"
                               value={link.card_type_model}
@@ -640,7 +653,7 @@ const TransmissionInformationForm = () => {
                           Destination site ID
                         </td>
                         {formData.mw_links.slice(0, parseInt(formData.how_many_mw_link_exist)).map((link, linkIndex) => (
-                          <td key={linkIndex} className="border px-2 py-2">
+                          <td key={linkIndex} className={`border px-2 py-2 ${isFieldAutoFilled(linkIndex, 'destination_site_id') ? bgColorFillAuto : ''}`} >
                             <input
                               type="text"
                               value={link.destination_site_id}
@@ -736,7 +749,7 @@ const TransmissionInformationForm = () => {
       
       {/* Image Uploader */}
       <ImageUploader 
-        images={generateMWImages()} 
+        images={generateMWImages} 
         onImageUpload={handleImageUpload}
         uploadedImages={uploadedImages}
       />
