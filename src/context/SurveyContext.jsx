@@ -20,7 +20,8 @@ export const SurveyProvider = ({ children }) => {
       createdBy: null,
       assignedTo: null,
       project: null,
-      status: null
+      status: null,
+      readOnly: false
     };
   });
 
@@ -41,7 +42,8 @@ export const SurveyProvider = ({ children }) => {
       createdBy: null,
       assignedTo: null,
       project: null,
-      status: null
+      status: null,
+      readOnly: false
     });
     localStorage.removeItem('surveyData');
   };

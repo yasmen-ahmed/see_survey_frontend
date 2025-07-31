@@ -5,14 +5,18 @@ import ImageUploader from "../../GalleryComponent";
 import { showSuccess, showError } from "../../../utils/notifications";
 import useImageManager from "../../../hooks/useImageManager";
 import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
+import { useReadOnly } from "../../../hooks/useReadOnly";
 
-function SiteInformationForm() {
+function SiteInformationForm({ readOnly = false }) {
   
 const { sessionId, siteId } = useParams();   
 const { uploadedImages, handleImageUpload, saveImages, loading } = useImageManager(sessionId);
 const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 const [loadingApi,setLoadingApi] =useState(false) 
-
+const { isReadOnly, getInputProps, getButtonProps } = useReadOnly();
+  
+// Use the readOnly prop or the context readOnly state
+const isFormReadOnly = readOnly || isReadOnly;
 const [formData, setFormData] = useState({
     site_located_at: "",
     site_ownership: "",
@@ -153,7 +157,7 @@ const [formData, setFormData] = useState({
     <div className="h-full flex items-start space-x-2 justify-start bg-gray-100 p-">
     <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full overflow-y-auto flex flex-col">
        {/* Unsaved Changes Warning */}
-        {hasUnsavedChanges && (
+       {hasUnsavedChanges && !isFormReadOnly && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
             <div className="flex items-center">
               <div className="ml-3">
@@ -180,6 +184,7 @@ const [formData, setFormData] = useState({
                   checked={formData.site_located_at === "Downtown"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
                 Downtown
               </label>
@@ -191,6 +196,7 @@ const [formData, setFormData] = useState({
                   checked={formData.site_located_at === "Suburb"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
            Suburb
               </label>
@@ -202,6 +208,7 @@ const [formData, setFormData] = useState({
                   checked={formData.site_located_at === "Rural area"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
                 Rural area
               </label>
@@ -213,6 +220,7 @@ const [formData, setFormData] = useState({
                   checked={formData.site_located_at === "Highway Road"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
                Highway Road
               </label>
@@ -224,6 +232,7 @@ const [formData, setFormData] = useState({
                   checked={formData.site_located_at === "Hills or Mountain"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
                 Hills or Mountain
               </label>
@@ -235,6 +244,7 @@ const [formData, setFormData] = useState({
                   checked={formData.site_located_at === "Shore"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
                 Shore
               </label>
@@ -246,6 +256,7 @@ const [formData, setFormData] = useState({
                   checked={formData.site_located_at === "Other"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
                 Other
               </label>
@@ -265,6 +276,7 @@ const [formData, setFormData] = useState({
                   checked={formData.site_ownership === "Operator"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
                Operator
               </label>
@@ -276,6 +288,7 @@ const [formData, setFormData] = useState({
                   checked={formData.site_ownership === "Tower Company"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
            Tower Company
               </label>
@@ -287,6 +300,7 @@ const [formData, setFormData] = useState({
                   checked={formData.site_ownership === " Other Operator"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
                 Other Operator
               </label>
@@ -298,6 +312,7 @@ const [formData, setFormData] = useState({
                   checked={formData.site_ownership === " Utility Company"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
                Utility Company
               </label>
@@ -309,7 +324,8 @@ const [formData, setFormData] = useState({
                   checked={formData.site_ownership === "Other"}
                   onChange={handleChange}
                   className="mr-2"
-                />
+                  {...getInputProps()}
+                    />
                 Other
               </label>
          
@@ -328,6 +344,7 @@ const [formData, setFormData] = useState({
                   checked={formData.shared_site === "Yes"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
                 Yes
               </label>
@@ -339,6 +356,7 @@ const [formData, setFormData] = useState({
                   checked={formData.shared_site === "No"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
                 No
               </label>
@@ -358,6 +376,7 @@ const [formData, setFormData] = useState({
                     checked={formData.other_telecom_operator_exist_onsite.includes(slot)}
                     onChange={handleChange}
                     className="mr-2"
+                    {...getInputProps()}
                   />
                   {slot}
                 </label>
@@ -377,6 +396,7 @@ const [formData, setFormData] = useState({
                   checked={formData.ac_power_sharing === "Yes"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
                 Yes
               </label>
@@ -388,6 +408,7 @@ const [formData, setFormData] = useState({
                   checked={formData.ac_power_sharing === "No"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
                 No
               </label>
@@ -406,6 +427,7 @@ const [formData, setFormData] = useState({
                   checked={formData.dc_power_sharing === "Yes"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
                 Yes
               </label>
@@ -417,6 +439,7 @@ const [formData, setFormData] = useState({
                   checked={formData.dc_power_sharing === "No"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
                 No
               </label>  
@@ -435,6 +458,7 @@ const [formData, setFormData] = useState({
                   checked={formData.site_topology === "Ground Field"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
                Ground Field
               </label>
@@ -446,6 +470,7 @@ const [formData, setFormData] = useState({
                   checked={formData.site_topology === "Roof Top"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
           Roof Top
               </label>
@@ -457,6 +482,7 @@ const [formData, setFormData] = useState({
                   checked={formData.site_topology === "Other"}
                   onChange={handleChange}
                   className="mr-2"
+                  {...getInputProps()}
                 />
                 Other
               </label>
@@ -476,7 +502,8 @@ const [formData, setFormData] = useState({
                   checked={formData.site_type === "Normal radio site"}
                   onChange={handleChange}
                   className="mr-2"
-                />
+                  {...getInputProps()}
+                    />
              Normal radio site
               </label>
               <label className="flex items-center">
@@ -487,7 +514,8 @@ const [formData, setFormData] = useState({
                   checked={formData.site_type === "Hub site"}
                   onChange={handleChange}
                   className="mr-2"
-                />
+                  {...getInputProps()}
+                    />
          Hub site
               </label>
               <label className="flex items-center">
@@ -498,7 +526,8 @@ const [formData, setFormData] = useState({
                   checked={formData.site_type === "Corpo site"}
                   onChange={handleChange}
                   className="mr-2"
-                />
+                  {...getInputProps()}
+                    />
                Corpo site
               </label>
               <label className="flex items-center">
@@ -509,7 +538,8 @@ const [formData, setFormData] = useState({
                   checked={formData.site_type === "Other"}
                   onChange={handleChange}
                   className="mr-2"
-                />
+                  {...getInputProps()}
+                    />
                 Other
               </label>
              
@@ -528,6 +558,7 @@ const [formData, setFormData] = useState({
                     checked={formData.planned_scope.includes(slot)}
                     onChange={handleChange}
                     className="mr-2"
+                    {...getInputProps()}
                   />
                   {slot}
                 </label>
@@ -548,6 +579,7 @@ const [formData, setFormData] = useState({
                     checked={formData.location_of_existing_telecom_racks_cabinets.includes(slot)}
                     onChange={handleChange}
                     className="mr-2"
+                    {...getInputProps()}
                   />
                   {slot}
                 </label>
@@ -568,6 +600,7 @@ const [formData, setFormData] = useState({
                     checked={formData.location_of_planned_new_telecom_racks_cabinets.includes(slot)}
                     onChange={handleChange}
                     className="mr-2"
+                    {...getInputProps()}
                   />
                   {slot}
                 </label>
@@ -588,6 +621,7 @@ const [formData, setFormData] = useState({
                     checked={formData.existing_technology.includes(slot)}
                     onChange={handleChange}
                     className="mr-2"
+                    {...getInputProps()}
                   />
                   {slot}
                 </label>
@@ -600,7 +634,8 @@ const [formData, setFormData] = useState({
       <div className="mt-auto pt-6 flex justify-center">
         <button type="submit"
           onClick={handleSubmit}
-        className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
+          {...getButtonProps()}
+          className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
           {loadingApi ? "loading...": "Save"}  
         </button>
       </div>
@@ -609,6 +644,7 @@ const [formData, setFormData] = useState({
         images={images}
         onImageUpload={handleImageUpload}
         uploadedImages={uploadedImages}
+        readOnly={isFormReadOnly}
       />
   </div>
   

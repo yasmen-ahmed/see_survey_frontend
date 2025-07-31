@@ -51,14 +51,19 @@ const PageContainer = () => {
         <div className="site-info mx-30">
           <span>{surveyData?.siteId}</span>
           <span>{surveyData?.project && `, ${surveyData.project}`}</span>
+          {surveyData?.readOnly && (
+            <span className="read-only-indicator">
+              <span className="read-only-badge">READ-ONLY MODE</span>
+            </span>
+          )}
         </div>
       </div>
 
       {/* Dynamic Form Rendering */}
-      <div className="form-container">
+      <div className={`form-container ${surveyData?.readOnly ? 'read-only-mode' : ''}`}>
         <ErrorBoundary>
           <Suspense fallback={<div>Loading...</div>}>
-            {ActiveComponent ? <ActiveComponent /> : <div>No form available</div>}
+            {ActiveComponent ? <ActiveComponent readOnly={surveyData?.readOnly} /> : <div>No form available</div>}
           </Suspense>
         </ErrorBoundary>
       </div>
@@ -119,6 +124,23 @@ const PageContainer = () => {
             display: flex;
             gap: var(--spacing-lg, 1.5rem);
             padding: 0 20px;
+            align-items: center;
+          }
+
+          .read-only-indicator {
+            display: flex;
+            align-items: center;
+          }
+
+          .read-only-badge {
+            background-color: #ef4444;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
           }
 
           .form-container {
@@ -141,6 +163,56 @@ const PageContainer = () => {
             min-height: 0;
             display: flex;
             flex-direction: row;
+          }
+
+          /* Read-only mode styles */
+          .read-only-mode input:not([type="checkbox"]):not([type="radio"]),
+          .read-only-mode textarea,
+          .read-only-mode select,
+          .read-only-mode button:not(.read-only-badge) {
+            pointer-events: none !important;
+            opacity: 0.6 !important;
+            cursor: not-allowed !important;
+          }
+
+          .read-only-mode input:not([type="checkbox"]):not([type="radio"]),
+          .read-only-mode textarea,
+          .read-only-mode select {
+            background-color: #f5f5f5 !important;
+            border-color: #d1d5db !important;
+          }
+
+          .read-only-mode button:not(.read-only-badge) {
+            background-color: #9ca3af !important;
+            border-color: #9ca3af !important;
+          }
+
+          /* Special handling for checkboxes and radio buttons */
+          .read-only-mode input[type="checkbox"],
+          .read-only-mode input[type="radio"] {
+            pointer-events: none !important;
+            opacity: 0.6 !important;
+            cursor: not-allowed !important;
+            /* Preserve the checked state visually */
+          }
+
+          /* Disable form submissions but allow scrolling */
+          .read-only-mode form {
+            pointer-events: none;
+          }
+
+          /* Allow scrolling and text selection */
+          .read-only-mode {
+            user-select: text;
+            overflow: auto !important;
+            pointer-events: auto !important;
+          }
+
+          /* Ensure containers can scroll */
+          .read-only-mode .form-container,
+          .read-only-mode .overflow-y-auto {
+            overflow-y: auto !important;
+            pointer-events: auto !important;
           }
         `}
       </style>

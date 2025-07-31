@@ -1,16 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import ImageUploader from "../../GalleryComponent";
 import { showSuccess, showError } from "../../../utils/notifications";
 import useImageManager from "../../../hooks/useImageManager";
 import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
+import { useReadOnly } from "../../../hooks/useReadOnly";
 
-const SiteLocationForm = () => {
+const SiteLocationForm = ({ readOnly = false }) => {
   const { sessionId, siteId } = useParams();
   const { uploadedImages, initialImages, handleImageUpload, saveImages, loading, resetUnsavedChanges } = useImageManager(sessionId);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loadingApi,setLoadingApi] =useState(false)
+  const { isReadOnly, disableAllFormElements } = useReadOnly();
+  const formRef = useRef(null);
+  
+  // Use the readOnly prop or the context readOnly state
+  const isFormReadOnly = readOnly || isReadOnly;
   
 
   const [formData, setFormData] = useState({
@@ -108,6 +114,16 @@ const SiteLocationForm = () => {
       .catch(err => console.error("Error loading survey details:", err));
   }, [sessionId, siteId]);
 
+  // Disable all form elements when in read-only mode
+  useEffect(() => {
+    if (isFormReadOnly) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        disableAllFormElements(formRef);
+      }, 100);
+    }
+  }, [isFormReadOnly, disableAllFormElements]);
+
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -168,10 +184,10 @@ const SiteLocationForm = () => {
   }
 
   return (
-    <div className="h-full flex items-start space-x-2 justify-start bg-gray-100 p-">
+    <div className="h-full flex items-start space-x-2 justify-start bg-gray-100 p-" ref={formRef}>
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full overflow-y-auto flex flex-col">
         {/* Unsaved Changes Warning */}
-        {hasUnsavedChanges && (
+        {hasUnsavedChanges && !isFormReadOnly && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
             <div className="flex items-center">
               <div className="ml-3">
@@ -211,7 +227,7 @@ const SiteLocationForm = () => {
                   placeholder="Site Name"
                   value={formData.sitename}
                   onChange={handleInputChange}
-                    className="form-input"
+                  className="form-input"
                   required
                 />
               </div>
@@ -305,7 +321,10 @@ const SiteLocationForm = () => {
 
           {/* Save Button at Bottom */}
           <div className="mt-auto pt-6 flex justify-center">
-            <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">
+            <button 
+              type="submit" 
+              className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700"
+            >
               {loadingApi ? "loading...": "Save"}  
             </button>
           </div>
@@ -316,6 +335,7 @@ const SiteLocationForm = () => {
         images={images}
         onImageUpload={handleImageUploadWithChangeDetection}
         uploadedImages={uploadedImages}
+        readOnly={isFormReadOnly}
       />
     </div>
   );

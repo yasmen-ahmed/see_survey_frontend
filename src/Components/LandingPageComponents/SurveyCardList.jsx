@@ -2,16 +2,71 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useSurveyContext } from '../../context/SurveyContext';
+import SurveyDashboard from './SurveyDashboard';
+import SurveyFilters from './SurveyFilters';
 
 const SurveyCardList = () => {
   const [surveys, setSurveys] = useState([]);
+  const [filteredSurveys, setFilteredSurveys] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [userRole, setUserRole] = useState(null);
   const [statusHistory, setStatusHistory] = useState({});
   const [showHistory, setShowHistory] = useState({});
+  const [activeFilters, setActiveFilters] = useState({});
   const navigate = useNavigate();
   const { updateSurveyData } = useSurveyContext();
+
+  // Filter surveys based on active filters
+  const applyFilters = (surveysToFilter, filters) => {
+    return surveysToFilter.filter(survey => {
+      // Project filter
+      if (filters.project && (survey.project || survey.projectData?.name) !== filters.project) {
+        return false;
+      }
+      
+      // Site name filter
+      if (filters.siteName && survey.site_id !== filters.siteName) {
+        return false;
+      }
+      
+      // Status filter
+      if (filters.status && survey.TSSR_Status !== filters.status) {
+        return false;
+      }
+      
+      // Search filter
+      if (filters.search) {
+        const searchTerm = filters.search.toLowerCase();
+        const searchableFields = [
+          survey.session_id?.toString(),
+          survey.site_id?.toString(),
+          survey.project,
+          survey.projectData?.name,
+          survey.createdBy?.username,
+          survey.user?.username,
+          survey.TSSR_Status
+        ].filter(Boolean).join(' ').toLowerCase();
+        
+        if (!searchableFields.includes(searchTerm)) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  };
+
+  // Update filtered surveys when surveys or filters change
+  useEffect(() => {
+    const filtered = applyFilters(surveys, activeFilters);
+    setFilteredSurveys(filtered);
+  }, [surveys, activeFilters]);
+
+  // Handle filter changes
+  const handleFilterChange = (filters) => {
+    setActiveFilters(filters);
+  };
 
   // Get user role from localStorage
   useEffect(() => {
@@ -57,26 +112,54 @@ const SurveyCardList = () => {
         
       case 'coordinator':
         // Coordinator can only see Created and Submitted
-        return allStatuses.filter(status => 
-          ['created', 'submitted'].includes(status.value)
-        );
+        return allStatuses;
         
       case 'survey_engineer':
-        // Survey Engineer can see Submitted and Under revision
-        return allStatuses.filter(status => 
-          ['submitted', 'review'].includes(status.value)
-        );
+        // Survey Engineer can see all statuses but only change to submitted
+        return allStatuses;
         
       case 'approver':
-        // Approver can see Under revision, Rework, and Approved
-        return allStatuses.filter(status => 
-          ['review', 'rework', 'done'].includes(status.value)
-        );
+        // Approver can see all statuses but some are disabled
+        return allStatuses;
         
       default:
         // Default: show all statuses
         return allStatuses;
     }
+  };
+
+  // Function to check if a specific status option should be disabled
+  const isStatusDisabled = (statusValue, currentStatus) => {
+    if (!userRole) return false;
+
+    switch (userRole) {
+      case 'admin':
+        // Admin can change to any status
+        return false;
+        
+      case 'coordinator':
+        // Coordinator dropdown is completely disabled
+        return true;
+        
+      case 'survey_engineer':
+        // Survey Engineer can only change to 'submitted'
+        return statusValue !== 'submitted';
+        
+      case 'approver':
+        // Approver cannot change 'created' and 'submitted' statuses, but can change to 'under review'
+        return ['created', 'submitted'].includes(statusValue);
+        
+      default:
+        return false;
+    }
+  };
+
+  // Function to check if the entire dropdown should be disabled
+  const isDropdownDisabled = () => {
+    if (!userRole) return false;
+    
+    // Coordinator dropdown is completely disabled
+    return userRole === 'coordinator';
   };
 
   // Function to check if user can change to a specific status
@@ -89,16 +172,16 @@ const SurveyCardList = () => {
         return true;
         
       case 'coordinator':
-        // Coordinator can only change to Created and Submitted
-        return ['created', 'submitted'].includes(newStatus);
+        // Coordinator cannot change any status
+        return false;
         
       case 'survey_engineer':
-        // Survey Engineer can change to Submitted and Under revision
-        return ['submitted', 'review'].includes(newStatus);
+        // Survey Engineer can only change to 'submitted'
+        return newStatus === 'submitted';
         
       case 'approver':
-        // Approver can change to Under revision, Rework, and Approved
-        return ['review', 'rework', 'done'].includes(newStatus);
+        // Approver cannot change 'created' and 'submitted' statuses, but can change to 'under review'
+        return !['created', 'submitted'].includes(newStatus);
         
       default:
         return true;
@@ -166,9 +249,9 @@ const SurveyCardList = () => {
 
       // Optional: Prompt for notes when changing status
       let notes = '';
-      if (newStatus === 'review' || newStatus === 'rework') {
-        notes = prompt(`Please provide a reason for changing status to "${newStatus}":`) || '';
-      }
+      // if (newStatus === 'review' || newStatus === 'rework') {
+      //   notes = prompt(`Please provide a reason for changing status to "${newStatus}":`) || '';
+      // }
 
       await updateSurveyStatus(surveyId, newStatus, notes);
       setSurveys(prevSurveys =>
@@ -267,6 +350,9 @@ const SurveyCardList = () => {
   };
 
   const handleContinue = (survey) => {
+    // Determine if user should be in read-only mode (admin or coordinator)
+    const isReadOnly = userRole === 'admin' || userRole === 'coordinator' || (userRole === 'survey_engineer' && ( survey.TSSR_Status == 'submitted' || survey.TSSR_Status == 'review')) || (userRole === 'approver' && survey.TSSR_Status == 'done' ) ;
+    
     // Update the context with the survey data
     updateSurveyData({
       sessionId: survey.session_id,
@@ -274,7 +360,9 @@ const SurveyCardList = () => {
       createdBy: survey.createdBy?.username,
       assignedTo: survey.user?.username,
       project: survey.project,
-      status: survey.TSSR_Status
+      status: survey.TSSR_Status,
+      role: userRole,
+      readOnly: isReadOnly
     });
 
     // Navigate to the site page
@@ -291,17 +379,24 @@ const SurveyCardList = () => {
 
   return (
     <div className="p-6 overflow-x-auto">
-      {/* Role Information Display */}
-      {userRole && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-700">
-            <strong>Current Role:</strong> {userRole.replace('_', ' ').toUpperCase()}
-          </p>
-          <p className="text-xs text-blue-600 mt-1">
-            You can only see and change to statuses allowed for your role.
-          </p>
+        {/* Survey Dashboard */}
+        <SurveyDashboard surveys={filteredSurveys} userRole={userRole} />
+      {/* Survey Filters */}
+      <SurveyFilters surveys={surveys} onFilterChange={handleFilterChange} />
+      
+    
+
+      {/* Results Count */}
+      <div className="mb-4 flex justify-between items-center">
+        <div className="text-sm text-gray-600">
+          Showing {filteredSurveys.length} of {surveys.length} surveys
+          {Object.values(activeFilters).some(filter => filter) && (
+            <span className="ml-2 text-blue-600">
+              (filtered)
+            </span>
+          )}
         </div>
-      )}
+      </div>
 
       <table className="min-w-full bg-white rounded-xl shadow-md">
         <thead>
@@ -318,7 +413,7 @@ const SurveyCardList = () => {
           </tr>
         </thead>
         <tbody>
-          {surveys.map((survey) => {
+          {filteredSurveys.map((survey) => {
             const availableStatuses = getAvailableStatusOptions(survey.TSSR_Status);
             
             return (
@@ -327,30 +422,47 @@ const SurveyCardList = () => {
                 <td className="px-6 py-4">{survey.site_id}</td>
                 <td className="px-6 py-4">{survey.createdBy?.username}</td>
                 <td className="px-6 py-4">{survey.user?.username}</td>
-                <td className="px-6 py-4">{survey.project}</td>
+                <td className="px-6 py-4">
+                  <div className="font-medium">{survey.projectData?.name || survey.project}</div>
+                  {/* {survey.projectData?.code && (
+                    <div className="text-xs text-gray-500">Code: {survey.projectData.code}</div>
+                  )} */}
+                </td>
+              
+              
                 <td className="px-6 py-4">
                   <select
                     value={survey.TSSR_Status}
                     onChange={(e) => handleStatusChange(survey.session_id, e.target.value)}
                     className="border rounded p-1"
-                    disabled={!userRole} // Disable if no role is set
+                    disabled={isDropdownDisabled()}
                   >
                     {availableStatuses.map((status) => (
-                      <option key={status.value} value={status.value}>
+                      <option 
+                        key={status.value} 
+                        value={status.value}
+                        disabled={isStatusDisabled(status.value, survey.TSSR_Status)}
+                      >
                         {status.label}
                       </option>
                     ))}
                   </select>
                 </td>
-                <td className="px-6 py-4">
-                  <button
-                    onClick={() => handleContinue(survey)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                  >
-                    Continue
-                  </button>
-                </td>
-                {survey.TSSR_Status === 'done' && (
+                {!(
+  userRole === 'approver' && survey.TSSR_Status === 'submitted'
+) && (
+  <td className="px-6 py-4">
+    <button
+      onClick={() => handleContinue(survey)}
+      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+    >
+      Continue
+    </button>
+  </td>
+)}
+
+              
+                {survey.TSSR_Status === 'done' && userRole != 'survey_engineer' && (
                   <td className="px-6 py-4">
                     <button
                       onClick={() => generateReport(survey.session_id)}

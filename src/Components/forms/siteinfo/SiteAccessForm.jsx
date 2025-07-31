@@ -1,16 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import axios from "axios";
 import ImageUploader from "../../GalleryComponent";
 import { showSuccess, showError } from "../../../utils/notifications";
 import useImageManager from "../../../hooks/useImageManager";
 import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
+import { useReadOnly } from "../../../hooks/useReadOnly";
 
-function SiteAccessForm() {
+function SiteAccessForm({ readOnly = false }) {
   const { sessionId, siteId } = useParams();
   const { uploadedImages, handleImageUpload, saveImages, loading } = useImageManager(sessionId);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loadingApi, setLoadingApi] = useState(false)
+  const { isReadOnly, disableAllFormElements } = useReadOnly();
+  const formRef = useRef(null);
+  
+  // Use the readOnly prop or the context readOnly state
+  const isFormReadOnly = readOnly || isReadOnly;
   const [formData, setFormData] = useState({
     site_access_permission_required: "",
     preferred_time_slot_crane_access: [],
@@ -88,6 +94,16 @@ function SiteAccessForm() {
       })
       .catch(err => console.error("Error loading survey details:", err));
   }, [sessionId, siteId]);
+
+  // Disable all form elements when in read-only mode
+  useEffect(() => {
+    if (isFormReadOnly) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        disableAllFormElements(formRef);
+      }, 100);
+    }
+  }, [isFormReadOnly, disableAllFormElements]);
 
   const handleChange = (e) => {
     setHasUnsavedChanges(true);
@@ -183,10 +199,10 @@ function SiteAccessForm() {
 
 
   return (
-    <div className="h-full flex items-start space-x-2 justify-start bg-gray-100 p-">
+    <div className="h-full flex items-start space-x-2 justify-start bg-gray-100 p-" ref={formRef}>
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full overflow-y-auto flex flex-col">
         {/* Unsaved Changes Warning */}
-        {hasUnsavedChanges && (
+        {hasUnsavedChanges && !isFormReadOnly && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
             <div className="flex items-center">
               <div className="ml-3">
@@ -735,6 +751,7 @@ function SiteAccessForm() {
         images={images}
         onImageUpload={handleImageUpload}
         uploadedImages={uploadedImages}
+        readOnly={isFormReadOnly}
       />
     </div>
   );

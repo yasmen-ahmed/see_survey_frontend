@@ -201,8 +201,8 @@ function Createform() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
+    <div className=" w-full  p-10">
+      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-lg w-full mx-auto max-w-xl">
         <h2 className="text-2xl font-bold mb-6 text-center">Create A New Survey</h2>
         {error && <div className="text-red-500 mb-4">{error}</div>}
         {success && <div className="text-green-500 mb-4">{success}</div>}
