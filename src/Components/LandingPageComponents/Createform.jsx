@@ -37,18 +37,7 @@ function Createform() {
       }
     };
 
-    const fetchUsers = async () => {
-      try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/users`);
-        setUsers(response.data);
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        setError('Failed to fetch users.');
-      }
-    };
-
     fetchMUs();
-    fetchUsers();
   }, []);
 
   // Fetch countries when MU changes
@@ -72,9 +61,11 @@ function Createform() {
     setSelectedCT('');
     setSelectedProject('');
     setSelectedCompany('');
+    setSelectedUser('');
     setCts([]);
     setProjects([]);
     setCompanies([]);
+    setUsers([]);
   }, [selectedMU]);
 
   // Fetch CTs when country changes
@@ -120,10 +111,12 @@ function Createform() {
     // Reset dependent fields
     setSelectedProject('');
     setSelectedCompany('');
+    setSelectedUser('');
     setCompanies([]);
+    setUsers([]);
   }, [selectedCT]);
 
-  // Fetch companies when project changes
+  // Fetch companies and users when project changes
   useEffect(() => {
     if (selectedProject) {
       const fetchCompanies = async () => {
@@ -135,12 +128,27 @@ function Createform() {
           setError('Failed to fetch companies.');
         }
       };
+
+      const fetchProjectUsers = async () => {
+        try {
+          const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/user-management/projects/${selectedProject}/users`);
+          console.log(["users",response.data]);
+          setUsers(response.data.data || response.data);
+        } catch (error) {
+          console.error('Error fetching project users:', error);
+          setError('Failed to fetch project users.');
+        }
+      };
+
       fetchCompanies();
+      fetchProjectUsers();
     } else {
       setCompanies([]);
+      setUsers([]);
     }
-    // Reset dependent field
+    // Reset dependent fields
     setSelectedCompany('');
+    setSelectedUser('');
   }, [selectedProject]);
 
   const handleSubmit = async (e) => {
@@ -306,6 +314,7 @@ function Createform() {
             onChange={(e) => setSelectedUser(e.target.value)}
             className="w-full border border-gray-300 rounded-lg px-4 py-2"
             required
+            disabled={!selectedProject}
           >
             <option value="">-- Select User --</option>
             {users.map((user) => (
