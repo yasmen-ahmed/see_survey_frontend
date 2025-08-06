@@ -68,7 +68,7 @@ const SurveyCardList = () => {
     setActiveFilters(filters);
   };
 
-  // Get user role from localStorage
+  // Get user role from localStorage and listen for role changes
   useEffect(() => {
     const role = localStorage.getItem('role');
     const token = localStorage.getItem('token');
@@ -87,6 +87,23 @@ const SurveyCardList = () => {
           console.error('Test endpoint error:', error);
         });
     }
+
+    // Listen for role changes from the header
+    const handleRoleChange = (event) => {
+      const newRole = event.detail.role;
+      console.log('Role changed to:', newRole);
+      setUserRole(newRole);
+      
+      // Optionally refetch surveys with new role permissions
+      // This will be handled by the existing useEffect that depends on userRole
+    };
+
+    window.addEventListener('roleChanged', handleRoleChange);
+
+    // Cleanup listener on unmount
+    return () => {
+      window.removeEventListener('roleChanged', handleRoleChange);
+    };
   }, []);
 
   // Function to get available status options based on user role
@@ -194,6 +211,8 @@ const SurveyCardList = () => {
     console.log('Token from localStorage:', token);
     console.log('Token type:', typeof token);
     console.log('Token length:', token ? token.length : 0);
+    console.log('Current userRole for fetching surveys:', userRole);
+    console.log('Token payload:', token ? JSON.parse(atob(token.split('.')[1])) : 'No token');
     
     if (!token) {
       setError('Authentication token not found. Please login again.');
@@ -203,7 +222,11 @@ const SurveyCardList = () => {
 
     console.log('Making API request with token:', `Bearer ${token}`);
 
-    axios.get(`${import.meta.env.VITE_API_URL}/api/surveys`, {
+    // The backend handles role-based filtering through the JWT token
+    const apiUrl = `${import.meta.env.VITE_API_URL}/api/surveys`;
+    console.log('API URL:', apiUrl);
+
+    axios.get(apiUrl, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -225,6 +248,7 @@ const SurveyCardList = () => {
         });
   
         setSurveys(fetchedSurveys);
+        console.log(`Fetched ${fetchedSurveys.length} surveys for role: ${userRole}`);
       })
       .catch((err) => {
         console.error('Error fetching surveys:', err);
@@ -235,7 +259,7 @@ const SurveyCardList = () => {
         }
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [userRole]); // Add userRole as dependency
   
 
   const handleStatusChange = async (surveyId, newStatus) => {
@@ -407,7 +431,6 @@ const SurveyCardList = () => {
             <th className="px-6 py-3">Assigned To</th>
             <th className="px-6 py-3">Project</th>
             <th className="px-6 py-3">TSSR Status</th>
-            {/* <th className="px-6 py-3">Status History</th> */}
             <th className="px-6 py-3">Action</th>
             <th className="px-6 py-3">Report</th>
           </tr>

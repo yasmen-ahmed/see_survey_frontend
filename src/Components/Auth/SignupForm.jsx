@@ -25,6 +25,11 @@ const LoginForm = () => {
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("name", response.data.user.firstName + " " + response.data.user.lastName);
         localStorage.setItem("role", response.data.user.role);
+        localStorage.setItem("userId", response.data.user.id);
+        // Store user roles for role switching functionality
+        if (response.data.user.roles && response.data.user.roles.length > 0) {
+          localStorage.setItem("userRoles", JSON.stringify(response.data.user.roles));
+        }
         setError("");
         setSuccess("Login successful! Redirecting...");
         setTimeout(() => {

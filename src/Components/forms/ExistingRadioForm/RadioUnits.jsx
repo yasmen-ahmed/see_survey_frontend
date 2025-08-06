@@ -632,57 +632,86 @@ const RadioUnitsForm = () => {
   };
 
   const handleChange = (unitIndex, field, value) => {
-    if (isInitialLoading) return; // Don't set unsaved changes during initial load
+    if (isInitialLoading) return;
 
-    const newRadioUnits = [...formData.radioUnits];
+    console.log(`handleChange: unitIndex=${unitIndex}, field=${field}, value="${value}"`);
 
-    if (unitIndex === 0) {
-      const numUnits = parseInt(formData.numberOfRadioUnits) || 1;
-      for (let i = 1; i < numUnits; i++) {
-        if (!newRadioUnits[i][field]) {
-          newRadioUnits[i] = {
-            ...newRadioUnits[i],
-            [field]: value,
-            [`${field}AutoFilled`]: true
-          };
+    setFormData(prev => {
+      const newRadioUnits = [...prev.radioUnits];
+      const numUnits = parseInt(prev.numberOfRadioUnits) || 1;
 
-          // If auto-filling DC power source to a cabinet, fetch DC options for this unit too
-          if (field === 'dcPowerSource' && value && value.startsWith('Cabinet ')) {
-            const cabinetNumber = value.split(' ')[1];
-            fetchDcOptions(i, cabinetNumber);
+      // ✅ Always update the changed field and mark as manually edited
+      newRadioUnits[unitIndex] = {
+        ...newRadioUnits[unitIndex],
+        [field]: value,
+        [`${field}AutoFilled`]: false
+      };
 
-            // Clear the DC CB/Fuse selection when cabinet changes
-            newRadioUnits[i].dcCbFuse = '';
+      // ✅ Only perform auto-fill if first column (unitIndex === 0) was changed
+      if (unitIndex === 0) {
+        for (let i = 1; i < numUnits; i++) {
+          const currentValue = newRadioUnits[i][field];
+          const wasAutoFilled = newRadioUnits[i][`${field}AutoFilled`];
+
+          const isEmpty =
+            currentValue === "" ||
+            currentValue === null ||
+            currentValue === undefined ||
+            (Array.isArray(currentValue) && currentValue.length === 0);
+
+          // ✅ Only auto-fill if empty or previously auto-filled
+          if (isEmpty || wasAutoFilled) {
+            newRadioUnits[i] = {
+              ...newRadioUnits[i],
+              [field]: value,
+              [`${field}AutoFilled`]: true
+            };
+            console.log(`Auto-filled unit ${i} with value "${value}"`);
+
+            // Cabinet DC power source special case
+            if (field === 'dcPowerSource' && value.startsWith('Cabinet ')) {
+              const cabinetNumber = value.split(' ')[1];
+              fetchDcOptions(i, cabinetNumber);
+              newRadioUnits[i].dcCbFuse = '';
+            }
           }
         }
       }
-    }
 
-    newRadioUnits[unitIndex] = {
-      ...newRadioUnits[unitIndex],
-      [field]: value,
-      [`${field}AutoFilled`]: false
-    };
+      return {
+        ...prev,
+        radioUnits: newRadioUnits
+      };
+    });
 
-    setFormData({ ...formData, radioUnits: newRadioUnits });
     setHasUnsavedChanges(true);
 
-    // If changing DC power source to a cabinet, fetch DC options
-    if (field === 'dcPowerSource' && value && value.startsWith('Cabinet ')) {
+    // Cabinet DC logic for the changed unit
+    if (field === 'dcPowerSource' && value.startsWith('Cabinet ')) {
       const cabinetNumber = value.split(' ')[1];
       fetchDcOptions(unitIndex, cabinetNumber);
 
-      // Clear the DC CB/Fuse selection when cabinet changes
-      newRadioUnits[unitIndex].dcCbFuse = '';
+      setFormData(prev => {
+        const updatedUnits = [...prev.radioUnits];
+        updatedUnits[unitIndex].dcCbFuse = '';
+        return {
+          ...prev,
+          radioUnits: updatedUnits
+        };
+      });
     }
 
-    // Clear error for this field
+    // Clear error if present
     if (errors[`${unitIndex}.${field}`]) {
       const newErrors = { ...errors };
       delete newErrors[`${unitIndex}.${field}`];
       setErrors(newErrors);
     }
   };
+
+
+
+
 
   const handleTableDataChange = (unitIndex, newData) => {
     if (isInitialLoading) return; // Don't set unsaved changes during initial load
@@ -856,7 +885,7 @@ const RadioUnitsForm = () => {
     { label: `Radio Unit #${unitNumber} RF Fiber ports Photo`, name: `radio_unit_${unitNumber}_rf_fiber_ports` },
     { label: `Radio Unit #${unitNumber} RF and its mount Photo`, name: `radio_unit_${unitNumber}_rf_and_its_mount` },
     { label: `Radio Unit #${unitNumber} RF label (SN label) Photo`, name: `radio_unit_${unitNumber}_rf_label_sn_label` },
-    { label: `Radio Unit #${unitNumber} RF Power Port Photo`, name: `radio_unit_${unitNumber}_rf_power_port` }, 
+    { label: `Radio Unit #${unitNumber} RF Power Port Photo`, name: `radio_unit_${unitNumber}_rf_power_port` },
   ];
 
   // Generate all image fields based on radio unit count
@@ -979,7 +1008,7 @@ const RadioUnitsForm = () => {
                   {Array.from({ length: formData.numberOfRadioUnits }, (_, i) => (
                     <th
                       key={i}
-                    className="border px-4 py-3 text-center font-semibold min-w-[400px] sticky top-0 bg-blue-500 z-10"
+                      className="border px-4 py-3 text-center font-semibold min-w-[400px] sticky top-0 bg-blue-500 z-10"
                     >
                       Radio Unit #{i + 1}
                     </th>
@@ -1019,81 +1048,87 @@ const RadioUnitsForm = () => {
                   </td>
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-1 py-1 align-top">
-                    <div className="grid grid-cols-4 text-xs gap-1">
-                      {["700", "900", "1800", "2100", "2300", "2600", "3500"].map((band) => (
-                        <label key={band} className="flex items-center gap-1">
-                          <input
-                            type="checkbox"
-                            checked={Array.isArray(unit.band) && unit.band.includes(band) || false}
-                            onChange={(e) => {
-                              const checked = e.target.checked;
-                              const current = Array.isArray(unit.band) && unit.band || [];
-                              const updated = checked
-                                ? [...current, band]
-                                : current.filter((val) => val !== band);
-                              handleChange(unitIndex, "band", updated);
-                            }}
-                          />
-                          {band}
-                        </label>
-                      ))}
-                    </div>
+                      <div className={`grid grid-cols-4 text-xs gap-1 ${unit.bandAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}`}>
+                        {["700", "900", "1800", "2100", "2300", "2600", "3500"].map((band) => (
+                          <label key={band} className="flex items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={Array.isArray(unit.band) && unit.band.includes(band) || false}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                const current = Array.isArray(unit.band) && unit.band || [];
+                                const updated = checked
+                                  ? [...current, band]
+                                  : current.filter((val) => val !== band);
+                                handleChange(unitIndex, "band", updated);
+                              }}
+                            />
+                            <span className={unit.bandAutoFilled ? 'text-[#006100]' : ''}>
+                              {band}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
                     </td>
                   ))}
                 </tr>
                 <tr>
                   <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                  Connected to base band (BTS)
+                    Connected to base band (BTS)
                   </td>
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-1 py-1 align-top">
-                    <div className="grid grid-cols-4 text-xs gap-1">
-                      {["Base band 1", "Base band 2", "Base band 3", "Base band 4", "Base band 5", "Base band 6", "Base band 7"].map((band) => (
-                        <label key={band} className="flex items-center gap-1">
-                          <input
-                            type="checkbox"
-                            checked={Array.isArray(unit.connectedToBaseBand) && unit.connectedToBaseBand.includes(band) || false}
-                            onChange={(e) => {
-                              const checked = e.target.checked;
-                              const current = Array.isArray(unit.connectedToBaseBand) && unit.connectedToBaseBand || [];
-                              const updated = checked
-                                ? [...current, band]
-                                : current.filter((val) => val !== band);
-                              handleChange(unitIndex, "connectedToBaseBand", updated);
-                            }}
-                          />
-                          {band}
-                        </label>
-                      ))}
-                    </div>
+                      <div className={`grid grid-cols-4 text-xs gap-1 ${unit.connectedToBaseBandAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}`}>
+                        {["Base band 1", "Base band 2", "Base band 3", "Base band 4", "Base band 5", "Base band 6", "Base band 7"].map((band) => (
+                          <label key={band} className="flex items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={Array.isArray(unit.connectedToBaseBand) && unit.connectedToBaseBand.includes(band) || false}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                const current = Array.isArray(unit.connectedToBaseBand) && unit.connectedToBaseBand || [];
+                                const updated = checked
+                                  ? [...current, band]
+                                  : current.filter((val) => val !== band);
+                                handleChange(unitIndex, "connectedToBaseBand", updated);
+                              }}
+                            />
+                            <span className={unit.connectedToBaseBandAutoFilled ? 'text-[#006100]' : ''}>
+                              {band}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
                     </td>
                   ))}
                 </tr>
                 <tr>
                   <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                  Radio Module Technology
+                    Radio Module Technology
                   </td>
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-1 py-1 align-top">
-                    <div className="grid grid-cols-4 text-xs gap-1">
-                      {["2G", "3G", "4G", "5G"].map((tech) => (
-                        <label key={tech} className="flex items-center gap-1">
-                          <input
-                            type="checkbox"
-                            checked={Array.isArray(unit.technologies) && unit.technologies.includes(tech) || false}
-                            onChange={(e) => {
-                              const checked = e.target.checked;
-                              const current = Array.isArray(unit.technologies) && unit.technologies || [];
-                              const updated = checked
-                                ? [...current, tech]
-                                : current.filter((val) => val !== tech);
-                              handleChange(unitIndex, "technologies", updated);
-                            }}
-                          />
-                          {tech}
-                        </label>
-                      ))}
-                    </div>
+                      <div className={`grid grid-cols-4 text-xs gap-1 ${unit.technologiesAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}`}>
+                        {["2G", "3G", "4G", "5G"].map((tech) => (
+                          <label key={tech} className="flex items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={Array.isArray(unit.technologies) && unit.technologies.includes(tech) || false}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                const current = Array.isArray(unit.technologies) && unit.technologies || [];
+                                const updated = checked
+                                  ? [...current, tech]
+                                  : current.filter((val) => val !== tech);
+                                handleChange(unitIndex, "technologies", updated);
+                              }}
+                            />
+                            <span className={unit.technologiesAutoFilled ? 'text-[#006100]' : ''}>
+                              {tech}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
                     </td>
                   ))}
                 </tr>
@@ -1126,8 +1161,7 @@ const RadioUnitsForm = () => {
                   </td>
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-2 py-2">
-                      <div className={`flex gap-2 ${unit.tower_legAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                        }`}>
+                      <div className={`flex gap-2 ${unit.tower_legAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}`}>
                         {['A', 'B', 'C', 'D'].map(leg => (
                           <label key={leg} className="flex items-center gap-1 text-sm cursor-pointer">
                             <input
@@ -1158,8 +1192,7 @@ const RadioUnitsForm = () => {
                   </td>
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-2 py-2">
-                      <div className={`grid grid-cols-3 gap-1 ${unit.vendorAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                        }`}>
+                      <div className={`grid grid-cols-3 gap-1 ${unit.vendorAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}`}>
                         {['Nokia', 'Huawei', 'Ericsson', 'ZTE', 'Other'].map(vendor => (
                           <label key={vendor} className="flex items-center gap-1 text-sm cursor-pointer">
                             <input
@@ -1217,7 +1250,7 @@ const RadioUnitsForm = () => {
                       </td>
                       {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                         <td key={unitIndex} className="border px-2 py-2">
-                          <div className="flex gap-2 flex-wrap">
+                          <div className={`flex gap-2 flex-wrap ${unit.nokiaPortCountAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}`}>
                             {['2', '4', '6', '8', '9'].map(option => (
                               <label key={option} className="flex items-center gap-1 text-sm">
                                 <input
@@ -1229,7 +1262,7 @@ const RadioUnitsForm = () => {
                                   className="w-4 h-4"
                                   disabled={unit.vendor !== 'Nokia'}
                                 />
-                                <span className={unit.vendor !== 'Nokia' ? 'text-gray-400' : ''}>
+                                <span className={unit.vendor !== 'Nokia' ? 'text-gray-400' : unit.nokiaPortCountAutoFilled ? 'text-[#006100]' : ''}>
                                   {option}
                                 </span>
                               </label>
@@ -1348,8 +1381,7 @@ const RadioUnitsForm = () => {
                   </td>
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-2 py-2">
-                      <div className={`space-y-1 ${unit.sideArmTypeAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                        }`}>
+                      <div className={`space-y-1 ${unit.sideArmTypeAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}`}>
                         {[
                           'Same antenna side arm',
                           'Separate side arm only for the radio unit',
@@ -1364,7 +1396,9 @@ const RadioUnitsForm = () => {
                               onChange={(e) => handleChange(unitIndex, 'sideArmType', e.target.value)}
                               className="w-3 h-3"
                             />
-                            {option}
+                            <span className={unit.sideArmTypeAutoFilled ? 'text-[#006100]' : ''}>
+                              {option}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -1378,12 +1412,14 @@ const RadioUnitsForm = () => {
                     If not same side arm as the antenna, What is the radio unit side arm length? (cm)
                   </td>
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
-                    <td key={unitIndex} className="border px-2 py-2">
+                    <td key={unitIndex} className={`border px-2 py-2 `}>
                       <input
                         type="number"
                         value={unit.sideArmType !== 'Same antenna side arm' ? unit.sideArmLength : ' '}
                         onChange={(e) => handleChange(unitIndex, 'sideArmLength', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm
+                          ${unit.sideArmType !== 'Same antenna side arm' && unit.sideArmLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}
+                        `}
                         placeholder={unit.sideArmType !== 'Same antenna side arm' ? '000' : 'N/A'}
                         disabled={unit.sideArmType === 'Same antenna side arm'}
                       />
@@ -1402,7 +1438,9 @@ const RadioUnitsForm = () => {
                         type="number"
                         value={unit.sideArmType !== 'Same antenna side arm' ? unit.sideArmDiameter : ' '}
                         onChange={(e) => handleChange(unitIndex, 'sideArmDiameter', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm
+                          ${unit.sideArmType !== 'Same antenna side arm' && unit.sideArmDiameterAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}
+                        `}
                         placeholder={unit.sideArmType !== 'Same antenna side arm' ? '000' : 'N/A'}
                         disabled={unit.sideArmType === 'Same antenna side arm'}
                       />
@@ -1421,7 +1459,9 @@ const RadioUnitsForm = () => {
                         type="number"
                         value={unit.sideArmType !== 'Same antenna side arm' ? unit.sideArmOffset : ' '}
                         onChange={(e) => handleChange(unitIndex, 'sideArmOffset', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm
+                          ${unit.sideArmType !== 'Same antenna side arm' && unit.sideArmOffsetAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}
+                        `}
                         placeholder={unit.sideArmType !== 'Same antenna side arm' ? '000' : 'N/A'}
                         disabled={unit.sideArmType === 'Same antenna side arm'}
                       />
@@ -1439,8 +1479,9 @@ const RadioUnitsForm = () => {
                       <select
                         value={unit.dcPowerSource}
                         onChange={(e) => handleChange(unitIndex, 'dcPowerSource', e.target.value)}
-                        className={`w-full p-2 border rounded text-sm ${unit.dcPowerSourceAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                          }`}
+                        className={`w-full p-2 border rounded text-sm
+          ${unit.dcPowerSourceAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}
+        `}
                       >
                         <option value="">-- Select --</option>
                         {generateCabinetOptions().map(cabinet => (
@@ -1448,7 +1489,6 @@ const RadioUnitsForm = () => {
                             {cabinet}
                           </option>
                         ))}
-
                       </select>
                     </td>
                   ))}
@@ -1464,7 +1504,9 @@ const RadioUnitsForm = () => {
                       <select
                         value={unit.dcCbFuse}
                         onChange={(e) => handleChange(unitIndex, 'dcCbFuse', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm
+          ${unit.dcCbFuseAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}
+        `}
                         disabled={!unit.dcPowerSource || !unit.dcPowerSource.startsWith('Cabinet ')}
                       >
                         <option value="">-- Select --</option>
@@ -1474,6 +1516,7 @@ const RadioUnitsForm = () => {
                           </option>
                         ))}
                       </select>
+
                       {!unit.dcPowerSource || !unit.dcPowerSource.startsWith('Cabinet ') ? (
                         <div className="text-xs text-gray-500 mt-1">
                           Select a cabinet first
@@ -1494,7 +1537,9 @@ const RadioUnitsForm = () => {
                         type="number"
                         value={unit.dcCableLength}
                         onChange={(e) => handleChange(unitIndex, 'dcCableLength', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm
+          ${unit.dcCableLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}
+        `}
                         placeholder="000"
                       />
                     </td>
@@ -1512,7 +1557,9 @@ const RadioUnitsForm = () => {
                         type="number"
                         value={unit.dcCableCrossSection}
                         onChange={(e) => handleChange(unitIndex, 'dcCableCrossSection', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm
+          ${unit.dcCableCrossSectionAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}
+        `}
                         placeholder="000"
                       />
                     </td>
@@ -1530,12 +1577,15 @@ const RadioUnitsForm = () => {
                         type="number"
                         value={unit.fiberCableLength}
                         onChange={(e) => handleChange(unitIndex, 'fiberCableLength', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm
+          ${unit.fiberCableLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}
+        `}
                         placeholder="000"
                       />
                     </td>
                   ))}
                 </tr>
+
 
                 {/* Jumper Length */}
                 <tr className="bg-gray-50">
@@ -1547,7 +1597,9 @@ const RadioUnitsForm = () => {
                       <select
                         value={unit.jumperLength}
                         onChange={(e) => handleChange(unitIndex, 'jumperLength', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm
+          ${unit.jumperLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}
+        `}
                       >
                         <option value="">-- Select --</option>
                         {Array.from({ length: 15 }, (_, i) => (
@@ -1565,8 +1617,7 @@ const RadioUnitsForm = () => {
                   </td>
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-2 py-2">
-                      <div className={`grid grid-cols-4 gap-1 ${unit.feederTypeAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
-                        }`}>
+                      <div className={`grid grid-cols-4 gap-1 ${unit.feederTypeAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}`}>
                         {feederTypes.map(type => (
                           <label key={type} className="flex items-center gap-1 text-xs cursor-pointer">
                             <input
@@ -1598,7 +1649,9 @@ const RadioUnitsForm = () => {
                         type="number"
                         value={unit.feederLength}
                         onChange={(e) => handleChange(unitIndex, 'feederLength', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className={`w-full p-2 border rounded text-sm
+          ${unit.feederLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}
+        `}
                         placeholder="000"
                       />
                     </td>
@@ -1617,22 +1670,24 @@ const RadioUnitsForm = () => {
                         type="number"
                         value={unit.earthCableLength}
                         onChange={(e) => handleChange(unitIndex, 'earthCableLength', e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                          className={`w-full p-2 border rounded text-sm
+          ${unit.earthCableLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}
+        `}
                         placeholder="000"
                       />
                     </td>
                   ))}
                 </tr>
 
-                
+
                 {/* Include in Plan */}
                 <tr>
                   <td className="border px-4 py-3 font-semibold sticky left-0 bg-blue-400 text-white z-10">
-                  Is any action planned for Radio unit ?
+                    Is any action planned for Radio unit ?
                   </td>
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-2 py-2">
-                      <div className="flex gap-4">
+                      <div className={`flex gap-4 ${unit.actionPlannedAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}`}>
                         {['Swap', 'Dismantle', 'No action'].map(option => (
                           <label key={option} className="flex items-center gap-1 text-sm">
                             <input
@@ -1643,7 +1698,9 @@ const RadioUnitsForm = () => {
                               onChange={(e) => handleChange(unitIndex, 'actionPlanned', e.target.value)}
                               className="w-4 h-4"
                             />
-                            {option}
+                            <span className={unit.actionPlannedAutoFilled ? 'text-[#006100]' : ''}>
+                              {option}
+                            </span>
                           </label>
                         ))}
                       </div>

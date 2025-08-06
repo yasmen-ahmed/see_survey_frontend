@@ -341,32 +341,32 @@ const RadioAntenasForm = () => {
 
   const handleChange = (antennaIndex, fieldName, value) => {
     if (isInitialLoading) return; // Don't set unsaved changes during initial load
-
+  
     console.log(`handleChange: antennaIndex=${antennaIndex}, fieldName=${fieldName}, value="${value}"`);
-
+  
     setFormData(prev => {
       const newFormData = { ...prev };
-
+  
       // Update the changed antenna first
       newFormData.antennas[antennaIndex] = {
         ...newFormData.antennas[antennaIndex],
         [fieldName]: value,
-        [`${fieldName}AutoFilled`]: false // The changed field is not auto-filled
+        [`${fieldName}AutoFilled`]: false // The changed field is manual edit
       };
-
-      // Auto-fill empty fields in other antennas
-      const numAntennas = parseInt(prev.numberOfAntennas) || 1;
-      console.log(`Auto-filling for ${numAntennas} antennas`);
-      
-      for (let i = 0; i < numAntennas; i++) {
-        if (i !== antennaIndex) { // Skip the antenna that was manually changed
-          // Only auto-fill if the field is empty or was previously auto-filled
+  
+      // Only auto-fill other antennas if change happened on the first antenna
+      if (antennaIndex === 0) {
+        const numAntennas = parseInt(prev.numberOfAntennas) || 1;
+        console.log(`Auto-filling for ${numAntennas} antennas`);
+        
+        for (let i = 1; i < numAntennas; i++) { // start from 1 to skip first antenna
           const currentValue = newFormData.antennas[i][fieldName];
           const isEmpty = currentValue === "" || currentValue === null || currentValue === undefined || 
                          (Array.isArray(currentValue) && currentValue.length === 0);
-          
+  
           console.log(`Antenna ${i}: currentValue="${currentValue}", isEmpty=${isEmpty}, wasAutoFilled=${newFormData.antennas[i][`${fieldName}AutoFilled`]}`);
-          
+  
+          // Auto-fill only if empty or previously auto-filled (and not manually changed)
           if (isEmpty || newFormData.antennas[i][`${fieldName}AutoFilled`]) {
             newFormData.antennas[i] = {
               ...newFormData.antennas[i],
@@ -377,20 +377,22 @@ const RadioAntenasForm = () => {
           }
         }
       }
-
+  
       return newFormData;
     });
+  
     setHasUnsavedChanges(true);
   };
+  
 
   const handleCheckboxChange = (antennaIndex, fieldName, value, checked) => {
-    if (isInitialLoading) return; // Don't set unsaved changes during initial load
-
+    if (isInitialLoading) return;
+  
     setFormData(prev => {
       const newFormData = { ...prev };
       const currentAntenna = { ...newFormData.antennas[antennaIndex] };
-
-      // Handle any array-type field
+  
+      // Clone and update the array for this antenna
       let arr = Array.isArray(currentAntenna[fieldName]) ? [...currentAntenna[fieldName]] : [];
       if (checked) {
         if (!arr.includes(value)) arr.push(value);
@@ -398,30 +400,34 @@ const RadioAntenasForm = () => {
         arr = arr.filter(t => t !== value);
       }
       currentAntenna[fieldName] = arr;
-      currentAntenna[`${fieldName}AutoFilled`] = false;
-
-      // Update the changed antenna first
+  
+      // Mark manually changed antenna as not auto-filled
+      currentAntenna[`${fieldName}AutoFilled`] = antennaIndex === 0 ? true : false;
+  
       newFormData.antennas[antennaIndex] = currentAntenna;
-
-      // Auto-fill empty fields in other antennas
-      const numAntennas = parseInt(prev.numberOfAntennas) || 1;
-      for (let i = 0; i < numAntennas; i++) {
-        if (i !== antennaIndex) { // Skip the antenna that was manually changed
-          // Only auto-fill if the field is empty or was previously auto-filled
-          if (!newFormData.antennas[i][fieldName] || newFormData.antennas[i][`${fieldName}AutoFilled`]) {
+  
+      // Only auto-fill other antennas if change is on first antenna (antennaIndex === 0)
+      if (antennaIndex === 0) {
+        const numAntennas = parseInt(prev.numberOfAntennas) || 1;
+        for (let i = 1; i < numAntennas; i++) { // start from 1 to skip first antenna
+          const manuallyEdited = newFormData.antennas[i][`${fieldName}AutoFilled`] === false;
+          if (!manuallyEdited) {
             newFormData.antennas[i] = {
               ...newFormData.antennas[i],
-              [fieldName]: arr,
-              [`${fieldName}AutoFilled`]: true
+              [fieldName]: [...arr], // clone array
+              [`${fieldName}AutoFilled`]: true,
             };
           }
         }
       }
-
+  
       return newFormData;
     });
+  
     setHasUnsavedChanges(true);
   };
+  
+  
 
   const handleNumberOfAntennasChange = (e) => {
     if (isInitialLoading) return; // Don't set unsaved changes during initial load
@@ -717,35 +723,22 @@ const RadioAntenasForm = () => {
             };
           }
   
-          if (fieldName === 'portType') {
-            newFormData.antennas[i].ports[portIndex] = {
-              ...newFormData.antennas[i].ports[portIndex],
-              portType: currentPorts[portIndex].portType,
-              portTypeAutoFilled: true
-            };
-          }
+          const otherPort = newFormData.antennas[i].ports[portIndex];
+          const autoFilledFlag = `${fieldName}AutoFilled`;
+          const currentValue = otherPort[fieldName];
   
-          if (fieldName === 'band') {
-            newFormData.antennas[i].ports[portIndex] = {
-              ...newFormData.antennas[i].ports[portIndex],
-              band: currentPorts[portIndex].band,
-              bandAutoFilled: true
-            };
-          }
+          // Check if value is empty or was autofilled before
+          const isEmpty = currentValue === '' ||
+                          currentValue === null ||
+                          currentValue === undefined ||
+                          (Array.isArray(currentValue) && currentValue.length === 0);
+          const wasAutoFilled = otherPort[autoFilledFlag] === true;
   
-          if (fieldName === 'portStatus') {
+          if (isEmpty || wasAutoFilled) {
             newFormData.antennas[i].ports[portIndex] = {
-              ...newFormData.antennas[i].ports[portIndex],
-              portStatus: value,
-              portStatusAutoFilled: true
-            };
-          }
-  
-          if (fieldName === 'electricalTilt') {
-            newFormData.antennas[i].ports[portIndex] = {
-              ...newFormData.antennas[i].ports[portIndex],
-              electricalTilt: value,
-              electricalTiltAutoFilled: true
+              ...otherPort,
+              [fieldName]: value,
+              [autoFilledFlag]: true
             };
           }
         }
@@ -753,11 +746,13 @@ const RadioAntenasForm = () => {
   
       currentAntenna.ports = currentPorts;
       newFormData.antennas[antennaIndex] = currentAntenna;
+  
       return newFormData;
     });
   
     setHasUnsavedChanges(true);
   };
+  
   
 
   return (
@@ -852,12 +847,12 @@ const RadioAntenasForm = () => {
                     Antenna's base height from tower base level (meter)
                   </td>
                   {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                    <td key={antennaIndex} className={`border px-2 py-2 ${antenna.baseHeightAutoFilled ? bgColorFillAuto : ''}`}>
+                    <td key={antennaIndex} className={`border px-2 py-2 `}>
                       <input
                         type="number"
                         value={antenna.baseHeight}
                         onChange={(e) => handleChange(antennaIndex, 'baseHeight', e.target.value)}
-                                                      className={`w-full p-2 border rounded text-sm ${antenna.baseHeightAutoFilled ? `${bgColorFillAuto} ${colorFillAuto}` : ''
+                        className={`w-full p-2 border rounded text-sm ${antenna.baseHeightAutoFilled ? `${bgColorFillAuto} ${colorFillAuto}` : ''
                           }`}
                         placeholder="Enter height..."
                         required
@@ -1000,7 +995,7 @@ const RadioAntenasForm = () => {
                       <td key={antennaIndex} className={`border px-2 py-2 ${antenna.mechanicalTiltAutoFilled ? bgColorFillAuto : ''}`}>
                         <input
                           type="number"
-                          value={antenna.mechanicalTilt}
+                          value={antenna.mechanicalTiltExist == 'Yes'? antenna.mechanicalTilt : ''}
                           onChange={(e) => handleChange(antennaIndex, 'mechanicalTilt', e.target.value)}
                           className={`w-full p-2 border rounded text-sm ${antenna.mechanicalTiltAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
                             }`}
