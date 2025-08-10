@@ -1,26 +1,49 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import SurveyCardList from "../Components/LandingPageComponents/SurveyCardList.jsx";
 import Createform from "../Components/LandingPageComponents/Createform.jsx";
 import Header from "../Components/layout/Header.jsx";
 
 const LandingPage = () => {
+  const location = useLocation();
   const [showSurveyOptions, setShowSurveyOptions] = useState(false);
-  const [activeView, setActiveView] = useState("view"); // default
+  const [activeView, setActiveView] = useState(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const viewParam = searchParams.get('view');
+    return viewParam === 'surveys' ? 'view' : 'view'; // default to 'view' for now
+  });
+  
   const [userRole, setUserRole] = useState("");
 
+  // Handle URL parameters and user role
   useEffect(() => {
     const role = localStorage.getItem("role");
     setUserRole(role);
-  }, []);
+    
+    const searchParams = new URLSearchParams(location.search);
+  const viewParam = searchParams.get('view');
+  
+  if (viewParam) {
+    if (viewParam === 'surveys') {
+      setActiveView("view");
+      setShowSurveyOptions(false);
+    }
+  }
+    
+  }, [location.search, location.pathname]);
 
   const handleCreateClick = () => {
     setShowSurveyOptions(!showSurveyOptions);
-    setActiveView(""); // Reset
+    setActiveView("single");
+    // Clear URL parameter when switching to create mode
+    window.history.replaceState({}, '', '/landingpage');
   };
 
   const handleViewClick = () => {
     setShowSurveyOptions(false);
     setActiveView("view");
+    // Update URL to reflect the current view
+    window.history.replaceState({}, '', '/landingpage?view=surveys');
   };
 
   return (
@@ -39,12 +62,7 @@ const LandingPage = () => {
                 Create Survey
               </button>
             )}
-            <button
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
-              onClick={handleViewClick}
-            >
-              View Survey
-            </button>
+          
           </div>
 
           {/* Sub-options */}

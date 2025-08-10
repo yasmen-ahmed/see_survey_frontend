@@ -7,6 +7,7 @@ import {
   TentTree,
   RadioTower,
   CircleHelp,
+  BookImage,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 
@@ -57,6 +58,12 @@ const SidebarTabs = () => {
       icon: <CircleHelp size={20} />, 
       path: `/sites/${sessionId}/${siteId}/H&S/h&s`,
       section: "H&S"
+    },
+    { 
+      label: "Gallery", 
+      icon:  <BookImage size={20} />, 
+      path: `/sites/${sessionId}/${siteId}/gallery`,
+      section: "gallery"
     }
   ];
 

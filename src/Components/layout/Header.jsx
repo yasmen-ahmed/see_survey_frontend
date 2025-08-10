@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { ChevronDown } from "lucide-react";
 import { IoHomeOutline } from "react-icons/io5";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 // components/Header.js
 const Header = () => {
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
@@ -185,7 +186,7 @@ const Header = () => {
 
           {isOpen && (
             <div 
-              className="absolute top-9 right-0 bg-white shadow-xl rounded-md p-2 min-w-32 z-50"
+              className="absolute top-9 right-0 bg-white shadow-xl rounded-md p-2 min-w-48 z-50"
               onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
             >
               <div className="relative">
@@ -247,7 +248,7 @@ const Header = () => {
           alt="Profile of Amgad Salem"
           className="h-10 w-10 rounded-full object-cover"
         />
-        <Link to={'/landingpage'}> 
+        <Link to={'/landingpage?view=surveys'}> 
           <IoHomeOutline className="text-2xl"/>
         </Link>
       </div>
