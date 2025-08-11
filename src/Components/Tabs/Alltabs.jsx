@@ -26,6 +26,7 @@ const mw=React.lazy(()=>import("../forms/Outdoor/TransmissionMW.jsx"))
 const dc=React.lazy(()=>import("../forms/Outdoor/DCpowersystem.jsx"))
 const hs=React.lazy(()=>import("../forms/H&S/health&safetysiteaccess.jsx"))
 const bts=React.lazy(()=>import("../forms/H&S/Health&safetyBTSAntennaaccess.jsx"))
+const Gallery=React.lazy(()=>import("../Gallery/Gallery.jsx"))
 const gps=React.lazy(()=>import("../forms/NewRadio/gps.jsx"))
 const radioinstallation=React.lazy(()=>import("../forms/NewRadio/Newradioinstallations.jsx"))
 const NewMW = React.lazy(() => import("../forms/NewRadio/NewMWForm"));
@@ -74,5 +75,8 @@ export const tabsConfig = {
   "H&S": [
     {label:"Health & Safety site access", key:"h&s", component:hs},
     {label:"Health & Safety BTS / Antenna access", key:"bts", component:bts}
+  ],
+  "gallery": [
+    {label:"Gallery", key:"gallery", component:Gallery}
   ]
 };

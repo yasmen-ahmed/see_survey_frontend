@@ -59,12 +59,12 @@ const SidebarTabs = () => {
       path: `/sites/${sessionId}/${siteId}/H&S/h&s`,
       section: "H&S"
     },
-    { 
-      label: "Gallery", 
-      icon:  <BookImage size={20} />, 
-      path: `/sites/${sessionId}/${siteId}/gallery`,
-      section: "gallery"
-    }
+    // { 
+    //   label: "Gallery", 
+    //   icon:  <BookImage size={20} />, 
+    //   path: `/sites/${sessionId}/${siteId}/gallery/gallery`,
+    //   section: "gallery"
+    // }
   ];
 
   // Function to check if current path includes the section
