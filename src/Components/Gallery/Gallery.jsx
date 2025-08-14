@@ -17,6 +17,17 @@ const Gallery = () => {
   const [freePositionsAvailable, setFreePositionsAvailable] = useState(0);
   const [numberOfCabinets, setNumberOfCabinets] = useState(0);
   const [how_many_base_band_onsite, setHowManyBaseBandOnsite] = useState(0);
+  const [transmission_data, setTransmissionData] = useState([]);
+  const [dc_power_data, setDCPowerData] = useState([]);
+  const [mw_antennas_data, setMWAntennasData] = useState(0);
+  const [external_dc_distribution_data, setExternalDCDistributionData] = useState(0);
+  const [external_dc_distribution_locations, setExternalDCDistributionLocations] = useState([]);
+  const [antenna_count, setAntennaCount] = useState(0);
+  const [radio_unit_count, setRadioUnitCount] = useState(0);
+  const [new_antennas_planned, setNewAntennasPlanned] = useState(0);
+  const [new_fpfh_installed, setNewFPFHInstalled] = useState(0);
+  const [new_radio_units_planned, setNewRadioUnitsPlanned] = useState(0);
+  const [mw_count, setMwCount] = useState(0);
   useEffect(() => {
     fetchGalleryData();
   }, [sessionId]);
@@ -45,7 +56,18 @@ const Gallery = () => {
         setFreePositionsAvailable(response.data.data.free_positions_available); 
         setNumberOfCabinets(response.data.data.number_of_cabinets);
         setHowManyBaseBandOnsite(response.data.data.how_many_base_band_onsite);
-      } else {
+        setTransmissionData(response.data.data.transmission_data);
+        setDCPowerData(response.data.data.dc_power_data);
+        setMWAntennasData(response.data.data.mw_antennas_data);
+        setExternalDCDistributionData(response.data.data.external_dc_distribution_data);
+        setExternalDCDistributionLocations(response.data.data.external_dc_distribution_locations);
+        setAntennaCount(response.data.data.antenna_count);
+        setRadioUnitCount(response.data.data.radio_unit_count);
+        setNewAntennasPlanned(response.data.data.new_antennas_planned);
+        setNewFPFHInstalled(response.data.data.new_fpfh_installed);
+        setNewRadioUnitsPlanned(response.data.data.new_radio_units_planned);
+        setMwCount(response.data.data.mw_count);
+        } else {
         setError('Failed to fetch gallery data');
       }
     } catch (error) {
@@ -176,6 +198,116 @@ const Gallery = () => {
     }
     return categories;
   };
+const generateTransmissionMWCategories = (transmission_data) => {
+  const categories = [];
+  if (transmission_data[0] === 'MW') {
+    for (let i = 1; i <= transmission_data[1]; i++) {
+      categories.push(`mw_idu_photo_${i}`);
+      categories.push(`mw_idu_cards_photo_${i}`);
+    }
+  } else if (transmission_data[0] === 'Fiber') {
+    categories.push(`odf_photo`);
+    categories.push(`odf_free_port`);
+  }
+  return categories;
+};
+const generateDCPowerSystemCategories = (dc_power_data) => {
+  const categories = [];
+  for (let i = 1; i <= dc_power_data[0]; i++) {
+    categories.push(`rectifier_module_photo_${i}`);
+  }
+  categories.push(`free_slots_rectifier_modules` ,`rectifier_cb_photos` ,`rectifier_free_cb_photo` ,`rect_load_current_reading_photo` ,`existing_site_temperature_photo` ,`rectifier_picture` ,`rectifier_manufactory_specification_picture`);
+  for (let i = 1; i <= dc_power_data[1]; i++) {
+    categories.push(`battery_string_photo_${i}`);
+  }
+  categories.push(`battery_model_photo` ,`battery_cb_photo` ,`rectifier_main_ac_cb_photo` ,`pdu_photos` ,`pdu_free_cb`);
+  return categories;
+};
+const generateMWAntennasCategories = (mw_antennas_data) => {
+  const categories = [];
+  for (let i = 1; i <= mw_antennas_data; i++) {
+    categories.push(`mw_${i}_photo`);
+    categories.push(`mw_${i}_Azimuth_view_photo`);
+    categories.push(`mw_${i}_label_photo`);
+  }
+  return categories;
+};
+const generateExternalDCDistributionCategories = (external_dc_distribution_data ,external_dc_distribution_locations) => {
+  const categories = [];
+  for (let i = 1; i <= external_dc_distribution_data; i++) {
+    categories.push(`pdu_${i}_photo`);
+    categories.push(`pdu_${i}_fuses`);
+    categories.push(`pdu_${i}_existing_pdu_power_cables_photo`);
+  }
+  for (let i = 0; i < external_dc_distribution_locations.length; i++) {
+    categories.push(`pdu_${i}_cables_route_photo_from_tower_top_1`);
+    categories.push(`pdu_${i}_cables_route_photo_from_tower_top_2`);
+  }
+  return categories;
+};
+const generateAntennaConfigurationCategories = (antenna_count) => {
+  const categories = [];
+  for (let i = 1; i <= antenna_count; i++) {
+    categories.push(`antenna_${i}_photo`);
+    categories.push(`antenna_${i}_azimuth_view_photo`);
+    categories.push(`antenna_${i}_mechanical_tilt_photo`);
+    categories.push(`antenna_${i}_ret_photo`);
+    categories.push(`antenna_${i}_label_photo`);
+    categories.push(`antenna_${i}_ports_photo`);
+    categories.push(`antenna_${i}_free_ports_photo`);
+    categories.push(`antenna_${i}_blocking_view_photo`);
+  }
+  return categories;
+};
+const generateRadioUnitsCategories = (radio_unit_count) => {
+  const categories = [];
+  for (let i = 1; i <= radio_unit_count; i++) {
+    categories.push(`radio_unit_${i}_front`);
+    categories.push(`radio_unit_${i}_back`);
+    categories.push(`radio_unit_${i}_label`);
+    categories.push(`radio_unit_${i}_side`);
+    categories.push(`radio_unit_${i}_rf_jumper_ports`);
+    categories.push(`radio_unit_${i}_rf_fiber_ports`);
+    categories.push(`radio_unit_${i}_rf_and_its_mount`);
+    categories.push(`radio_unit_${i}_rf_label_sn_label`);
+    categories.push(`radio_unit_${i}_rf_power_port`);
+  }
+  return categories;
+};
+const generateNewAntennaCategories =( new_antennas_planned ) => {
+  const categories = [];
+  for (let i = 1; i <= new_antennas_planned; i++) {
+    categories.push(`new_antenna_${i}_proposed_location`);
+    categories.push(`new_antenna_${i}_proposed_location_optional_photo`);
+  }
+  return categories;
+};
+const generateNewRadioUnitsCategories =( new_radio_units_planned ) => {
+  const categories = [];
+  for (let i = 1; i <= new_radio_units_planned; i++) {
+    categories.push(`new_radio_unit_${i}_proposed_location`);
+    categories.push(`new_radio_unit_${i}_proposed_location_optional_photo`);
+  }
+  return categories;
+};
+const generateNewFPFHsCategories =( new_fpfh_installed ) => {
+  const categories = [];  
+  for (let i = 1; i <= new_fpfh_installed; i++) {
+    categories.push(`new_fpfh_${i}_proposed_location`);
+    categories.push(`new_fpfh_${i}_proposed_location_optional_photo`);
+  }
+  return categories;
+};
+const generateNewMwCategories =( mw_count ) => {
+  const categories = [];
+  for (let i = 1; i <= mw_count; i++) {
+    categories.push(`mw_${i}_front`);
+    categories.push(`mw_${i}_idulocation_optional`);
+    categories.push(`mw_${i}_odu_proposedn`);
+    categories.push(`mw_${i}_odu_location_optional`);
+  }
+  return categories;
+};
   // Define all possible sections and their categories based on actual forms
   const allSections = {
     general_site: {
@@ -214,85 +346,66 @@ const Gallery = () => {
       name: 'RAN Equipment',
       categories: generateRanEquipmentCategories(how_many_base_band_onsite)
     },
+    transmission_mw: {
+      name: 'Transmission MW',
+        categories:generateTransmissionMWCategories(transmission_data)
+    },
+    dc_power_system: {
+      name: 'DC Power System',
+      categories: generateDCPowerSystemCategories(dc_power_data)
+    },
     antenna_structure: {
       name: 'Antenna Structure',
       categories: [
         'structure_general_photo', 'structure_legs_photo_1', 'structure_legs_photo_2',
-        'structure_legs_photo_3', 'structure_legs_photo_4', 'building_photo', 'north_direction_view'
+        'structure_legs_photo_3', 'structure_legs_photo_4', 'building_photo', 'north_direction_view' ,'tower_ladder_and_cables_feeders_1' , 'tower_ladder_and_cables_feeders_2',
+        'cable_tray_showing_all_cables_1','cable_tray_showing_all_cables_2','cable_tray_showing_all_cables_3','cable_tray_showing_all_cables_4',
+        'complete_tower_picture_from_different_angles_1','complete_tower_picture_from_different_angles_2','complete_tower_picture_from_different_angles_3',
+        'tower_pic_top_of_tower_shows_measure_tool_with_reading','tower_pic_bottom_of_tower_shows_measure_tool_with_reading',
+        'tower_additional_picture_1','tower_additional_picture_2','tower_additional_picture_3','tower_additional_picture_4',
+        'tower_manufactory_specification_picture','top_of_building_shows_measure_tool_with_reading_picture','building_parapet_picture_with_measure_tool_and_length_reading',
+        'rf_panorama_photos_0_deg','rf_panorama_photos_30_deg','rf_panorama_photos_60_deg','rf_panorama_photos_90_deg','rf_panorama_photos_120_deg','rf_panorama_photos_150_deg','rf_panorama_photos_180_deg','rf_panorama_photos_210_deg','rf_panorama_photos_240_deg','rf_panorama_photos_270_deg','rf_panorama_photos_300_deg','rf_panorama_photos_330_deg',
+        'night_beacon_picture','lightening_rods'
       ]
     },
+    mw_antennas: {
+      name: 'MW Antennas',
+      categories: generateMWAntennasCategories(mw_antennas_data)
+    },
+    external_dc_distribution: {
+      name: 'External DC Distribution',
+      categories: generateExternalDCDistributionCategories(external_dc_distribution_data ,external_dc_distribution_locations)
+    },
     antennas: {
-      name: 'Antennas',
-      categories: [
-        'antenna_1_photo', 'antenna_1_azimuth_view_photo', 'antenna_1_mechanical_tilt_photo'
-      ]
+      name: 'Radio Antennas',
+      categories: generateAntennaConfigurationCategories(antenna_count)
     },
     radio_units: {
       name: 'Radio Units',
-      categories: [
-        'radio_unit_1_photo', 'radio_unit_1_front', 'radio_unit_1_back'
-      ]
+      categories: generateRadioUnitsCategories(radio_unit_count)
     },
-    dc_power_system: {
-      name: 'DC Power System',
-      categories: [
-        'overall_rectifier_cabinet_photo', 'rectifier_module_photo_1', 'rectifier_module_photo_2',
-        'rectifier_module_photo_3', 'free_slots_rectifier_modules', 'rectifier_cb_photos',
-        'rectifier_free_cb_photo', 'battery_string_photo_1', 'battery_model_photo', 'battery_cb_photo',
-        'rectifier_main_ac_cb_photo', 'pdu_photos', 'pdu_free_cb'
-      ]
-    },
-   
   
-    mw_antennas: {
-      name: 'MW Antennas',
-      categories: [
-        'mw_1_photo', 'mw_1_Azimuth_view_photo', 'mw_1_label_photo'
-      ]
-    },
-    transmission_mw: {
-      name: 'Transmission MW',
-      categories: [
-        'odf_photo', 'odf_free_port', 'mw_idu_photo_1', 'mw_idu_cards_photo_1',
-        'mw_idu_photo_2', 'mw_idu_cards_photo_2', 'mw_idu_photo_3', 'mw_idu_cards_photo_3'
-      ]
-    },
-   
-    external_dc_distribution: {
-      name: 'External DC Distribution',
-      categories: [
-        'pdu_1_photo', 'pdu_2_photo', 'pdu_free_ports_photo'
-      ]
-    },
     new_antennas: {
       name: 'New Antennas',
-      categories: [
-        'new_antenna_1_photo', 'new_antenna_1_location', 'new_antenna_1_installation'
-      ]
+      categories: generateNewAntennaCategories(new_antennas_planned)
+    }, 
+    new_fpfhs: {
+      name: 'New FPFHs',
+      categories: generateNewFPFHsCategories(new_fpfh_installed)
     },
     new_radio_units: {
       name: 'New Radio Units',
-      categories: [
-        'new_radio_1_photo', 'new_radio_1_location', 'new_radio_1_installation'
-      ]
-    },
-    new_fpfhs: {
-      name: 'New FPFHs',
-      categories: [
-        'new_fpfh_1_photo', 'new_fpfh_1_location', 'new_fpfh_1_installation'
-      ]
+      categories: generateNewRadioUnitsCategories(new_radio_units_planned)
     },
     new_gps: {
       name: 'New GPS',
       categories: [
-        'new_gps_1_photo', 'new_gps_1_location', 'new_gps_1_installation'
+        'new_gps_1_proposed_location', 'new_gps_1_proposed_location_optional_photo'
       ]
     },
     new_mw: {
       name: 'New MW',
-      categories: [
-        'new_mw_1_front', 'new_mw_1_back', 'new_mw_1_installation'
-      ]
+      categories: generateNewMwCategories(mw_count)
     }
   };
 

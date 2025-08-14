@@ -169,7 +169,7 @@ const Header = () => {
         />
       </div>
       <div className="flex justify-center items-center gap-2">
-        <h1 className="text-xl font-extrabold">SEE Survey v1.10</h1>
+        <h1 className="text-xl font-extrabold">SEE Survey v1.11</h1>
        
       </div>
       <div className="flex justify-center items-center gap-3">
