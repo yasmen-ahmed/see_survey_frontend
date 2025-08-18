@@ -58,23 +58,25 @@ const ShelterRTelecomRoomForm = () => {
           // Update selected state to match hardware data
           setSelected(hardwareData);
 
-          // Process existing images from the main data structure
-          if (data.images && data.images.length > 0) {
+          // Process existing images from the response
+          if (res.data.images && Object.keys(res.data.images).length > 0) {
+            console.log("Processed images:", res.data.images);
+            console.log("API response structure:", res.data);
+            
+            // Process the images to ensure they have the correct structure
             const processedImages = {};
-            data.images.forEach(image => {
-              if (!processedImages[image.category]) {
-                processedImages[image.category] = [];
+            Object.keys(res.data.images).forEach(category => {
+              const images = res.data.images[category];
+              if (Array.isArray(images) && images.length > 0) {
+                processedImages[category] = images.map(img => ({
+                  ...img,
+                  url: img.url || img.file_url, // Ensure url property exists
+                  file_url: img.file_url || img.url // Ensure file_url property exists
+                }));
               }
-              processedImages[image.category].push({
-                id: image.id || Math.random(),
-                file_url: image.file_url,
-                url: image.file_url, // Add url property for GalleryComponent compatibility
-                name: image.original_filename,
-                category: image.category,
-                isExisting: true // Flag to identify existing images
-              });
             });
-            console.log("Processed images:", processedImages);
+            
+            console.log("Processed images for state:", processedImages);
             setUploadedImages(processedImages);
           }
 
@@ -120,16 +122,22 @@ const ShelterRTelecomRoomForm = () => {
   const handleImageUpload = (imageCategory, files) => {
     setHasUnsavedChanges(true);
     console.log(`Images uploaded for ${imageCategory}:`, files);
+    console.log('Files type:', typeof files, 'Is array:', Array.isArray(files));
     
     // Merge new files with existing images for this category
     const existingImages = uploadedImages[imageCategory] || [];
     const newFiles = Array.isArray(files) ? files : [files];
+    
+    console.log('Existing images:', existingImages);
+    console.log('New files:', newFiles);
     
     // Filter out existing images that are not actual files (they have isExisting flag)
     const existingNonFiles = existingImages.filter(img => img.isExisting);
     
     // Combine existing non-file images with new files
     const combinedImages = [...existingNonFiles, ...newFiles];
+    
+    console.log('Combined images:', combinedImages);
     
     setUploadedImages(prev => ({
       ...prev,
@@ -156,23 +164,53 @@ const ShelterRTelecomRoomForm = () => {
       formDataToSubmit.append('data', JSON.stringify(dataToSubmit));
       
       // Add images - only new files, not existing ones
+      console.log('Uploaded images before submission:', uploadedImages);
       Object.keys(uploadedImages).forEach(category => {
         const files = uploadedImages[category];
+        console.log(`Processing category: ${category}, files:`, files);
         if (files && files.length > 0) {
           files.forEach((file, index) => {
             // Only append actual File objects, not existing image objects
             if (file instanceof File) {
-              formDataToSubmit.append('images', file);
+              console.log(`Appending file for category ${category}:`, file.name, file.size);
+              formDataToSubmit.append(category, file); // Use category name as field name
+            } else {
+              console.log(`Skipping non-File object for category ${category}:`, file);
             }
           });
         }
       });
 
-      await axios.put(`${import.meta.env.VITE_API_URL}/api/room-info/${sessionId}`, formDataToSubmit, {
+      const response = await axios.put(`${import.meta.env.VITE_API_URL}/api/room-info/${sessionId}`, formDataToSubmit, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
+      
+      // Update uploaded images with the response data
+      if (response.data.images && Object.keys(response.data.images).length > 0) {
+        console.log("Updated images from response:", response.data.images);
+        console.log("Full response data:", response.data);
+        
+        // Process the images to ensure they have the correct structure
+        const processedImages = {};
+        Object.keys(response.data.images).forEach(category => {
+          const images = response.data.images[category];
+          if (Array.isArray(images) && images.length > 0) {
+            processedImages[category] = images.map(img => ({
+              ...img,
+              url: img.url || img.file_url, // Ensure url property exists
+              file_url: img.file_url || img.url // Ensure file_url property exists
+            }));
+          }
+        });
+        
+        console.log("Processed images for state:", processedImages);
+        setUploadedImages(processedImages);
+      } else {
+        console.log("No images in response:", response.data);
+      }
+      
       setHasUnsavedChanges(false);
       showSuccess('Room information saved successfully');
     } catch (err) {
@@ -197,21 +235,24 @@ const ShelterRTelecomRoomForm = () => {
             <div>
               <label className="block font-medium mb-1">Room Height (m)</label>
               <input type="number" name="height" value={formData.height} onChange={handleChange} className="form-input" required />
+            <hr className='mt-2' />
             </div>
 
             <div>
               <label className="block font-medium mb-1">Room Width (m)</label>
               <input type="number" name="width" value={formData.width} onChange={handleChange} className="form-input" required />
+            <hr className='mt-2' />
             </div>
 
             <div>
               <label className="block font-medium mb-1">Room Depth (m)</label>
               <input type="number" name="depth" value={formData.depth} onChange={handleChange} className="form-input" required />
+              <hr className='mt-2' />
             </div>
 
             <div className="form-section">
               <label className="font-semibold mb-1 block">Type of existing telecom hardware installed in the room</label>
-              <div className="space-y-2 mt-2 grid grid-cols-3 gap-4">
+              <div className=" grid grid-cols-3 ">
                 {options.map((option) => (
                   <label key={option} className="flex items-center">
                     <input
@@ -224,10 +265,11 @@ const ShelterRTelecomRoomForm = () => {
                   </label>
                 ))}
               </div>
+              <hr className='mt-2' />
             </div>
 
-            <div className="col-span-1 md:col-span-2">
-              <label className="block font-medium mb-2">Do you have sketch measurement for the room?</label>
+            <div className="">
+              <label className="block font-medium ">Do you have sketch measurement for the room?</label>
               <div className="flex gap-6">
                 <label>
                   <input type="radio" name="sketch_available" value="Yes" checked={formData.sketch_available === "Yes"} onChange={handleChange} /> Yes
@@ -236,8 +278,9 @@ const ShelterRTelecomRoomForm = () => {
                   <input type="radio" name="sketch_available" value="No" checked={formData.sketch_available === "No"} onChange={handleChange} /> No
                 </label>
               </div>
+              <hr className='mt-2' />
             </div>
-          </div>
+            </div>
 
           <div className="mt-auto pt-6 flex justify-center">
             <button type="submit" className="px-6 py-3 text-white bg-blue-600 rounded hover:bg-blue-700">

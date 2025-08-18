@@ -516,8 +516,8 @@ const generateNewMwCategories =( mw_count ) => {
                 onClick={() => handleUpload(sectionKey, category)}
                 className="flex flex-col items-center justify-center space-y-2 text-gray-400 hover:text-gray-600 transition-colors"
               >
-                <Upload className="w-8 h-8" />
-                <span className="text-sm">Upload Image</span>
+                {/* <Upload className="w-8 h-8" /> */}
+                <span className="text-sm">No image attached</span>
               </button>
             </div>
           )}

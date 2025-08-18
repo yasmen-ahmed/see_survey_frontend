@@ -172,21 +172,46 @@ export const useAntennaForm = (sessionId) => {
     setHasUnsavedChanges(true);
   };
 
-  const handleChange = (antennaIndex, field, value) => {
+  const handleChange = (antennaIndex, field, value, isManual = false) => {
     setAntennaForms(prev => {
       const updated = [...prev];
       const antenna = { ...updated[antennaIndex] };
-
-      // Handle all fields directly - DynamicFormTable handles arrays properly
+  
+      // Save the value
       antenna[field] = value;
-
+  
+      // Track if this field was changed manually
+      // Once true, it stays true
+      if (isManual) {
+        antenna[`${field}Manual`] = true;
+        antenna[`${field}AutoFilled`] = false; // Remove auto-filled flag when manually changed
+      } else {
+        antenna[`${field}Manual`] = antenna[`${field}Manual`] || false;
+      }
+  
       updated[antennaIndex] = antenna;
+      
+      // Auto-fill logic: If change is in first antenna (index 0), propagate to other antennas
+      if (antennaIndex === 0 && isManual) {
+        // Auto-fill the same value to other antennas (index 1 and beyond)
+        for (let i = 1; i < antennaCount; i++) {
+          const otherAntenna = { ...updated[i] };
+          
+          // Only auto-fill if this field hasn't been manually changed in the other antenna
+          if (!otherAntenna[`${field}Manual`]) {
+            otherAntenna[field] = value;
+            otherAntenna[`${field}AutoFilled`] = true; // Mark as auto-filled
+            updated[i] = otherAntenna;
+          }
+        }
+      }
+      
       return updated;
     });
-
+  
     setHasUnsavedChanges(true);
-
-    // Clear error for this field
+  
+    // Clear error for this field if exists
     const errorKey = `${antennaIndex}.${field}`;
     if (errors[errorKey]) {
       const newErrors = { ...errors };
@@ -194,7 +219,7 @@ export const useAntennaForm = (sessionId) => {
       setErrors(newErrors);
     }
   };
-
+  
   const validateForm = () => {
     const newErrors = {};
     
@@ -373,6 +398,22 @@ export const useAntennaForm = (sessionId) => {
   };
   
 
+  // Function to reset manual flag for a specific field in all antennas (except first)
+  const resetManualFlag = (field) => {
+    setAntennaForms(prev => {
+      const updated = [...prev];
+      for (let i = 1; i < antennaCount; i++) {
+        if (updated[i]) {
+          updated[i] = { ...updated[i] };
+          delete updated[i][`${field}Manual`];
+          delete updated[i][`${field}AutoFilled`];
+        }
+      }
+      return updated;
+    });
+    setHasUnsavedChanges(true);
+  };
+
   return {
     antennaCount,
     antennaForms,
@@ -385,6 +426,7 @@ export const useAntennaForm = (sessionId) => {
     handleChange,
     handleSubmit,
     hasUnsavedChanges,
-    setHasUnsavedChanges
+    setHasUnsavedChanges,
+    resetManualFlag
   };
 }; 

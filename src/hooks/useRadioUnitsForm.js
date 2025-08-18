@@ -177,7 +177,7 @@ export const useRadioUnitsForm = (sessionId) => {
     });
   };
 
-  const handleChange = (radioUnitIndex, field, value) => {
+  const handleChange = (radioUnitIndex, field, value, isManual = false) => {
     console.log(`HandleChange called: radioUnitIndex=${radioUnitIndex}, field=${field}, value=${value}`);
     
     setRadioUnitsForms(prev => {
@@ -218,8 +218,28 @@ export const useRadioUnitsForm = (sessionId) => {
       if (field === 'earthBusExists' && value !== 'Yes') {
         radioUnit.earthBusExists = '';
       }
-
+      if (isManual) {
+        radioUnit[`${field}Manual`] = true;
+        radioUnit[`${field}AutoFilled`] = false; // Remove auto-filled flag when manually changed
+      } else {
+        radioUnit[`${field}Manual`] = radioUnit[`${field}Manual`] || false;
+      }
+  
       updated[radioUnitIndex] = radioUnit;
+         // Auto-fill logic: If change is in first antenna (index 0), propagate to other antennas
+         if (radioUnitIndex === 0 && isManual) {
+          // Auto-fill the same value to other antennas (index 1 and beyond)
+          for (let i = 1; i < radioUnitsCount; i++) {
+            const otherAntenna = { ...updated[i] };
+            
+            // Only auto-fill if this field hasn't been manually changed in the other antenna
+            if (!otherAntenna[`${field}Manual`]) {
+              otherAntenna[field] = value;
+              otherAntenna[`${field}AutoFilled`] = true; // Mark as auto-filled
+              updated[i] = otherAntenna;
+            }
+          }
+        }
       return updated;
     });
 
@@ -396,7 +416,21 @@ export const useRadioUnitsForm = (sessionId) => {
       setIsSubmitting(false);
     }
   };
-
+  // Function to reset manual flag for a specific field in all  (except first)
+  const resetManualFlag = (field) => {
+    setRadioUnitsForms(prev => {
+      const updated = [...prev];
+      for (let i = 1; i < radioUnitsCount; i++) {
+        if (updated[i]) {
+          updated[i] = { ...updated[i] };
+          delete updated[i][`${field}Manual`];
+          delete updated[i][`${field}AutoFilled`];
+        }
+      }
+      return updated;
+    });
+    setHasUnsavedChanges(true);
+  };
   return {
     radioUnitsCount,
     radioUnitsForms,
@@ -409,6 +443,7 @@ export const useRadioUnitsForm = (sessionId) => {
     handleChange,
     handleSubmit,
     hasUnsavedChanges,
-    setHasUnsavedChanges
+    setHasUnsavedChanges,
+    resetManualFlag
   };
 };

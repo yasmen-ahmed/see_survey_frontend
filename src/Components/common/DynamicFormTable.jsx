@@ -22,7 +22,8 @@ const DynamicFormTable = ({
   }
 
   const safeEntities = Array.isArray(entities) ? entities : [];
-
+  const bgColorFillAuto = "bg-[#c6efce]";
+  const colorFillAuto = 'text-[#006100]';
   const getRowBackgroundClass = (index) => index % 2 === 0 ? '' : 'bg-gray-50';
 
   const getHeaderClass = (question) =>
@@ -36,7 +37,11 @@ const DynamicFormTable = ({
     const errorKey = `${entityIndex}.${question.key}`;
     const hasError = errors[errorKey];
     const isDisabled = question.condition && !question.condition(entity);
+    const isManuallyChanged = entity[`${question.key}Manual`];
+    const isAutoFilled = entity[`${question.key}AutoFilled`];
+    
 
+    
     const fieldClass = `w-full p-2 border rounded text-sm ${
       isDisabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
     } ${hasError ? 'border-red-500' : 'border-gray-300'}`;
@@ -47,8 +52,8 @@ const DynamicFormTable = ({
           <div>
             <select
               value={fieldValue}
-              onChange={(e) => onChange(entityIndex, question.key, e.target.value)}
-              className={fieldClass}
+              onChange={(e) => onChange(entityIndex, question.key, e.target.value, true)}
+              className={`${fieldClass} ${isAutoFilled && !isManuallyChanged ? `${bgColorFillAuto} ${colorFillAuto}` : ''}`}
               disabled={isDisabled}
             >
               <option value="">-- Select --</option>
@@ -66,7 +71,7 @@ const DynamicFormTable = ({
         case 'radio':
           return (
             <div>
-              <div className="flex gap-2 flex-wrap">
+              <div className={`flex gap-2 flex-wrap p-2 border rounded ${isAutoFilled && !isManuallyChanged ? `${bgColorFillAuto} ${colorFillAuto}` : ''}`}>
                 {(question.options || []).map((option, idx) => {
                   const value = option.value || option;
                   return (
@@ -76,7 +81,7 @@ const DynamicFormTable = ({
                         name={`${question.key}-${entityIndex}`}
                         value={value}
                         checked={fieldValue === value}
-                        onChange={(e) => onChange(entityIndex, question.key, value)}
+                        onChange={(e) => onChange(entityIndex, question.key, value, true)}
                         className="w-4 h-4"
                         disabled={isDisabled}
                       />
@@ -92,11 +97,11 @@ const DynamicFormTable = ({
                   <input
                     type="text"
                     value={safeEntities[entityIndex]?.[question.otherKey] || ''}
-                    onChange={(e) => onChange(entityIndex, question.otherKey, e.target.value)}
+                    onChange={(e) => onChange(entityIndex, question.otherKey, e.target.value, true)}
                     placeholder="Please specify"
                     className={`w-full p-2 mt-1 border rounded text-sm ${
                       errors[`${entityIndex}.${question.otherKey}`] ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                    } ${safeEntities[entityIndex]?.[`${question.otherKey}AutoFilled`] && !safeEntities[entityIndex]?.[`${question.otherKey}Manual`] ? `${bgColorFillAuto} ${colorFillAuto}` : ''}`}
                   />
                   {errors[`${entityIndex}.${question.otherKey}`] && (
                     <div className="text-red-500 text-xs mt-1">
@@ -112,7 +117,7 @@ const DynamicFormTable = ({
           case 'checkbox':
             return (
               <div>
-                <div className="grid grid-cols-2 gap-1">
+                <div className={`grid grid-cols-2 gap-1 p-2 border rounded ${isAutoFilled && !isManuallyChanged ? `${bgColorFillAuto} ${colorFillAuto}` : ''}`}>
                   {(question.options || []).map((option, idx) => {
                     const optionValue = typeof option === 'object' ? option.value : option;
                     const label = typeof option === 'object' ? option.label : option;
@@ -130,7 +135,7 @@ const DynamicFormTable = ({
                             const updated = isCurrentlyChecked
                               ? currentValue.filter((v) => v !== optionValue)
                               : [...currentValue, optionValue];
-                            onChange(entityIndex, question.key, updated);
+                            onChange(entityIndex, question.key, updated, true);
                           }}
                           className="w-4 h-4"
                           disabled={isDisabled}
@@ -152,8 +157,8 @@ const DynamicFormTable = ({
             <input
               type={question.type || 'text'}
               value={fieldValue}
-              onChange={(e) => onChange(entityIndex, question.key, e.target.value)}
-              className={fieldClass}
+              onChange={(e) => onChange(entityIndex, question.key, e.target.value, true)}
+              className={`${fieldClass} ${isAutoFilled && !isManuallyChanged ? `${bgColorFillAuto} ${colorFillAuto}` : ''}`}
               placeholder={
                 isDisabled ? question.disabledPlaceholder || 'N/A' : question.placeholder
               }
@@ -238,6 +243,8 @@ const DynamicFormTable = ({
                               const errorKey = `${i}.${fieldKey}`;
                               const hasError = errors[errorKey];
                               const fieldMeta = questions.find(q => q.key === fieldKey) || {};
+                              const isManuallyChanged = entity[`${fieldKey}Manual`];
+                              const isAutoFilled = entity[`${fieldKey}AutoFilled`];
 
                               return (
                                 <div key={fieldKey}>
@@ -246,9 +253,9 @@ const DynamicFormTable = ({
                                     placeholder={fieldMeta.placeholder || ''}
                                     className={`w-full p-2 border rounded text-sm ${
                                       hasError ? 'border-red-500' : 'border-gray-300'
-                                    }`}
+                                    } ${isAutoFilled && !isManuallyChanged ? `${bgColorFillAuto} ${colorFillAuto}` : ''}`}
                                     value={fieldValue}
-                                    onChange={(e) => onChange(i, fieldKey, e.target.value)}
+                                    onChange={(e) => onChange(i, fieldKey, e.target.value, true)}
                                   />
                                   {hasError && (
                                     <div className="text-red-500 text-xs mt-1">{errors[errorKey]}</div>

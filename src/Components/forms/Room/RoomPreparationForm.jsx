@@ -55,24 +55,39 @@ const ShelterRoomPreparationForm = () => {
           rackFreePositions: data.rack_free_positions || ""
         });
 
-        // Process existing images from the main data structure
-        if (data.images && data.images.length > 0) {
+        // Process existing images from the response
+        if (response.data.images && Array.isArray(response.data.images)) {
+          console.log("Raw images from API:", response.data.images);
+          console.log("API response structure:", response.data);
+          
+          // Process the images to group them by category (like RAN room)
           const processedImages = {};
-          data.images.forEach(image => {
-            if (!processedImages[image.category]) {
-              processedImages[image.category] = [];
+          response.data.images.forEach(img => {
+            const category = img.image_category || img.category;
+            console.log("Processing image with category:", category, "Image:", img);
+            if (category) {
+              if (!processedImages[category]) {
+                processedImages[category] = [];
+              }
+              processedImages[category].push({
+                id: img.id,
+                url: img.file_url || img.url, // Use file_url as primary URL
+                file_url: img.file_url || img.url,
+                name: img.original_filename || img.name,
+                category: category,
+                isExisting: true // Mark as existing image from backend
+              });
+              console.log(`Added image to category ${category}:`, processedImages[category]);
+            } else {
+              console.log("Image has no category:", img);
             }
-            processedImages[image.category].push({
-              id: image.id || Math.random(),
-              file_url: image.file_url,
-              url: image.file_url, // Add url property for GalleryComponent compatibility
-              name: image.original_filename,
-              category: image.category,
-              isExisting: true // Flag to identify existing images
-            });
           });
-          console.log("Processed images:", processedImages);
+          
+          console.log("Final processed images for state:", processedImages);
           setUploadedImages(processedImages);
+        } else {
+          console.log("No images found in API response");
+          setUploadedImages({});
         }
 
         // Reset unsaved changes flag after loading data
@@ -122,29 +137,61 @@ const ShelterRoomPreparationForm = () => {
       formDataToSubmit.append('data', JSON.stringify(dataToSubmit));
       
       // Add images - only new files, not existing ones
+      console.log('Uploaded images before submission:', uploadedImages);
       Object.keys(uploadedImages).forEach(category => {
         const files = uploadedImages[category];
+        console.log(`Processing category: ${category}, files:`, files);
         if (files && files.length > 0) {
           files.forEach((file, index) => {
             // Only append actual File objects, not existing image objects
             if (file instanceof File) {
-              formDataToSubmit.append('images', file);
+              console.log(`Appending file for category ${category}:`, file.name, file.size);
+              formDataToSubmit.append(category, file); // Use category name as field name
+            } else {
+              console.log(`Skipping non-File object for category ${category}:`, file);
             }
           });
         }
       });
 
-      await axios.put(`${import.meta.env.VITE_API_URL}/api/room-preparation/${sessionId}`, formDataToSubmit, {
+      const response = await axios.put(`${import.meta.env.VITE_API_URL}/api/room-preparation/${sessionId}`, formDataToSubmit, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
       
+      // Update uploaded images with the response data
+      if (response.data.images && Array.isArray(response.data.images)) {
+        console.log("Updated images from response:", response.data.images);
+        console.log("Full response data:", response.data);
+        
+        // Process the images to group them by category (like RAN room)
+        const processedImages = {};
+        response.data.images.forEach(img => {
+          const category = img.image_category || img.category;
+          if (category) {
+            if (!processedImages[category]) {
+              processedImages[category] = [];
+            }
+            processedImages[category].push({
+              id: img.id,
+              url: img.file_url || img.url, // Use file_url as primary URL
+              file_url: img.file_url || img.url,
+              name: img.original_filename || img.name,
+              category: category,
+              isExisting: true // Mark as existing image from backend
+            });
+          }
+        });
+        
+        console.log("Processed images for state:", processedImages);
+        setUploadedImages(processedImages);
+      } else {
+        console.log("No images in response:", response.data);
+      }
+      
       setHasUnsavedChanges(false);
       showSuccess('Room preparation saved successfully');
-      
-      // Reload data to get updated images
-      await loadRoomPreparation();
     } catch (error) {
       console.error('Error saving room preparation:', error);
       showError('Failed to save room preparation');
@@ -156,16 +203,22 @@ const ShelterRoomPreparationForm = () => {
   const handleImageUpload = (imageCategory, files) => {
     setHasUnsavedChanges(true);
     console.log(`Images uploaded for ${imageCategory}:`, files);
+    console.log('Files type:', typeof files, 'Is array:', Array.isArray(files));
     
     // Merge new files with existing images for this category
     const existingImages = uploadedImages[imageCategory] || [];
     const newFiles = Array.isArray(files) ? files : [files];
+    
+    console.log('Existing images:', existingImages);
+    console.log('New files:', newFiles);
     
     // Filter out existing images that are not actual files (they have isExisting flag)
     const existingNonFiles = existingImages.filter(img => img.isExisting);
     
     // Combine existing non-file images with new files
     const combinedImages = [...existingNonFiles, ...newFiles];
+    
+    console.log('Combined images:', combinedImages);
     
     setUploadedImages(prev => ({
       ...prev,
@@ -257,13 +310,14 @@ const ShelterRoomPreparationForm = () => {
                   </label>
                 ))}
               </div>
+              <hr className='mt-2' />
             </div>
 
             <div className="flex flex-col">
-              <label className="font-semibold mb-1">
+              <label className="font-semibold ">
                 How many air conditioners in the room?
               </label>
-              <div className=" grid grid-cols-3 gap-4">
+              <div className=" grid grid-cols-3 ">
                 {["1", "2", "Other"].map((count) => (
                   <label key={count} className="flex items-center">
                     <input
@@ -279,6 +333,7 @@ const ShelterRoomPreparationForm = () => {
                   </label>
                 ))}
               </div>
+              <hr className='mt-2' />
             </div>
 
             <div className="flex flex-col">
@@ -292,6 +347,7 @@ const ShelterRoomPreparationForm = () => {
                 required
                 min={0}
               />
+                  <hr className='mt-2' />
             </div>
 
             <div className="flex flex-col">
@@ -314,6 +370,7 @@ const ShelterRoomPreparationForm = () => {
                   </label>
                 ))}
               </div>
+              <hr className='mt-2' />
             </div>
 
             <div className="flex flex-col">
@@ -326,6 +383,7 @@ const ShelterRoomPreparationForm = () => {
                 className="form-input"
                 min={0}
               />
+                  <hr className='mt-2' />
             </div>
 
             <div className="flex flex-col">
@@ -338,6 +396,7 @@ const ShelterRoomPreparationForm = () => {
                 className="form-input"
                 min={0}
               />
+                  <hr className='mt-2' />
             </div>
 
             <div className="flex flex-col">
@@ -360,6 +419,7 @@ const ShelterRoomPreparationForm = () => {
                   </label>
                 ))}
               </div>
+              <hr className='mt-2' />
             </div>
 
             <div className="flex flex-col">
@@ -382,6 +442,7 @@ const ShelterRoomPreparationForm = () => {
                   </label>
                 ))}
               </div>
+              <hr className='mt-2' />
             </div>
             <div className="flex flex-col">
               <label className="font-semibold mb-1">
@@ -404,6 +465,7 @@ const ShelterRoomPreparationForm = () => {
                   );
                 })}
               </select>
+              <hr className='mt-2' />
             </div>
 
             <div className="flex flex-col">
@@ -427,6 +489,7 @@ const ShelterRoomPreparationForm = () => {
                   );
                 })}
               </select>
+              <hr className='mt-2' />
             </div>
 
             <div className="flex flex-col">
@@ -450,6 +513,7 @@ const ShelterRoomPreparationForm = () => {
                   );
                 })}
               </select>
+              <hr className='mt-2' />
             </div>
             <div className="flex flex-col">
               <label className="font-semibold mb-1">
@@ -472,6 +536,7 @@ const ShelterRoomPreparationForm = () => {
                   );
                 })}
               </select>
+              <hr className='mt-2' />
             </div>
 
 

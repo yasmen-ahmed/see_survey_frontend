@@ -151,7 +151,7 @@ export const useFpfhForm = (sessionId) => {
     });
   };
 
-  const handleChange = (fpfhIndex, field, value) => {
+  const handleChange = (fpfhIndex, field, value, isManual = false) => {
     setFpfhForms(prev => {
       const updated = [...prev];
       const fpfh = { ...updated[fpfhIndex] }; // Clone the specific FPFH object
@@ -180,9 +180,28 @@ export const useFpfhForm = (sessionId) => {
           fpfh.earthCableLength = '';
         }
       }
+      if (isManual) {
+        fpfh[`${field}Manual`] = true;
+        fpfh[`${field}AutoFilled`] = false; // Remove auto-filled flag when manually changed
+      } else {
+        fpfh[`${field}Manual`] = fpfh[`${field}Manual`] || false;
+      }
 
       updated[fpfhIndex] = fpfh; // Replace with updated FPFH object
-
+ // Auto-fill logic: If change is in first antenna (index 0), propagate to other antennas
+ if (fpfhIndex === 0 && isManual) {
+  // Auto-fill the same value to other antennas (index 1 and beyond)
+  for (let i = 1; i < fpfhCount; i++) {
+    const otherAntenna = { ...updated[i] };
+    
+    // Only auto-fill if this field hasn't been manually changed in the other antenna
+    if (!otherAntenna[`${field}Manual`]) {
+      otherAntenna[field] = value;
+      otherAntenna[`${field}AutoFilled`] = true; // Mark as auto-filled
+      updated[i] = otherAntenna;
+    }
+  }
+}
       return updated;
     });
 
@@ -316,7 +335,20 @@ export const useFpfhForm = (sessionId) => {
       setIsSubmitting(false);
     }
   };
-
+  const resetManualFlag = (field) => {
+    setFpfhForms(prev => {
+      const updated = [...prev];
+      for (let i = 1; i < fpfhCount; i++) {
+        if (updated[i]) {
+          updated[i] = { ...updated[i] };
+          delete updated[i][`${field}Manual`];
+          delete updated[i][`${field}AutoFilled`];
+        }
+      }
+      return updated;
+    });
+    setHasUnsavedChanges(true);
+  };
   return {
     fpfhCount,
     fpfhForms,
@@ -329,6 +361,7 @@ export const useFpfhForm = (sessionId) => {
     handleChange,
     handleSubmit,
     hasUnsavedChanges,
-    setHasUnsavedChanges
+    setHasUnsavedChanges,
+    resetManualFlag
   };
 }; 
