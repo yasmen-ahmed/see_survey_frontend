@@ -3,6 +3,7 @@ import { ChevronDown } from "lucide-react";
 import { IoHomeOutline } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import NotificationDropdown from "../common/NotificationDropdown";
 
 // components/Header.js
 const Header = () => {
@@ -169,7 +170,7 @@ const Header = () => {
         />
       </div>
       <div className="flex justify-center items-center gap-2">
-        <h1 className="text-xl font-extrabold">SEE Survey v1.11</h1>
+        <h1 className="text-xl font-extrabold">SEE Survey v1.12</h1>
        
       </div>
       <div className="flex justify-center items-center gap-3">
@@ -243,6 +244,7 @@ const Header = () => {
           )}
         </div>
 
+        <NotificationDropdown />
         <img
           src="https://globalfundccm.org.ug/wp-content/uploads/2024/02/blank-profile-picture-973460_1280-modified.png"
           alt="Profile of Amgad Salem"

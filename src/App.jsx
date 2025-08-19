@@ -2,13 +2,16 @@ import './App.css'
 import { BrowserRouter } from 'react-router-dom'
 import RoutesComponent from './routes/routes'
 import { SurveyProvider } from './context/SurveyContext'
+import { NotificationProvider } from './context/NotificationContext'
 
 function App() {
   return (
     // <BrowserRouter>
-      <SurveyProvider>
-        <RoutesComponent />
-      </SurveyProvider>
+      <NotificationProvider>
+        <SurveyProvider>
+          <RoutesComponent />
+        </SurveyProvider>
+      </NotificationProvider>
     // </BrowserRouter>
   )
 }
