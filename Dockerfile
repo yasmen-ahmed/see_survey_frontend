@@ -13,8 +13,15 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+
+# Accept VITE_API_URL from build arguments
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
+# Inject environment variable at build time
+RUN echo "VITE_API_URL=$VITE_API_URL" > .env && npm run build
 # Build the application
-RUN npm run build
+#RUN npm run build
 
 # Production stage
 FROM nginx:alpine AS production
@@ -23,7 +30,7 @@ FROM nginx:alpine AS production
 COPY --from=build /app/dist /usr/share/nginx/html
 
 # Copy custom nginx configuration
-#COPY --from=build /app/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port
 EXPOSE 80

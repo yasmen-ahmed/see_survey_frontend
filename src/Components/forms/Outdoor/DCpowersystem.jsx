@@ -458,9 +458,10 @@ const DCPowerInformationForm = () => {
                 type='number'
                 step='0.1'
                 className='form-input'
-                value={formData.dc_rectifiers.total_capacity_existing_dc_power_system}
-                onChange={(e) => handleChange('dc_rectifiers', 'total_capacity_existing_dc_power_system', e.target.value)}
+                value={formData.dc_rectifiers.how_many_existing_dc_rectifier_modules * formData.dc_rectifiers.rectifier_module_capacity}
+                // onChange={(e) => handleChange('dc_rectifiers', 'total_capacity_existing_dc_power_system', e.target.value)}
                 placeholder='12.5'
+                readOnly
               />
             </div>
 

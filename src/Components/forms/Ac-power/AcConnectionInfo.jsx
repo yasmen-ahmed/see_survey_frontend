@@ -388,7 +388,7 @@ const AcInformationForm = () => {
                       className="mr-2"
 
                     />
-                    Commercial power
+                    Commercial power (SCECO ) 
                   </label>
                   <label>
                     <input

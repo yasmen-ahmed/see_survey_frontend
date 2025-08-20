@@ -49,7 +49,7 @@ const DCPowerSystemForm = () => {
     cb_fuse_data_llvd: [],
     cb_fuse_data_pdu: []
   });
-    // Handle BLVD table data changes
+  // Handle BLVD table data changes
   const handleBLVDTableDataChange = useCallback((newTableData) => {
     if (!newTableData) {
       const currentData = formData.cb_fuse_data_blvd || [];
@@ -62,7 +62,7 @@ const DCPowerSystemForm = () => {
       }));
       return;
     }
-    
+
     const processedData = newTableData
       .filter(item => {
         const rating = item.rating?.toString().trim() || '';
@@ -77,7 +77,7 @@ const DCPowerSystemForm = () => {
     // Compare with current data to detect actual changes
     const currentData = formData.cb_fuse_data_blvd || [];
     const hasChanged = JSON.stringify(processedData) !== JSON.stringify(currentData);
-    
+
     if (hasChanged) {
       setHasUnsavedChanges(true);
     }
@@ -88,7 +88,7 @@ const DCPowerSystemForm = () => {
     }));
   }, [formData.cb_fuse_data_blvd, setHasUnsavedChanges]);
 
-    // Handle LLVD table data changes
+  // Handle LLVD table data changes
   const handleLLVDTableDataChange = useCallback((newTableData) => {
     if (!newTableData) {
       const currentData = formData.cb_fuse_data_llvd || [];
@@ -101,7 +101,7 @@ const DCPowerSystemForm = () => {
       }));
       return;
     }
-    
+
     const processedData = newTableData
       .filter(item => {
         const rating = item.rating?.toString().trim() || '';
@@ -116,7 +116,7 @@ const DCPowerSystemForm = () => {
     // Compare with current data to detect actual changes
     const currentData = formData.cb_fuse_data_llvd || [];
     const hasChanged = JSON.stringify(processedData) !== JSON.stringify(currentData);
-    
+
     if (hasChanged) {
       setHasUnsavedChanges(true);
     }
@@ -127,7 +127,7 @@ const DCPowerSystemForm = () => {
     }));
   }, [formData.cb_fuse_data_llvd, setHasUnsavedChanges]);
 
-    // Handle PDU table data changes
+  // Handle PDU table data changes
   const handlePDUTableDataChange = useCallback((newTableData) => {
     if (!newTableData) {
       const currentData = formData.cb_fuse_data_pdu || [];
@@ -140,7 +140,7 @@ const DCPowerSystemForm = () => {
       }));
       return;
     }
-    
+
     const processedData = newTableData
       .filter(item => {
         const rating = item.rating?.toString().trim() || '';
@@ -155,7 +155,7 @@ const DCPowerSystemForm = () => {
     // Compare with current data to detect actual changes
     const currentData = formData.cb_fuse_data_pdu || [];
     const hasChanged = JSON.stringify(processedData) !== JSON.stringify(currentData);
-    
+
     if (hasChanged) {
       setHasUnsavedChanges(true);
     }
@@ -630,17 +630,27 @@ const DCPowerSystemForm = () => {
                   placeholder='Model'
                 />
               </div>
-
               <div>
                 <label className='block font-semibold '>How many existing DC rectifier modules?</label>
                 <select
                   className='form-input'
                   value={formData.dc_rectifiers.how_many_existing_dc_rectifier_modules}
-                  onChange={(e) => handleChange('dc_rectifiers', 'how_many_existing_dc_rectifier_modules', e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    handleChange('dc_rectifiers', 'how_many_existing_dc_rectifier_modules', value);
+
+                    // auto calculate total
+                    const total =
+                      (parseFloat(value) || 0) *
+                      (parseFloat(formData.dc_rectifiers.rectifier_module_capacity) || 0);
+                    handleChange('dc_rectifiers', 'total_capacity_existing_dc_power_system', total.toFixed(1));
+                  }}
                 >
                   <option value=''>Select</option>
                   {[...Array(20)].map((_, i) => (
-                    <option key={i} value={i + 1}>{i + 1}</option>
+                    <option key={i} value={i + 1}>
+                      {i + 1}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -652,7 +662,16 @@ const DCPowerSystemForm = () => {
                   step='0.1'
                   className='form-input'
                   value={formData.dc_rectifiers.rectifier_module_capacity}
-                  onChange={(e) => handleChange('dc_rectifiers', 'rectifier_module_capacity', e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    handleChange('dc_rectifiers', 'rectifier_module_capacity', value);
+
+                    // auto calculate total
+                    const total =
+                      (parseFloat(formData.dc_rectifiers.how_many_existing_dc_rectifier_modules) || 0) *
+                      (parseFloat(value) || 0);
+                    handleChange('dc_rectifiers', 'total_capacity_existing_dc_power_system', total.toFixed(1));
+                  }}
                   placeholder='2.5'
                 />
               </div>
@@ -663,11 +682,11 @@ const DCPowerSystemForm = () => {
                   type='number'
                   step='0.1'
                   className='form-input'
-                  value={formData.dc_rectifiers.total_capacity_existing_dc_power_system}
-                  onChange={(e) => handleChange('dc_rectifiers', 'total_capacity_existing_dc_power_system', e.target.value)}
-                  placeholder='12.5'
+                  value={formData.dc_rectifiers.how_many_existing_dc_rectifier_modules * formData.dc_rectifiers.rectifier_module_capacity}
+                  readOnly // make it auto-filled
                 />
               </div>
+
 
               <div>
                 <label className='block font-semibold '>RECT Load current reading (A)</label>
@@ -752,21 +771,21 @@ const DCPowerSystemForm = () => {
                 )}
               {
                 formData.dc_rectifiers.blvd_in_dc_power_rack === 'Yes' && (
-                                <DynamicTable
-                title="Existing BLVD CBs ratings & connected loads"
-                rows={tableRows}
-                initialData={getBLVDTableData()}
-                onChange={handleBLVDTableDataChange}
-                minColumns={1}
-                autoExpand={true}
-                enableDragDrop={true}
-                enableDelete={true}
-                className="col-span-2"
-                tableClassName="w-full border border-gray-300"
-                headerClassName="bg-gray-200"
-                cellClassName="border px-2 py-2"
-                labelClassName="border px-4 py-2 font-semibold bg-gray-50"
-              />
+                  <DynamicTable
+                    title="Existing BLVD CBs ratings & connected loads"
+                    rows={tableRows}
+                    initialData={getBLVDTableData()}
+                    onChange={handleBLVDTableDataChange}
+                    minColumns={1}
+                    autoExpand={true}
+                    enableDragDrop={true}
+                    enableDelete={true}
+                    className="col-span-2"
+                    tableClassName="w-full border border-gray-300"
+                    headerClassName="bg-gray-200"
+                    cellClassName="border px-2 py-2"
+                    labelClassName="border px-4 py-2 font-semibold bg-gray-50"
+                  />
 
 
                 )
@@ -799,21 +818,21 @@ const DCPowerSystemForm = () => {
                 )}
               {
                 formData.dc_rectifiers.llvd_in_dc_power_rack === 'Yes' && (
-                                <DynamicTable
-                title="Existing LLVD CBs ratings & connected loads"
-                rows={tableRows}
-                initialData={getLLVDTableData()}
-                onChange={handleLLVDTableDataChange}
-                minColumns={1}
-                autoExpand={true}
-                enableDragDrop={true}
-                enableDelete={true}
-                className="col-span-2"
-                tableClassName="w-full border border-gray-300"
-                headerClassName="bg-gray-200"
-                cellClassName="border px-2 py-2"
-                labelClassName="border px-4 py-2 font-semibold bg-gray-50"
-              />
+                  <DynamicTable
+                    title="Existing LLVD CBs ratings & connected loads"
+                    rows={tableRows}
+                    initialData={getLLVDTableData()}
+                    onChange={handleLLVDTableDataChange}
+                    minColumns={1}
+                    autoExpand={true}
+                    enableDragDrop={true}
+                    enableDelete={true}
+                    className="col-span-2"
+                    tableClassName="w-full border border-gray-300"
+                    headerClassName="bg-gray-200"
+                    cellClassName="border px-2 py-2"
+                    labelClassName="border px-4 py-2 font-semibold bg-gray-50"
+                  />
                 )}
               <div>
                 <label className='block font-semibold '>Is there PDU in the cabinet?</label>
@@ -842,21 +861,21 @@ const DCPowerSystemForm = () => {
                 )}
               {
                 formData.dc_rectifiers.pdu_in_dc_power_rack === 'Yes' && (
-                                <DynamicTable
-                title="Existing PDU CBs ratings & connected loads"
-                rows={tableRows}
-                initialData={getPDUTableData()}
-                onChange={handlePDUTableDataChange}
-                minColumns={1}
-                autoExpand={true}
-                enableDragDrop={true}
-                enableDelete={true}
-                className="col-span-2"
-                tableClassName="w-full border border-gray-300"
-                headerClassName="bg-gray-200"
-                cellClassName="border px-2 py-2"
-                labelClassName="border px-4 py-2 font-semibold bg-gray-50"
-              />
+                  <DynamicTable
+                    title="Existing PDU CBs ratings & connected loads"
+                    rows={tableRows}
+                    initialData={getPDUTableData()}
+                    onChange={handlePDUTableDataChange}
+                    minColumns={1}
+                    autoExpand={true}
+                    enableDragDrop={true}
+                    enableDelete={true}
+                    className="col-span-2"
+                    tableClassName="w-full border border-gray-300"
+                    headerClassName="bg-gray-200"
+                    cellClassName="border px-2 py-2"
+                    labelClassName="border px-4 py-2 font-semibold bg-gray-50"
+                  />
                 )}
 
             </div>

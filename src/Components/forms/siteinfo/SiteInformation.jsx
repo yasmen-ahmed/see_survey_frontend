@@ -367,7 +367,7 @@ const [formData, setFormData] = useState({
           <div>
             <label className="block font-medium mb-1">Other Telecom Operator exist onsite </label>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              {["Operator 1", "Operator 2", "Operator 3", "Operator 4"].map((slot) => (
+              {["STC", "Zain", "Mobily", "Aramco"].map((slot) => (   
                 <label key={slot} className="flex items-center">
                   <input
                     type="checkbox"

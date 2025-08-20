@@ -11,6 +11,7 @@ const PowerMeterForm = () => {
 
   const [formData, setFormData] = useState({
     serialNumber: "",
+    powerMeterCapacity:"",
     meterReading: "",
     powerSourceType: "",
     cableLength: "",
@@ -49,6 +50,7 @@ const PowerMeterForm = () => {
       // Build the payload to match the expected API structure
       const payload = {
         serial_number: formData.serialNumber || '',
+        powerMeterCapacity: formData.powerMeterCapacity ? parseFloat(formData.powerMeterCapacity) : null,
         meter_reading: formData.meterReading ? parseFloat(formData.meterReading) : null,
         ac_power_source_type: formData.powerSourceType ? normalizeApiValue(formData.powerSourceType) : null,
         // Electrical measurements
@@ -137,6 +139,7 @@ const PowerMeterForm = () => {
         if (data) {
           setFormData({
             serialNumber: data.serial_number || "",
+            powerMeterCapacity:data.powerMeterCapacity || "",
             meterReading: data.meter_reading || "",
             powerSourceType: normalizeRadioValue(data.ac_power_source_type) || "",
             cableLength: data.power_cable_config?.length || "",
@@ -336,7 +339,16 @@ const PowerMeterForm = () => {
               className="form-input"
             />
           </div>
-
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Power Meter Capacity (KW) </label>
+            <input
+              type="number"
+              name="powerMeterCapacity"
+              value={formData.powerMeterCapacity}
+              onChange={handleChange}
+              className="form-input"
+            />
+          </div>
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Power Meter Reading</label>
             <input

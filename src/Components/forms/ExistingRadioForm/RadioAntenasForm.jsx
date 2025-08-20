@@ -832,10 +832,10 @@ const RadioAntenasForm = () => {
                           }`}
                       >
                         <option value="">-- Select --</option>
-                        <option value="Operator 1">Operator 1</option>
-                        <option value="Operator 2">Operator 2</option>
-                        <option value="Operator 3">Operator 3</option>
-                        <option value="Operator 4">Operator 4</option>
+                        <option value="STC">STC</option>
+                        <option value="Zain">Zain</option>
+                        <option value="Mobily">Mobily</option>
+                        <option value="Aramco">Aramco</option>
                       </select>
                     </td>
                   ))}
