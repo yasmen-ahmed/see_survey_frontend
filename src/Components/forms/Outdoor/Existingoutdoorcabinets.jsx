@@ -732,7 +732,8 @@ const OutdoorCabinetsForm = () => {
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.coolingCapacityAutoFilled ? bgColorFillAuto : ''}`}>
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={cabinet.coolingCapacity}
                         onChange={(e) => handleChange(cabinetIndex, 'coolingCapacity', e.target.value)}
                         className={`w-full p-2 border rounded text-sm ${cabinet.coolingCapacityAutoFilled ? colorFillAuto : ''}`}
@@ -857,7 +858,8 @@ const OutdoorCabinetsForm = () => {
                     {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                       <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.powerCableLengthAutoFilled ? bgColorFillAuto : ''}`}>
                         <input
-                          type="number"
+                          type="number" 
+min={0}
                           value={cabinet.powerCableLength}
                           onChange={(e) => handleChange(cabinetIndex, 'powerCableLength', e.target.value)}
                           className={`w-full p-2 border rounded text-sm ${cabinet.acPowerFeed !== 'Yes'
@@ -881,7 +883,8 @@ const OutdoorCabinetsForm = () => {
                     {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                       <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.powerCableCrossSectionAutoFilled ? bgColorFillAuto : ''}`}>
                         <input
-                          type="number"
+                          type="number" 
+min={0}
                           value={cabinet.powerCableCrossSection}
                           onChange={(e) => handleChange(cabinetIndex, 'powerCableCrossSection', e.target.value)}
                           className={`w-full p-2 border rounded text-sm ${cabinet.acPowerFeed !== 'Yes'
@@ -1220,7 +1223,8 @@ const OutdoorCabinetsForm = () => {
                   {formData.cabinets.slice(0, parseInt(formData.numberOfCabinets) || 1).map((cabinet, cabinetIndex) => (
                     <td key={cabinetIndex} className={`border px-2 py-2 ${cabinet.freeUAutoFilled ? bgColorFillAuto : ''}`}>
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={cabinet.freeU}
                         onChange={(e) => handleChange(cabinetIndex, 'freeU', e.target.value)}
                         className={`w-full p-2 border rounded text-sm ${cabinet.freeUAutoFilled ? colorFillAuto : ''}`}

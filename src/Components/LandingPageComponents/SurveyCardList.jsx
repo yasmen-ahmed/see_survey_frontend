@@ -383,7 +383,7 @@ const SurveyCardList = () => {
       siteId: survey.site_id,
       createdBy: survey.createdBy?.username,
       assignedTo: survey.user?.username,
-      project: survey.project,
+      project: survey.projectData?.name || survey.project,
       status: survey.TSSR_Status,
       role: userRole,
       readOnly: isReadOnly
@@ -431,6 +431,7 @@ const SurveyCardList = () => {
             <th className="px-6 py-3">Assigned To</th>
             <th className="px-6 py-3">Project</th>
             <th className="px-6 py-3">TSSR Status</th>
+            {/* <th className="px-6 py-3">Comments</th> */}
             <th className="px-6 py-3">Action</th>
             <th className="px-6 py-3">Report</th>
           </tr>

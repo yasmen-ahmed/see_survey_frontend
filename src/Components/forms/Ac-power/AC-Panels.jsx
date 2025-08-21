@@ -1,13 +1,30 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { showSuccess, showError } from "../../../utils/notifications";
 import ImageUploader from "../../GalleryComponent";
 import DynamicTable from "../../DynamicTable";
 import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
+import { useReadOnly } from "../../../hooks/useReadOnly";
 
-const ACPanelForm = () => {
+const ACPanelForm = ({ readOnly = false }) => {
   const { sessionId } = useParams();
+  const { isReadOnly, disableAllFormElements } = useReadOnly();
+  const formRef = useRef(null);
+  
+  // Use the readOnly prop or the context readOnly state
+  const isFormReadOnly = readOnly || isReadOnly;
+  
+  // Disable all form elements when in read-only mode
+  useEffect(() => {
+    if (isFormReadOnly) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        disableAllFormElements(formRef);
+      }, 100);
+    }
+  }, [isFormReadOnly, disableAllFormElements]);
+
   const [formData, setFormData] = useState({
     cableLength: "",
     crossSection: "",
@@ -257,7 +274,7 @@ const ACPanelForm = () => {
   };
 
   return (
-    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
+    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2" ref={formRef}>
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col"> {/* Unsaved Changes Warning */}
         {hasUnsavedChanges && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
@@ -279,7 +296,8 @@ const ACPanelForm = () => {
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Length of Power Cable (m)</label>
             <input
-              type="number"
+              type="number" 
+min={0}
               name="cableLength"
               value={formData.cableLength}
               onChange={handleChange}
@@ -291,7 +309,8 @@ const ACPanelForm = () => {
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Cross Section of Cable (mm²)</label>
             <input
-              type="number"
+              type="number" 
+min={0}
               name="crossSection"
               value={formData.crossSection}
               onChange={handleChange}
@@ -303,7 +322,8 @@ const ACPanelForm = () => {
           <div className="flex flex-col">
             <label className="font-semibold mb-1">AC Panel Main CB Rating (Amp)</label>
             <input
-              type="number"
+              type="number" 
+min={0}
               name="mainCBRating"
               value={formData.mainCBRating}
               onChange={handleChange}

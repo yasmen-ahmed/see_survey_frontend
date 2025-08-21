@@ -282,7 +282,8 @@ const SiteLocationForm = ({ readOnly = false }) => {
               <div className="grid grid-cols-1 gap-2">
                 <label className="font-semibold mb-1">Longitude</label>
                 <input
-                  type="number"
+                  type="number" 
+min={0}
                   name="longitude"
                   placeholder="Longitude"
                   value={formData.longitude}
@@ -294,7 +295,8 @@ const SiteLocationForm = ({ readOnly = false }) => {
               <div className="grid grid-cols-1 gap-2">
                 <label className="font-semibold mb-1">Site Elevation</label>
                 <input
-                  type="number"
+                  type="number" 
+min={0}
                   name="siteelevation"
                   placeholder="site elevation"
                   value={formData.siteelevation}

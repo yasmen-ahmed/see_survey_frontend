@@ -5,12 +5,11 @@ import { FaRegTrashAlt } from 'react-icons/fa';
 import { showSuccess, showError } from '../../../utils/notifications';
 import ImageUploader from "../../GalleryComponent";
 import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
+import { useSiteOperators } from '../../../hooks/useSiteOperators';
+import { radioUnitsCatalogService } from '../../../services/radioUnitsCatalogService';
 
-const nokiaModels = [
-  'AAHF', 'AAHC', 'AAHD', 'AAIA', 'AAHB', 'AAHG', 'AAHE', 'AAOA'
-]; // Nokia models as per SE requirements
+// Nokia models are now fetched from RadioUnitsCatalog with hardware_type 'RFM' and 'RRH'
 
-const operators = ['Operator 1', 'Operator 2', 'Operator 3', 'Operator 4'];
 const feederTypes = ['7/8 inch', '1-1/4 inch', '1-5/4 inch', '1/2 inch'];
 
 // Dynamic Table Component
@@ -148,7 +147,8 @@ const DynamicTable = ({ data, onChange, unitIndex }) => {
 
 const RadioUnitsForm = () => {
   const { sessionId } = useParams();
-  const [isLoading, setIsLoading] = useState(true);
+  const { operators, loading: operatorsLoading } = useSiteOperators();
+  const [loadingApi, setLoadingApi] = useState(false)
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [relations, setRelations] = useState({
     cabinet_numbers: [],
@@ -168,6 +168,7 @@ const RadioUnitsForm = () => {
         tower_leg: '',
         vendor: '',
         nokiaModel: '',
+        nokiaModelItemCode: '',
         nokiaPortCount: '',
         nokiaPortConnectivity: [{ sector: '', antenna: '', jumperLength: '' }],
         otherModel: '',
@@ -207,6 +208,8 @@ const RadioUnitsForm = () => {
 
   // Add hasUnsavedChanges state
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [catalogItems, setCatalogItems] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
 
   // Generate cabinet options based on number of cabinets
   const generateCabinetOptions = () => {
@@ -248,6 +251,7 @@ const RadioUnitsForm = () => {
       tower_leg: '',
       vendor: '',
       nokiaModel: '',
+      nokiaModelItemCode: '',
       nokiaPortCount: '',
       nokiaPortConnectivity: [{ sector: '', antenna: '', jumperLength: '' }],
       otherModel: '',
@@ -310,6 +314,7 @@ const RadioUnitsForm = () => {
         tower_leg: apiUnit.tower_leg || '',
         vendor: apiUnit.vendor || '',
         nokiaModel: apiUnit.nokia_model || '',
+        nokiaModelItemCode: apiUnit.nokia_model_item_code || '',
         nokiaPortCount: apiUnit.nokia_ports?.toString() || '',
         nokiaPortConnectivity: Array.isArray(apiUnit.nokia_port_connectivity) && apiUnit.nokia_port_connectivity.length > 0
           ? apiUnit.nokia_port_connectivity.map(conn => ({
@@ -386,6 +391,7 @@ const RadioUnitsForm = () => {
         tower_leg: unit.tower_leg || null,
         vendor: unit.vendor || null,
         nokia_model: unit.vendor === 'Nokia' ? unit.nokiaModel : "",
+        nokia_model_item_code: unit.vendor === 'Nokia' ? unit.nokiaModelItemCode : "",
         nokia_ports: unit.vendor === 'Nokia' && unit.nokiaPortCount ? parseInt(unit.nokiaPortCount) : null,
         nokia_port_connectivity: unit.vendor === 'Nokia' && unit.nokiaPortConnectivity ? unit.nokiaPortConnectivity
           .filter(conn => conn.sector || conn.antenna || conn.jumperLength)
@@ -420,6 +426,30 @@ const RadioUnitsForm = () => {
       }))
     };
   }, []);
+
+  // Fetch catalog items
+  const fetchCatalogItems = async () => {
+    try {
+      setCatalogLoading(true);
+      const items = await radioUnitsCatalogService.getItemsByHardwareType(['RFM', 'RRH']);
+      setCatalogItems(items);
+      console.log("Fetched catalog items:", items);
+    } catch (error) {
+      console.error("Error fetching catalog items:", error);
+      showError('Error loading catalog items');
+    } finally {
+      setCatalogLoading(false);
+    }
+  };
+
+  // Handle catalog item selection
+  const handleCatalogItemChange = (unitIndex, itemCode) => {
+    const item = catalogItems.find(cat => cat.item_code === itemCode);
+    if (item) {
+      handleChange(unitIndex, 'nokiaModelItemCode', itemCode);
+      handleChange(unitIndex, 'nokiaModel', item.item_name);
+    }
+  };
 
   // Add handleImageUpload function
   const handleImageUpload = (imageCategory, files) => {
@@ -460,7 +490,7 @@ const RadioUnitsForm = () => {
     setIsInitialLoading(true);
     const fetchData = async () => {
       try {
-        setIsLoading(true);
+        setLoadingApi(true);
 
         // Fetch relations (cabinet numbers and DC options)
         const relationsResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/radio-units/relations/${sessionId}`);
@@ -525,12 +555,13 @@ const RadioUnitsForm = () => {
         setHasUnsavedChanges(false);
         setIsInitialLoading(false);
       } finally {
-        setIsLoading(false);
+        setLoadingApi(false);
       }
     };
 
     if (sessionId) {
       fetchData();
+      fetchCatalogItems();
     }
   }, [sessionId, mapApiToFormData]);
 
@@ -551,6 +582,7 @@ const RadioUnitsForm = () => {
           tower_leg: '',
           vendor: '',
           nokiaModel: '',
+          nokiaModelItemCode: '',
           nokiaPortCount: '',
           nokiaPortConnectivity: [{ sector: '', antenna: '', jumperLength: '' }],
           otherModel: '',
@@ -586,6 +618,7 @@ const RadioUnitsForm = () => {
           tower_leg: '',
           vendor: '',
           nokiaModel: '',
+          nokiaModelItemCode: '',
           nokiaPortCount: '',
           nokiaPortConnectivity: [{ sector: '', antenna: '', jumperLength: '' }],
           otherModel: '',
@@ -1031,9 +1064,13 @@ const RadioUnitsForm = () => {
                           }`}
                       >
                         <option value="">-- Select --</option>
-                        {operators.map(op => (
-                          <option key={op} value={op}>{op}</option>
-                        ))}
+                        {operatorsLoading ? (
+                          <option value="">Loading operators...</option>
+                        ) : (
+                          operators.map(op => (
+                            <option key={op} value={op}>{op}</option>
+                          ))
+                        )}
                       </select>
                       {errors[`${unitIndex}.operator`] && (
                         <div className="text-red-500 text-xs mt-1">{errors[`${unitIndex}.operator`]}</div>
@@ -1140,7 +1177,8 @@ const RadioUnitsForm = () => {
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-2 py-2">
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={unit.baseHeight}
                         onChange={(e) => handleChange(unitIndex, 'baseHeight', e.target.value)}
                         className={`w-full p-2 border rounded text-sm ${unit.baseHeightAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
@@ -1226,15 +1264,17 @@ const RadioUnitsForm = () => {
                       {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                         <td key={unitIndex} className="border px-2 py-2">
                           <select
-                            value={unit.nokiaModel}
-                            onChange={(e) => handleChange(unitIndex, 'nokiaModel', e.target.value)}
+                            value={unit.nokiaModelItemCode}
+                            onChange={(e) => handleCatalogItemChange(unitIndex, e.target.value)}
                             className={`w-full p-2 border rounded text-sm ${unit.vendor !== 'Nokia' ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
                               }`}
-                            disabled={unit.vendor !== 'Nokia'}
+                            disabled={unit.vendor !== 'Nokia' || catalogLoading}
                           >
-                            <option value="">-- Select Nokia Model --</option>
-                            {nokiaModels.map(model => (
-                              <option key={model} value={model}>{model}</option>
+                            <option value="">{unit.vendor !== 'Nokia' ? 'N/A' : catalogLoading ? 'Loading...' : '-- Select Nokia Model --'}</option>
+                            {catalogItems.map((item) => (
+                              <option key={item.id} value={item.item_code}>
+                                {item.item_name}
+                              </option>
                             ))}
                           </select>
                           {errors[`${unitIndex}.nokiaModel`] && unit.vendor === 'Nokia' && (
@@ -1335,7 +1375,8 @@ const RadioUnitsForm = () => {
                               <div className="flex gap-1">
                                 {/* Length */}
                                 <input
-                                  type="number"
+                                  type="number" 
+min={0}
                                   value={unit.otherLength}
                                   onChange={(e) => handleChange(unitIndex, 'otherLength', e.target.value)}
                                   className={`w-full p-1 border rounded text-sm ${isDisabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
@@ -1346,7 +1387,8 @@ const RadioUnitsForm = () => {
 
                                 {/* Width */}
                                 <input
-                                  type="number"
+                                  type="number" 
+min={0}
                                   value={unit.otherWidth}
                                   onChange={(e) => handleChange(unitIndex, 'otherWidth', e.target.value)}
                                   className={`w-full p-1 border rounded text-sm ${isDisabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
@@ -1357,7 +1399,8 @@ const RadioUnitsForm = () => {
 
                                 {/* Depth */}
                                 <input
-                                  type="number"
+                                  type="number" 
+min={0}
                                   value={unit.otherDepth}
                                   onChange={(e) => handleChange(unitIndex, 'otherDepth', e.target.value)}
                                   className={`w-full p-1 border rounded text-sm ${isDisabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
@@ -1414,7 +1457,8 @@ const RadioUnitsForm = () => {
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className={`border px-2 py-2 `}>
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={unit.sideArmType !== 'Same antenna side arm' ? unit.sideArmLength : ' '}
                         onChange={(e) => handleChange(unitIndex, 'sideArmLength', e.target.value)}
                         className={`w-full p-2 border rounded text-sm
@@ -1435,7 +1479,8 @@ const RadioUnitsForm = () => {
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-2 py-2">
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={unit.sideArmType !== 'Same antenna side arm' ? unit.sideArmDiameter : ' '}
                         onChange={(e) => handleChange(unitIndex, 'sideArmDiameter', e.target.value)}
                         className={`w-full p-2 border rounded text-sm
@@ -1456,7 +1501,8 @@ const RadioUnitsForm = () => {
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-2 py-2">
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={unit.sideArmType !== 'Same antenna side arm' ? unit.sideArmOffset : ' '}
                         onChange={(e) => handleChange(unitIndex, 'sideArmOffset', e.target.value)}
                         className={`w-full p-2 border rounded text-sm
@@ -1534,7 +1580,8 @@ const RadioUnitsForm = () => {
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-2 py-2">
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={unit.dcCableLength}
                         onChange={(e) => handleChange(unitIndex, 'dcCableLength', e.target.value)}
                         className={`w-full p-2 border rounded text-sm
@@ -1554,7 +1601,8 @@ const RadioUnitsForm = () => {
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-2 py-2">
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={unit.dcCableCrossSection}
                         onChange={(e) => handleChange(unitIndex, 'dcCableCrossSection', e.target.value)}
                         className={`w-full p-2 border rounded text-sm
@@ -1574,7 +1622,8 @@ const RadioUnitsForm = () => {
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-2 py-2">
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={unit.fiberCableLength}
                         onChange={(e) => handleChange(unitIndex, 'fiberCableLength', e.target.value)}
                         className={`w-full p-2 border rounded text-sm
@@ -1646,7 +1695,8 @@ const RadioUnitsForm = () => {
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-2 py-2">
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={unit.feederLength}
                         onChange={(e) => handleChange(unitIndex, 'feederLength', e.target.value)}
                         className={`w-full p-2 border rounded text-sm
@@ -1667,7 +1717,8 @@ const RadioUnitsForm = () => {
                   {formData.radioUnits.slice(0, formData.numberOfRadioUnits).map((unit, unitIndex) => (
                     <td key={unitIndex} className="border px-2 py-2">
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={unit.earthCableLength}
                         onChange={(e) => handleChange(unitIndex, 'earthCableLength', e.target.value)}
                           className={`w-full p-2 border rounded text-sm

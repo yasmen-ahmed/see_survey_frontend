@@ -364,7 +364,8 @@ const OutdoorForm = () => {
               </div>
               <div>
                 <label className='block font-semibold mb-2'>Distance from equipment location to tower base (meter)</label>
-                <input type="number" name="distanceFromEquipmentToTowerBase" value={formData.distanceFromEquipmentToTowerBase} onChange={handleChange} className='form-input' />
+                <input type="number" 
+min={0} name="distanceFromEquipmentToTowerBase" value={formData.distanceFromEquipmentToTowerBase} onChange={handleChange} className='form-input' />
                 <hr className="my-4" />
 
               </div>
@@ -473,7 +474,8 @@ const OutdoorForm = () => {
 
               <div>
                 <label className='block font-semibold mb-2' htmlFor="acElectricalSockets">How many AC electrical sockets available?</label>
-                <input type="number" name="acElectricalSockets" value={formData.acElectricalSockets} onChange={handleChange} className='form-input' />
+                <input type="number" 
+min={0} name="acElectricalSockets" value={formData.acElectricalSockets} onChange={handleChange} className='form-input' />
                 <hr className="my-4" />
 
               </div>

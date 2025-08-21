@@ -1,5 +1,5 @@
 // Configuration for antenna form questions
-export const technologies = ['2G', '3G', '4G', '5G'];
+
 export const sideArmOptions = [
   'Use existing empty side arm',
   'Use swapped antenna side arm',
@@ -24,8 +24,8 @@ export const antennaQuestions = [
   {
     key: 'technologies',
     label: 'New antenna technology',
-    type: 'checkbox',
-    options: technologies,
+     type: 'checkbox',
+    options: ['2G', '3G', '4G', '5G'],
     required: true
   },
   {
@@ -36,6 +36,17 @@ export const antennaQuestions = [
   
     showOtherInput: true,  
     otherKey: 'antennaVendorOther'  
+  },
+  {
+    key: 'nokiaModuleName',
+    label: 'If Nokia, what is the module name?',
+    type: 'select',
+    options: [], // Will be populated dynamically from catalog
+    condition: (entity) => entity.antennaVendor === 'Nokia',
+    showCondition: (entity) => entity.antennaVendor === 'Nokia',
+    isConditional: true,
+    loading: false,
+    placeholder: '-- Select Nokia Module --'
   },  
   {
     key: 'antennaPhysicalSpecs',

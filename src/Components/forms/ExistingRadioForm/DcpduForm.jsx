@@ -877,7 +877,8 @@ const DcDistributionForm = () => {
                         <td key={pduIndex} className={`border px-2 py-2 ${pdu.towerBaseHeightAutoFilled ? bgColorFillAuto : ''}`}>
                           {pdu.location === "On tower" ? (
                             <input
-                              type="number"
+                              type="number" 
+min={0}
                               className={`w-full p-2 border rounded text-sm ${pdu.towerBaseHeightAutoFilled ? colorFillAuto : ''}`}
                               value={pdu.towerBaseHeight}
                               onChange={(e) => updatePdu(pduIndex, "towerBaseHeight", e.target.value)}
@@ -1012,7 +1013,8 @@ const DcDistributionForm = () => {
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
                         <td key={pduIndex} className={`border px-2 py-2 ${pdu.dc_cable_lengthAutoFilled ? bgColorFillAuto : ''}`}>
                           <input
-                            type="number"
+                            type="number" 
+min={0}
                             className={`w-full p-2 border rounded text-sm ${pdu.dc_cable_lengthAutoFilled ? colorFillAuto : ''}`}
                             value={pdu.dc_cable_length}
                             onChange={(e) => updatePdu(pduIndex, "dc_cable_length", e.target.value)}
@@ -1030,7 +1032,8 @@ const DcDistributionForm = () => {
                       {pdus.slice(0, parseInt(pduCount)).map((pdu, pduIndex) => (
                         <td key={pduIndex} className={`border px-2 py-2 ${pdu.cableCrossSectionAutoFilled ? bgColorFillAuto : ''}`}>
                           <input
-                            type="number"
+                            type="number" 
+min={0}
                             className={`w-full p-2 border rounded text-sm ${pdu.cableCrossSectionAutoFilled ? colorFillAuto : ''}`}
                             value={pdu.cableCrossSection}
                             onChange={(e) => updatePdu(pduIndex, "cableCrossSection", e.target.value)}

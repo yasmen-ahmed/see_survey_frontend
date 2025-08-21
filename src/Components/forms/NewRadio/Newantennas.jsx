@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import DynamicFormTable from '../../common/DynamicFormTable';
@@ -6,9 +6,12 @@ import { useAntennaForm } from '../../../hooks/useAntennaForm';
 import { antennaQuestions } from '../../../config/antennaQuestions';
 import ImageUploader from '../../GalleryComponent';
 import { showSuccess, showError } from '../../../utils/notifications';
+import { radioUnitsCatalogService } from '../../../services/radioUnitsCatalogService';
 
 const NewAntennaForm = () => {
   const { sessionId } = useParams();
+  const [catalogItems, setCatalogItems] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
   const {
     antennaCount,
     antennaForms,
@@ -21,6 +24,53 @@ const NewAntennaForm = () => {
     hasUnsavedChanges,
     setHasUnsavedChanges
   } = useAntennaForm(sessionId);
+
+  // Fetch catalog items
+  const fetchCatalogItems = async () => {
+    try {
+      setCatalogLoading(true);
+      const items = await radioUnitsCatalogService.getItemsByHardwareType(['IPAA', 'MAA']);
+      setCatalogItems(items);
+      console.log("Fetched catalog items:", items);
+    } catch (error) {
+      console.error("Error fetching catalog items:", error);
+      showError('Error loading catalog items');
+    } finally {
+      setCatalogLoading(false);
+    }
+  };
+
+  // Handle catalog item selection
+  const handleCatalogItemChange = (entityIndex, itemName) => {
+    const item = catalogItems.find(cat => cat.item_name === itemName);
+    if (item) {
+      handleChange(entityIndex, 'nokiaModuleName', item.item_name);
+      handleChange(entityIndex, 'nokiaModuleItemCode', item.item_code);
+    }
+  };
+
+  // Create dynamic questions with catalog items
+  const dynamicQuestions = useMemo(() => {
+    const questions = [...antennaQuestions];
+    const moduleQuestionIndex = questions.findIndex(q => q.key === 'nokiaModuleName');
+    
+    if (moduleQuestionIndex !== -1) {
+      questions[moduleQuestionIndex] = {
+        ...questions[moduleQuestionIndex],
+        options: catalogItems.map(item => item.item_name),
+        loading: catalogLoading,
+        placeholder: catalogLoading ? 'Loading...' : '-- Select Nokia Module --',
+        customOnChange: handleCatalogItemChange
+      };
+    }
+    
+    return questions;
+  }, [antennaQuestions, catalogItems, catalogLoading, handleCatalogItemChange]);
+
+  // Fetch catalog items on component mount
+  useEffect(() => {
+    fetchCatalogItems();
+  }, []);
 
   // Function to save data via API
   const saveDataToAPI = async () => {
@@ -63,6 +113,8 @@ const NewAntennaForm = () => {
         earth_cable_length: antenna.earthCableLength,
         antennaVendor: antenna.antennaVendor,
         antennaVendorOther: antenna.antennaVendorOther,
+        nokiaModuleName: antenna.nokiaModuleName,
+        nokiaModuleItemCode: antenna.nokiaModuleItemCode,
         antennaHeight: antenna.antennaHeight,
         antennaWeight: antenna.antennaWeight,
         antennaDiameter: antenna.antennaDiameter
@@ -138,7 +190,7 @@ const NewAntennaForm = () => {
             entityName="Antenna"
             entityCount={antennaCount}
             entities={antennaForms}
-            questions={antennaQuestions}
+            questions={dynamicQuestions}
             errors={errors}
             onChange={handleChange}
             onSubmit={handleSubmit}

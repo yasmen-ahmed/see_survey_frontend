@@ -91,7 +91,8 @@ const DynamicTable = ({
           </select>
         );
       case "number":
-        return <input {...commonProps} type="number" />;
+        return <input {...commonProps} type="number" 
+min={0} />;
       default:
         return <input {...commonProps} type="text" />;
     }

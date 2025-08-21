@@ -730,7 +730,8 @@ const RanFrom = () => {
                         {formData.bts_table.map((bts, index) => (
                           <td key={index} className={`border px-4 py-2 ${bts.length_of_transmission_cableAutoFilled ? bgColorFillAuto : ''}`}>
                             <input
-                              type="number"
+                              type="number" 
+min={0}
                               step="0.1"
                               className={`border rounded px-2 py-1 ${bts.length_of_transmission_cableAutoFilled ? colorFillAuto : ''}`}
                               value={bts.length_of_transmission_cable}

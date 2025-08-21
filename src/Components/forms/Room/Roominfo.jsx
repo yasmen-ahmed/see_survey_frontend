@@ -3,6 +3,7 @@ import ImageUploader from "../../GalleryComponent";
 import { useParams } from "react-router-dom";
 import { showSuccess, showError } from "../../../utils/notifications";
 import axios from "axios";
+import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
 
 const ShelterRTelecomRoomForm = () => {
   const { sessionId } = useParams();
@@ -221,6 +222,58 @@ const ShelterRTelecomRoomForm = () => {
     }
   };
 
+  // Function to save data via API (for use with useUnsavedChanges hook)
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
+    
+    try {
+      setLoadingApi(true);
+      // Create FormData for multipart/form-data submission
+      const formDataToSubmit = new FormData();
+      
+      // Add JSON data
+      const dataToSubmit = {
+        height: formData.height ? parseFloat(formData.height) : null,
+        width: formData.width ? parseFloat(formData.width) : null,
+        depth: formData.depth ? parseFloat(formData.depth) : null,
+        hardware: formData.hardware,
+        sketch_available: formData.sketch_available || null
+      };
+      
+      formDataToSubmit.append('data', JSON.stringify(dataToSubmit));
+      
+      // Add images - only new files, not existing ones
+      Object.keys(uploadedImages).forEach(category => {
+        const files = uploadedImages[category];
+        if (files && files.length > 0) {
+          files.forEach((file, index) => {
+            // Only append actual File objects, not existing image objects
+            if (file instanceof File) {
+              formDataToSubmit.append(category, file);
+            }
+          });
+        }
+      });
+
+      await axios.put(`${import.meta.env.VITE_API_URL}/api/room-info/${sessionId}`, formDataToSubmit, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      setHasUnsavedChanges(false);
+      return true;
+    } catch (err) {
+      console.error("Error saving data:", err);
+      return false;
+    } finally {
+      setLoadingApi(false);
+    }
+  };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
+
   return (
     <div className="h-full flex items-start space-x-2 justify-start bg-gray-100 p-4">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full overflow-y-auto flex flex-col">
@@ -234,19 +287,22 @@ const ShelterRTelecomRoomForm = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div>
               <label className="block font-medium mb-1">Room Height (m)</label>
-              <input type="number" name="height" value={formData.height} onChange={handleChange} className="form-input" required />
+              <input type="number" 
+min={0} name="height" value={formData.height} onChange={handleChange} className="form-input" required />
             <hr className='mt-2' />
             </div>
 
             <div>
               <label className="block font-medium mb-1">Room Width (m)</label>
-              <input type="number" name="width" value={formData.width} onChange={handleChange} className="form-input" required />
+              <input type="number" 
+min={0} name="width" value={formData.width} onChange={handleChange} className="form-input" required />
             <hr className='mt-2' />
             </div>
 
             <div>
               <label className="block font-medium mb-1">Room Depth (m)</label>
-              <input type="number" name="depth" value={formData.depth} onChange={handleChange} className="form-input" required />
+              <input type="number" 
+min={0} name="depth" value={formData.depth} onChange={handleChange} className="form-input" required />
               <hr className='mt-2' />
             </div>
 

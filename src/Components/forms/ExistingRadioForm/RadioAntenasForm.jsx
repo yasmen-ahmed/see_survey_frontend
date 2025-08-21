@@ -4,9 +4,12 @@ import axios from "axios";
 import { showSuccess, showError } from "../../../utils/notifications";
 import ImageUploader from "../../GalleryComponent";
 import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
+import { useSiteOperators } from '../../../hooks/useSiteOperators';
+import { radioUnitsCatalogService } from '../../../services/radioUnitsCatalogService';
 
 const RadioAntenasForm = () => {
   const { sessionId } = useParams();
+  const { operators, loading: operatorsLoading } = useSiteOperators();
   const [loadingApi, setLoadingApi] = useState(false)
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [formData, setFormData] = useState({
@@ -26,6 +29,7 @@ const RadioAntenasForm = () => {
       vendor: '',
       isNokiaActive: '',
       nokiaModuleName: '',
+      nokiaModuleItemCode: '',
       nokiaFiberCount: '',
       nokiaFiberLength: '',
       otherModelNumber: '',
@@ -57,6 +61,8 @@ const RadioAntenasForm = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [catalogItems, setCatalogItems] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
 
   // Helper function to map API data to form data
   const mapApiToFormData = (apiData) => {
@@ -74,6 +80,7 @@ const RadioAntenasForm = () => {
       vendor: '',
       isNokiaActive: '',
       nokiaModuleName: '',
+      nokiaModuleItemCode: '',
       nokiaFiberCount: '',
       nokiaFiberLength: '',
       otherModelNumber: '',
@@ -131,6 +138,7 @@ const RadioAntenasForm = () => {
         vendor: apiAntenna.vendor || '',
         isNokiaActive: apiAntenna.is_active_antenna ? 'Yes' : 'No',
         nokiaModuleName: apiAntenna.nokia_module_name || '',
+        nokiaModuleItemCode: apiAntenna.nokia_module_item_code || '',
         nokiaFiberCount: apiAntenna.nokia_fiber_count?.toString() || '',
         nokiaFiberLength: apiAntenna.nokia_fiber_length || '',
         otherModelNumber: apiAntenna.other_model_number || '',
@@ -206,6 +214,9 @@ const RadioAntenasForm = () => {
           antennaData.is_active_antenna = antenna.isNokiaActive === "Yes";
           if (antenna.nokiaModuleName) {
             antennaData.nokia_module_name = antenna.nokiaModuleName;
+          }
+          if (antenna.nokiaModuleItemCode) {
+            antennaData.nokia_module_item_code = antenna.nokiaModuleItemCode;
           }
           if (antenna.nokiaFiberCount) {
             antennaData.nokia_fiber_count = parseInt(antenna.nokiaFiberCount);
@@ -295,6 +306,36 @@ const RadioAntenasForm = () => {
     setHasUnsavedChanges(true);
   };
 
+  // Fetch catalog items
+  const fetchCatalogItems = async () => {
+    try {
+      setCatalogLoading(true);
+      const items = await radioUnitsCatalogService.getItemsByHardwareType(['IPAA', 'MAA']);
+      setCatalogItems(items);
+      console.log("Fetched catalog items:", items);
+    } catch (error) {
+      console.error("Error fetching catalog items:", error);
+      showError('Error loading catalog items');
+    } finally {
+      setCatalogLoading(false);
+    }
+  };
+
+  // Helper function to get display name for catalog item
+  const getCatalogItemDisplayName = (itemCode) => {
+    const item = catalogItems.find(cat => cat.item_code === itemCode);
+    return item ? `${item.item_name} - ${item.item_description}` : itemCode;
+  };
+
+  // Handle catalog item selection
+  const handleCatalogItemChange = (antennaIndex, itemCode) => {
+    const item = catalogItems.find(cat => cat.item_code === itemCode);
+    if (item) {
+      handleChange(antennaIndex, 'nokiaModuleItemCode', itemCode);
+      handleChange(antennaIndex, 'nokiaModuleName', item.item_name);
+    }
+  };
+
   // Fetch existing data when component loads
   useEffect(() => {
     setIsInitialLoading(true);
@@ -336,6 +377,7 @@ const RadioAntenasForm = () => {
 
     if (sessionId) {
       fetchData();
+      fetchCatalogItems();
     }
   }, [sessionId]);
 
@@ -471,7 +513,7 @@ const RadioAntenasForm = () => {
         isNokiaActive: '',
         isNokiaActiveAutoFilled: false,
         nokiaModuleName: '',
-        nokiaModuleNameAutoFilled: false,
+        nokiaModuleItemCodeAutoFilled: false,
         nokiaFiberCount: '',
         nokiaFiberCountAutoFilled: false,
         nokiaFiberLength: '',
@@ -832,10 +874,13 @@ const RadioAntenasForm = () => {
                           }`}
                       >
                         <option value="">-- Select --</option>
-                        <option value="STC">STC</option>
-                        <option value="Zain">Zain</option>
-                        <option value="Mobily">Mobily</option>
-                        <option value="Aramco">Aramco</option>
+                                                 {operatorsLoading ? (
+                           <option value="">Loading operators...</option>
+                         ) : (
+                           operators.map(op => (
+                             <option key={op} value={op}>{op}</option>
+                           ))
+                         )}
                       </select>
                     </td>
                   ))}
@@ -849,7 +894,8 @@ const RadioAntenasForm = () => {
                   {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                     <td key={antennaIndex} className={`border px-2 py-2 `}>
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={antenna.baseHeight}
                         onChange={(e) => handleChange(antennaIndex, 'baseHeight', e.target.value)}
                         className={`w-full p-2 border rounded text-sm ${antenna.baseHeightAutoFilled ? `${bgColorFillAuto} ${colorFillAuto}` : ''
@@ -944,13 +990,14 @@ const RadioAntenasForm = () => {
                   {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                     <td key={antennaIndex} className="border px-2 py-2">
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={antenna.azimuth}
                         onChange={(e) => handleChange(antennaIndex, 'azimuth', e.target.value)}
                                                       className={`w-full p-2 border rounded text-sm ${antenna.azimuthAutoFilled ? `${bgColorFillAuto} ${colorFillAuto}` : ''
                           }`}
                         placeholder="0000"
-                        min="0"
+                      
                         max="360"
                       />
                     </td>
@@ -994,7 +1041,8 @@ const RadioAntenasForm = () => {
                     {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                       <td key={antennaIndex} className={`border px-2 py-2 ${antenna.mechanicalTiltAutoFilled ? bgColorFillAuto : ''}`}>
                         <input
-                          type="number"
+                          type="number" 
+min={0}
                           value={antenna.mechanicalTiltExist == 'Yes'? antenna.mechanicalTilt : ''}
                           onChange={(e) => handleChange(antennaIndex, 'mechanicalTilt', e.target.value)}
                           className={`w-full p-2 border rounded text-sm ${antenna.mechanicalTiltAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
@@ -1015,7 +1063,8 @@ const RadioAntenasForm = () => {
                   {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                     <td key={antennaIndex} className="border px-2 py-2">
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={antenna.electricalTilt}
                         onChange={(e) => handleChange(antennaIndex, 'electricalTilt', e.target.value)}
                         className={`w-full p-2 border rounded text-sm ${
@@ -1111,20 +1160,21 @@ const RadioAntenasForm = () => {
                         If Nokia active antenna, what is the module name?
                       </td>
                       {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
-                        <td key={antennaIndex} className={`border px-2 py-2 ${antenna.nokiaModuleNameAutoFilled ? bgColorFillAuto : ''}`}>
+                        <td key={antennaIndex} className={`border px-2 py-2 ${antenna.nokiaModuleItemCodeAutoFilled ? bgColorFillAuto : ''}`}>
                           <div className="flex gap-4">
                             <select
-                              value={antenna.nokiaModuleName}
-                              onChange={(e) => handleChange(antennaIndex, 'nokiaModuleName', e.target.value)}
-                              className={`w-full p-2 border rounded text-sm ${antenna.vendor !== 'Nokia' ? 'bg-[#e5e7eb] ' : ''} ${antenna.nokiaModuleNameAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
+                              value={antenna.nokiaModuleItemCode}
+                              onChange={(e) => handleCatalogItemChange(antennaIndex, e.target.value)}
+                              className={`w-full p-2 border rounded text-sm ${antenna.vendor !== 'Nokia' ? 'bg-[#e5e7eb] ' : ''} ${antenna.nokiaModuleItemCodeAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
                                 }`}
-                              disabled={antenna.vendor !== 'Nokia'}
+                              disabled={antenna.vendor !== 'Nokia' || catalogLoading}
                             >
-                              <option value=""> {antenna.vendor !== 'Nokia' ? 'N/A' : '-- Select --'}</option>
-                              <option value="A">A</option>
-                              <option value="B">B</option>
-                              <option value="C">C</option>
-                              <option value="D">D</option>
+                              <option value=""> {antenna.vendor !== 'Nokia' ? 'N/A' : catalogLoading ? 'Loading...' : '-- Select --'}</option>
+                              {catalogItems.map((item) => (
+                                <option key={item.id} value={item.item_code}>
+                                  {item.item_name}
+                                </option>
+                              ))}
                             </select>
                           </div>
                         </td>
@@ -1166,7 +1216,8 @@ const RadioAntenasForm = () => {
                       {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                         <td key={antennaIndex} className={`border px-2 py-2 ${antenna.nokiaFiberLengthAutoFilled ? bgColorFillAuto : ''}`}>
                           <input
-                            type="number"
+                            type="number" 
+min={0}
                             value={antenna.nokiaFiberLength}
                             onChange={(e) => handleChange(antennaIndex, 'nokiaFiberLength', e.target.value)}
                             className={`w-full p-2 border rounded text-sm ${antenna.nokiaFiberLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
@@ -1212,7 +1263,8 @@ const RadioAntenasForm = () => {
     <td key={antennaIndex} className={`border px-2 py-2 align-top ${antenna.otherLengthAutoFilled ? bgColorFillAuto : ''}`}>  
       <div className="flex  gap-1">
         <input
-          type="number"
+          type="number" 
+min={0}
           value={antenna.otherLength}
           onChange={(e) => handleChange(antennaIndex, 'otherLength', e.target.value)}
           className={`w-full p-2 border rounded text-sm ${antenna.otherLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}`}
@@ -1220,7 +1272,8 @@ const RadioAntenasForm = () => {
           disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
         />
         <input
-          type="number"
+          type="number" 
+min={0}
           value={antenna.otherWidth}
           onChange={(e) => handleChange(antennaIndex, 'otherWidth', e.target.value)}
           className={`w-full p-2 border rounded text-sm ${antenna.otherWidthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}`}
@@ -1228,7 +1281,8 @@ const RadioAntenasForm = () => {
           disabled={antenna.vendor === 'Nokia' || !antenna.vendor}
         />
         <input
-          type="number"
+          type="number" 
+min={0}
           value={antenna.otherDepth}
           onChange={(e) => handleChange(antennaIndex, 'otherDepth', e.target.value)}
           className={`w-full p-2 border rounded text-sm ${antenna.otherDepthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''}`}
@@ -1250,7 +1304,8 @@ const RadioAntenasForm = () => {
                       {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                         <td key={antennaIndex} className="border px-2 py-2">
                           <input
-                            type="number"
+                            type="number" 
+min={0}
                             value={antenna.otherFreePorts}
                             onChange={(e) => handleChange(antennaIndex, 'otherFreePorts', e.target.value)}
                             className={`w-full p-2 border rounded text-sm ${antenna.otherFreePortsAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
@@ -1373,7 +1428,8 @@ const RadioAntenasForm = () => {
                   {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                     <td key={antennaIndex} className={`border px-2 py-2 ${antenna.otherPortCountAutoFilled ? bgColorFillAuto : ''}`}>
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={antenna.otherPortCount}
                         onChange={(e) => handleChange(antennaIndex, 'otherPortCount', e.target.value)}
                         className={`w-full p-2 border rounded text-sm ${antenna.otherPortCountAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
@@ -1483,7 +1539,8 @@ const RadioAntenasForm = () => {
                                     {/* Tilt */}
                                     <td className="border px-1 py-1 w-16">
                                       <input
-                                        type="number"
+                                        type="number" 
+min={0}
                                         value={Array.isArray(antenna.ports) && antenna.ports[portIndex]?.electricalTilt || ""}
                                         onChange={(e) =>
                                           handlePortChange(antennaIndex, portIndex, "electricalTilt", e.target.value)
@@ -1514,7 +1571,8 @@ const RadioAntenasForm = () => {
                   {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                     <td key={antennaIndex} className="border px-2 py-2">
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={antenna.sideArmLength}
                         onChange={(e) => handleChange(antennaIndex, 'sideArmLength', e.target.value)}
                         className={`w-full p-2 border rounded text-sm ${antenna.sideArmLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
@@ -1532,7 +1590,8 @@ const RadioAntenasForm = () => {
                   {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                     <td key={antennaIndex} className="border px-2 py-2">
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={antenna.sideArmDiameter}
                         onChange={(e) => handleChange(antennaIndex, 'sideArmDiameter', e.target.value)}
                         className={`w-full p-2 border rounded text-sm ${antenna.sideArmDiameterAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
@@ -1550,7 +1609,8 @@ const RadioAntenasForm = () => {
                   {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                     <td key={antennaIndex} className="border px-2 py-2">
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={antenna.sideArmOffset}
                         onChange={(e) => handleChange(antennaIndex, 'sideArmOffset', e.target.value)}
                         className={`w-full p-2 border rounded text-sm ${antenna.sideArmOffsetAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''
@@ -1569,7 +1629,8 @@ const RadioAntenasForm = () => {
                   {formData.antennas.slice(0, parseInt(formData.numberOfAntennas) || 1).map((antenna, antennaIndex) => (
                     <td key={antennaIndex} className="border px-2 py-2">
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         value={antenna.earthCableLength}
                         onChange={(e) => handleChange(antennaIndex, 'earthCableLength', e.target.value)}
                         className={`w-full p-2 border rounded text-sm ${antenna.earthCableLengthAutoFilled ? 'bg-[#c6efce] text-[#006100]' : ''

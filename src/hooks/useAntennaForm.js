@@ -23,6 +23,8 @@ const initialAntennaForm = {
   earthCableLength: '',
   antennaVendor: '',
   antennaVendorOther: '',
+  nokiaModuleName: '',
+  nokiaModuleItemCode: '',
   antennaHeight: '',
   antennaWeight: '',
   antennaDiameter: '',
@@ -88,6 +90,8 @@ export const useAntennaForm = (sessionId) => {
                 earthCableLength: antenna.earth_cable_length || '',
                 antennaVendor: antenna.antennaVendor || '',
                 antennaVendorOther: antenna.antennaVendorOther || '',
+                nokiaModuleName: antenna.nokia_module_name || '',
+                nokiaModuleItemCode: antenna.nokia_module_item_code || '',
                 antennaHeight: antenna.antennaHeight || '',
                 antennaWeight: antenna.antennaWeight || '',
                 antennaDiameter: antenna.antennaDiameter || '',
@@ -173,6 +177,7 @@ export const useAntennaForm = (sessionId) => {
   };
 
   const handleChange = (antennaIndex, field, value, isManual = false) => {
+    console.log(`handleChange called: antennaIndex=${antennaIndex}, field=${field}, value=`, value, 'isManual=', isManual, 'type=', typeof value, 'isArray=', Array.isArray(value));
     setAntennaForms(prev => {
       const updated = [...prev];
       const antenna = { ...updated[antennaIndex] };

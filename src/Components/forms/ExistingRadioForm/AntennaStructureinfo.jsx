@@ -336,7 +336,8 @@ const AntennaStructureForm = () => {
             <div className="flex flex-col">
               <label className="font-semibold mb-1">What is the antenna structure height? (meters)</label>
               <input
-              type="number"
+              type="number" 
+min={0}
               name="gfHeight"
               value={formData.gfHeight}
               onChange={handleChange}
@@ -392,7 +393,8 @@ const AntennaStructureForm = () => {
           <div className="flex flex-col">
             <label className="font-semibold mb-1">What is the building height? (meters)</label>
             <input
-              type="number"
+              type="number" 
+min={0}
               name="buildingHeight"
               value={formData.buildingHeight}
               onChange={handleChange}
@@ -422,7 +424,8 @@ const AntennaStructureForm = () => {
               <label><input type="radio" name="earthingBusBar" value="No" onChange={handleChange} checked={formData.earthingBusBar === "No"} /> No</label> */}
             
             <input
-              type="number"
+              type="number" 
+min={0}
               name="earthingBusBar" 
               value={formData.earthingBusBar}
               onChange={handleChange}
@@ -455,7 +458,8 @@ const AntennaStructureForm = () => {
           <div className="flex flex-col">
             <label className="font-semibold mb-1">How many empty mounts (Side Arms)?</label>
             <input
-              type="number"
+              type="number" 
+min={0}
               name="emptyMounts"
               value={formData.emptyMounts || 0} // Default to 0
               onChange={handleChange}

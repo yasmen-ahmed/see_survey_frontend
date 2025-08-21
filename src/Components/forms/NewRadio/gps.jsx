@@ -286,8 +286,9 @@ const GPSAntennaTab = () => {
                 New GPS antenna height from tower base level (meters)
               </label>
               <input
-                type="number"
-                min="0"
+                type="number" 
+min={0}
+               
                 value={formData.height}
                 onChange={(e) => handleChange('height', e.target.value)}
                 className="form-input"
@@ -302,8 +303,9 @@ const GPSAntennaTab = () => {
                 Cable length from the new GPS antenna location to the base band (meters)
               </label>
               <input
-                type="number"
-                min="0"
+                type="number" 
+min={0}
+               
                 value={formData.cableLength}
                 onChange={(e) => handleChange('cableLength', e.target.value)}
                 className="form-input"

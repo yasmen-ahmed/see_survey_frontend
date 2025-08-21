@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import DynamicFormTable from '../../common/DynamicFormTable';
@@ -6,9 +6,12 @@ import { useRadioUnitsForm } from '../../../hooks/useRadioUnitsForm';
 import { radioUnitsQuestions } from '../../../config/newRadioUnitsQuestions';
 import ImageUploader from '../../GalleryComponent';
 import { showSuccess, showError } from '../../../utils/notifications';
+import { radioUnitsCatalogService } from '../../../services/radioUnitsCatalogService';
 
 const NewRadioUnitsForm = () => {
   const { sessionId } = useParams();
+  const [catalogItems, setCatalogItems] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
   const {
     radioUnitsCount,
     radioUnitsForms,
@@ -23,6 +26,21 @@ const NewRadioUnitsForm = () => {
     hasUnsavedChanges,
     setHasUnsavedChanges
   } = useRadioUnitsForm(sessionId);
+
+  // Fetch catalog items
+  const fetchCatalogItems = async () => {
+    try {
+      setCatalogLoading(true);
+      const items = await radioUnitsCatalogService.getItemsByHardwareType(['RFM', 'RRH']);
+      setCatalogItems(items);
+      console.log("Fetched catalog items:", items);
+    } catch (error) {
+      console.error("Error fetching catalog items:", error);
+      showError('Error loading catalog items');
+    } finally {
+      setCatalogLoading(false);
+    }
+  };
 
   // Function to save data via API
   const saveDataToAPI = async () => {
@@ -51,6 +69,7 @@ const NewRadioUnitsForm = () => {
           connected_to_antenna: radioUnit.antennaConnection,
           connected_antenna_technology: radioUnit.technologies,
           new_radio_unit_model: radioUnit.model,
+          new_radio_unit_model_item_code: radioUnit.modelItemCode,
           radio_unit_location: radioUnit.location,
           feeder_length_to_antenna: radioUnit.feederLength ? parseFloat(radioUnit.feederLength) : null,
           tower_leg_section: radioUnit.towerLegSection,
@@ -97,6 +116,38 @@ const NewRadioUnitsForm = () => {
       return false;
     }
   };
+
+  // Handle catalog item selection
+  const handleCatalogItemChange = (entityIndex, itemName) => {
+    const item = catalogItems.find(cat => cat.item_name === itemName);
+    if (item) {
+      handleChange(entityIndex, 'model', item.item_name);
+      handleChange(entityIndex, 'modelItemCode', item.item_code);
+    }
+  };
+
+  // Create dynamic questions with catalog items
+  const dynamicQuestions = useMemo(() => {
+    const questions = [...radioUnitsQuestions];
+    const modelQuestionIndex = questions.findIndex(q => q.key === 'model');
+    
+    if (modelQuestionIndex !== -1) {
+      questions[modelQuestionIndex] = {
+        ...questions[modelQuestionIndex],
+        options: catalogItems.map(item => item.item_name),
+        loading: catalogLoading,
+        placeholder: catalogLoading ? 'Loading...' : '-- Select Nokia Model --',
+        customOnChange: handleCatalogItemChange
+      };
+    }
+    
+    return questions;
+  }, [radioUnitsQuestions, catalogItems, catalogLoading, handleCatalogItemChange]);
+
+  // Fetch catalog items on component mount
+  useEffect(() => {
+    fetchCatalogItems();
+  }, []);
 
   // Generate image fields for each radio unit - memoized to prevent infinite loop
   const getRadioUnitImages = useMemo(() => (unitNumber) => {
@@ -158,7 +209,7 @@ const NewRadioUnitsForm = () => {
           entityName="Radio Unit"
           entityCount={radioUnitsCount || 1}
           entities={radioUnitsForms || []}
-          questions={radioUnitsQuestions || []}
+          questions={dynamicQuestions || []}
           errors={errors || {}}
           onChange={handleChange}
           onSubmit={handleSubmit}

@@ -6,15 +6,16 @@ import { showSuccess, showError } from "../../../utils/notifications";
 import useImageManager from "../../../hooks/useImageManager";
 import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
 import { useReadOnly } from "../../../hooks/useReadOnly";
+import { useSurveyContext } from "../../../context/SurveyContext";
 
 function SiteInformationForm({ readOnly = false }) {
-  
+  const { surveyData } = useSurveyContext();
 const { sessionId, siteId } = useParams();   
 const { uploadedImages, handleImageUpload, saveImages, loading } = useImageManager(sessionId);
 const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 const [loadingApi,setLoadingApi] =useState(false) 
 const { isReadOnly, getInputProps, getButtonProps } = useReadOnly();
-  
+
 // Use the readOnly prop or the context readOnly state
 const isFormReadOnly = readOnly || isReadOnly;
 const [formData, setFormData] = useState({
@@ -367,7 +368,21 @@ const [formData, setFormData] = useState({
           <div>
             <label className="block font-medium mb-1">Other Telecom Operator exist onsite </label>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              {["STC", "Zain", "Mobily", "Aramco"].map((slot) => (   
+            
+              {surveyData?.project === 'MC – Tawal' ? ["STC", "Zain", "Mobily", "Aramco"].map((slot) => (   
+                <label key={slot} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="other_telecom_operator_exist_onsite"
+                    value={slot}
+                    checked={formData.other_telecom_operator_exist_onsite.includes(slot)}
+                    onChange={handleChange}
+                    className="mr-2"
+                    {...getInputProps()}
+                  />
+                  {slot}
+                </label>
+              )):["Operator1", "Operator2", "Operator3", "Operator4"].map((slot) => (   
                 <label key={slot} className="flex items-center">
                   <input
                     type="checkbox"

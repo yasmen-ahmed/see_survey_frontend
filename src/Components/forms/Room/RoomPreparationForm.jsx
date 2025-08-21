@@ -3,6 +3,7 @@ import ImageUploader from "../../GalleryComponent";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { showSuccess, showError } from "../../../utils/notifications";
+import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
 
 const ShelterRoomPreparationForm = () => {
   const { sessionId } = useParams();
@@ -266,6 +267,65 @@ const ShelterRoomPreparationForm = () => {
     return [...dynamicImages, ...baseImages];
   }, [formData.feederWindows]);
 
+  // Function to save data via API (for use with useUnsavedChanges hook)
+  const saveDataToAPI = async () => {
+    if (!hasUnsavedChanges) return true;
+    
+    try {
+      setLoadingApi(true);
+      // Create FormData for multipart/form-data submission
+      const formDataToSubmit = new FormData();
+      
+      // Add JSON data
+      const dataToSubmit = {
+        ac_type: formData.acType || null,
+        ac_count: formData.acCount || null,
+        ac_capacity: formData.acCapacity ? parseFloat(formData.acCapacity) : null,
+        ac_status: formData.acStatus || null,
+        cable_tray_height: formData.cableTrayHeight ? parseFloat(formData.cableTrayHeight) : null,
+        cable_tray_width: formData.cableTrayWidth ? parseFloat(formData.cableTrayWidth) : null,
+        existing_cable_tray_space: formData.existingCableTraySpace || null,
+        available_space_in_feeder_window: formData.availableSpaceInFeederWindow || null,
+        feeder_free_holes: formData.feederFreeHoles ? parseInt(formData.feederFreeHoles) : null,
+        feeder_windows: formData.feederWindows ? parseInt(formData.feederWindows) : null,
+        bus_bar_free_holes: formData.busBarFreeHoles ? parseInt(formData.busBarFreeHoles) : null,
+        rack_free_positions: formData.rackFreePositions ? parseInt(formData.rackFreePositions) : null
+      };
+      
+      formDataToSubmit.append('data', JSON.stringify(dataToSubmit));
+      
+      // Add images - only new files, not existing ones
+      Object.keys(uploadedImages).forEach(category => {
+        const files = uploadedImages[category];
+        if (files && files.length > 0) {
+          files.forEach((file, index) => {
+            // Only append actual File objects, not existing image objects
+            if (file instanceof File) {
+              formDataToSubmit.append(category, file);
+            }
+          });
+        }
+      });
+
+      await axios.put(`${import.meta.env.VITE_API_URL}/api/room-preparation/${sessionId}`, formDataToSubmit, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      setHasUnsavedChanges(false);
+      return true;
+    } catch (err) {
+      console.error("Error saving data:", err);
+      return false;
+    } finally {
+      setLoadingApi(false);
+    }
+  };
+
+  // Use the unsaved changes hook
+  useUnsavedChanges(hasUnsavedChanges, saveDataToAPI);
+
   return (
     <div className="h-full flex items-start space-x-2 justify-start bg-gray-100 p-">
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full overflow-y-auto flex flex-col">
@@ -339,7 +399,7 @@ const ShelterRoomPreparationForm = () => {
             <div className="flex flex-col">
               <label className="font-semibold mb-1">Air Conditioner system capacity (KVA)</label>
               <input
-                type="number"
+                type="number" 
                 name="acCapacity"
                 value={formData.acCapacity}
                 onChange={handleChange}
@@ -376,12 +436,12 @@ const ShelterRoomPreparationForm = () => {
             <div className="flex flex-col">
               <label className="font-semibold mb-1">Hight under cable tray (clearance to the ground) (m)</label>
               <input
-                type="number"
+                type="number" 
+min={0}
                 name="cableTrayHeight"
                 value={formData.cableTrayHeight}
                 onChange={handleChange}
                 className="form-input"
-                min={0}
               />
                   <hr className='mt-2' />
             </div>
@@ -389,12 +449,12 @@ const ShelterRoomPreparationForm = () => {
             <div className="flex flex-col">
               <label className="font-semibold mb-1">Cable tray width (m)</label>
               <input
-                type="number"
+                type="number" 
+min={0}
                 name="cableTrayWidth"
                 value={formData.cableTrayWidth}
                 onChange={handleChange}
                 className="form-input"
-                min={0}
               />
                   <hr className='mt-2' />
             </div>

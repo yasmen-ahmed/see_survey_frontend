@@ -265,7 +265,8 @@ function SiteAccessForm({ readOnly = false }) {
           <div>
             <label className="block font-medium mb-1">Contact Tel. Number For Site Access</label>
             <input
-              type="number"
+              type="number" 
+min={0}
               name="contact_tel_number"
               value={formData.contact_tel_number}
               onChange={handleChange}
@@ -291,7 +292,8 @@ function SiteAccessForm({ readOnly = false }) {
           <div>
             <label className="block font-medium mb-1">Contact Tel. Number For Site Key</label>
             <input
-              type="number"
+              type="number" 
+min={0}
               name="contact_tel_number_for_site_key"
               value={formData.contact_tel_number_for_site_key}
               onChange={handleChange}
@@ -572,7 +574,8 @@ function SiteAccessForm({ readOnly = false }) {
             <label className="block font-medium mb-1">Stair/Lift H /W /D (meter)</label>
             <div className="flex gap-4">
             <input
-              type="number"
+              type="number" 
+min={0}
               name="stair_lift_height"
               value={formData.stair_lift_height}
               onChange={handleChange}
@@ -580,7 +583,8 @@ function SiteAccessForm({ readOnly = false }) {
               placeholder="Height"
             />
                 <input
-              type="number"
+              type="number" 
+min={0}
               name="stair_lift_width"
               value={formData.stair_lift_width}
               onChange={handleChange}
@@ -588,7 +592,8 @@ function SiteAccessForm({ readOnly = false }) {
               placeholder="Width"
             />
             <input
-              type="number"
+              type="number" 
+min={0}
               name="stair_lift_depth"
               value={formData.stair_lift_depth}
               onChange={handleChange}

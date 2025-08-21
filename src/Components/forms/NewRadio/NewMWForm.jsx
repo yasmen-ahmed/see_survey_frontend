@@ -345,7 +345,8 @@ const NewMWForm = () => {
       case 'number':
         return (
           <input
-            type="number"
+            type="number" 
+
             value={value}
             onChange={onChange}
             placeholder={question.placeholder}

@@ -4,9 +4,11 @@ import axios from 'axios';
 import { showSuccess, showError } from '../../../utils/notifications';
 import ImageUploader from '../../GalleryComponent';
 import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
+import { useSiteOperators } from '../../../hooks/useSiteOperators';
 
 const MwAntennasForm = () => {
   const { sessionId } = useParams();
+  const { operators: operatorOptions, loading: operatorsLoading } = useSiteOperators();
   const [formData, setFormData] = useState({
     antennaCount: "",
     antennas: [],
@@ -17,7 +19,6 @@ const MwAntennasForm = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loadingApi, setLoadingApi] = useState(false)
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [operatorOptions, setOperatorOptions] = useState(['Operator A', 'Operator B', 'Operator C']);
 
   // Function to save data via API
   const saveDataToAPI = async () => {
@@ -160,7 +161,7 @@ const MwAntennasForm = () => {
 
           // Set operator options from API response
           if (data.operatorOptions && Array.isArray(data.operatorOptions)) {
-            setOperatorOptions(data.operatorOptions);
+            // setOperatorOptions(data.operatorOptions); // This line is no longer needed
           }
 
           // Process and set images from the response
@@ -358,7 +359,8 @@ const MwAntennasForm = () => {
                         {formData.antennas.slice(0, parseInt(formData.antennaCount)).map((antenna, antennaIndex) => (
                           <td key={antennaIndex} className="border px-2 py-2">
                             <input
-                              type="number"
+                              type="number" 
+min={0}
                               step="0.1"
                               value={antenna.height}
                               onChange={(e) => handleAntennaChange(antennaIndex, 'height', e.target.value)}
@@ -410,7 +412,8 @@ const MwAntennasForm = () => {
                         {formData.antennas.slice(0, parseInt(formData.antennaCount)).map((antenna, antennaIndex) => (
                           <td key={antennaIndex} className="border px-2 py-2">
                             <input
-                              type="number"
+                              type="number" 
+min={0}
                               step="0.1"
                               value={antenna.diameter}
                               onChange={(e) => handleAntennaChange(antennaIndex, 'diameter', e.target.value)}
@@ -433,9 +436,10 @@ const MwAntennasForm = () => {
                         {formData.antennas.slice(0, parseInt(formData.antennaCount)).map((antenna, antennaIndex) => (
                           <td key={antennaIndex} className="border px-2 py-2">
                             <input
-                              type="number"
+                              type="number" 
+min={0}
                               step="0.1"
-                              min="0"
+                            
                               max="360"
                               value={antenna.azimuth}
                               onChange={(e) => handleAntennaChange(antennaIndex, 'azimuth', e.target.value)}
@@ -458,21 +462,25 @@ const MwAntennasForm = () => {
                       {formData.antennas.slice(0, parseInt(formData.antennaCount)).map((antenna, antennaIndex) => (
                         <td key={antennaIndex} className={`border px-2 py-2 ${antenna.operatorAutoFilled ? bgColorFillAuto : ''}`}>
                           <div className="grid grid-cols-2 gap-4">
-                            {operatorOptions.map(option => (
-                              <label key={option} className="flex items-center gap-1 text-sm cursor-pointer">
-                                <input
-                                  type="radio"
-                                  name={`operator-${antennaIndex}`}
-                                  value={option}
-                                  checked={antenna.operator === option}
-                                  onChange={(e) => handleAntennaChange(antennaIndex, 'operator', e.target.value)}
-                                  className={`w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 ${antenna.operatorAutoFilled ? colorFillAuto : ''}`}
-                                />
-                                <span className={antenna.operatorAutoFilled ? colorFillAuto : ''}>
-                                  {option}
-                                </span>
-                              </label>
-                            ))}
+                            {operatorsLoading ? (
+                              <div className="text-sm text-gray-500">Loading operators...</div>
+                            ) : (
+                              operatorOptions.map(option => (
+                                <label key={option} className="flex items-center gap-1 text-sm cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name={`operator-${antennaIndex}`}
+                                    value={option}
+                                    checked={antenna.operator === option}
+                                    onChange={(e) => handleAntennaChange(antennaIndex, 'operator', e.target.value)}
+                                    className={`w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 ${antenna.operatorAutoFilled ? colorFillAuto : ''}`}
+                                  />
+                                  <span className={antenna.operatorAutoFilled ? colorFillAuto : ''}>
+                                    {option}
+                                  </span>
+                                </label>
+                              ))
+                            )}
                           </div>
                         </td>
                       ))}
@@ -513,6 +521,7 @@ const MwAntennasForm = () => {
                        
                                 <input
                                   type="number" 
+min={0} 
                                   name={`hopDistance-${antennaIndex}`}
                                   value={antenna.hopDistance}
                                   onChange={(e) => handleAntennaChange(antennaIndex, 'hopDistance', e.target.value)}
@@ -538,6 +547,7 @@ const MwAntennasForm = () => {
                        
                                 <input
                                   type="number" 
+min={0} 
                                   name={`linkCapacity-${antennaIndex}`}
                                   value={antenna.linkCapacity}
                                   onChange={(e) => handleAntennaChange(antennaIndex, 'linkCapacity', e.target.value)}

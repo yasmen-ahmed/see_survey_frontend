@@ -1,14 +1,35 @@
 import axios from "axios";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
 import ImageUploader from "../../GalleryComponent";
 import { showSuccess, showError } from "../../../utils/notifications";
 import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
+import { useReadOnly } from "../../../hooks/useReadOnly";
+// import { SurveyContext } from "../../../context/SurveyContext";
+import { useSurveyContext } from "../../../context/SurveyContext";
 
-const AcInformationForm = () => {
+const AcInformationForm = ({ readOnly = false }) => {
   const { sessionId, siteId } = useParams();
   const [powerSources, setPowerSources] = useState([]);
   const [dieselCount, setDieselCount] = useState(0);
+  const { surveyData } = useSurveyContext();
+  const { isReadOnly, disableAllFormElements } = useReadOnly();
+  const formRef = useRef(null);
+  
+  // Use the readOnly prop or the context readOnly state
+  const isFormReadOnly = readOnly || isReadOnly;
+  
+  // Disable all form elements when in read-only mode
+  useEffect(() => {
+    if (isFormReadOnly) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        disableAllFormElements(formRef);
+      }, 100);
+    }
+  }, [isFormReadOnly, disableAllFormElements]);
+  
+  
   const [dieselGenerators, setDieselGenerators] = useState([
     { 
       capacity: '', 
@@ -222,9 +243,6 @@ const AcInformationForm = () => {
     setImages(generateImagesArray());
   }, [dieselCount]);
 
-  console.log("Current image data:", images);
-  console.log("Current dieselCount:", dieselCount);
-
   // Function to save data via API for auto-save - memoized with useCallback
   const saveDataToAPI = useCallback(async () => {
     if (!hasUnsavedChanges) return true;
@@ -356,7 +374,7 @@ const AcInformationForm = () => {
   }, [sessionId]);
 
   return (
-    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
+    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2" ref={formRef}>
       <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col">
         {/* Unsaved Changes Warning */}
         {hasUnsavedChanges && (
@@ -388,7 +406,7 @@ const AcInformationForm = () => {
                       className="mr-2"
 
                     />
-                    Commercial power (SCECO ) 
+                    {surveyData?.project === 'MC – Tawal' ? 'Commercial power (SCECO)' : 'Commercial power'}
                   </label>
                   <label>
                     <input
@@ -428,7 +446,8 @@ const AcInformationForm = () => {
                   <div className="md:col-span-2">
                     <h3 className="text-lg font-bold mb-4">Transformer capacity (KVA)</h3>
                     <input
-                      type="number"
+                      type="number" 
+min={0}
                       name="transformer_capacity"
                       value={transformerCapacity}
                       onChange={(e) => handleTransformerCapacityChange(e.target.value)}
@@ -476,7 +495,8 @@ const AcInformationForm = () => {
                           <div className="flex flex-col mb-4">
                             <label className="font-semibold mb-1">Capacity (KVA)</label>
                             <input
-                              type="number"
+                              type="number" 
+min={0}
                               name={`dieselGenerators[${index}].capacity`}
                               value={gen.capacity}
                               onChange={(e) =>
@@ -515,7 +535,8 @@ const AcInformationForm = () => {
                             <div className="flex flex-col ">
                               <label className="font-semibold mb-1">Cable size from generator to AC panel (mm)</label>
                               <input
-                                type="number"
+                                type="number" 
+min={0}
                                 name={`cable_size_from_generator_to_ac_panel`}
                                 value={gen.cable_size_from_generator_to_ac_panel}
                                 onChange={(e) => handleGeneratorChange(index, 'cable_size_from_generator_to_ac_panel', e.target.value)}
@@ -558,7 +579,8 @@ const AcInformationForm = () => {
                   <div className="flex flex-col mb-4">
                     <label className="font-semibold mb-1">Capacity (KVA)</label>
                     <input
-                      type="number"
+                      type="number" 
+min={0}
                       name="solarCapacity"
                       value={solarCapacity}
                       onChange={(e) => handleSolarCapacityChange(e.target.value)}

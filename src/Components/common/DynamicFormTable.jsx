@@ -249,7 +249,8 @@ const DynamicFormTable = ({
                               return (
                                 <div key={fieldKey}>
                                   <input
-                                    type="number"
+                                    type="number" 
+min={0}
                                     placeholder={fieldMeta.placeholder || ''}
                                     className={`w-full p-2 border rounded text-sm ${
                                       hasError ? 'border-red-500' : 'border-gray-300'

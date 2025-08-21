@@ -1,17 +1,33 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { showSuccess, showError } from "../../../utils/notifications";
 import ImageUploader from "../../GalleryComponent";
 import { FaRegTrashAlt } from "react-icons/fa";
 import useUnsavedChanges from "../../../hooks/useUnsavedChanges";
+import { useReadOnly } from "../../../hooks/useReadOnly";
 
-const PowerMeterForm = () => {
+const PowerMeterForm = ({ readOnly = false }) => {
   const { sessionId } = useParams();
+  const { isReadOnly, disableAllFormElements } = useReadOnly();
+  const formRef = useRef(null);
+  
+  // Use the readOnly prop or the context readOnly state
+  const isFormReadOnly = readOnly || isReadOnly;
+  
+  // Disable all form elements when in read-only mode
+  useEffect(() => {
+    if (isFormReadOnly) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        disableAllFormElements(formRef);
+      }, 100);
+    }
+  }, [isFormReadOnly, disableAllFormElements]);
 
   const [formData, setFormData] = useState({
     serialNumber: "",
-    powerMeterCapacity:"",
+    powerMeterCapacity:0,
     meterReading: "",
     powerSourceType: "",
     cableLength: "",
@@ -50,7 +66,9 @@ const PowerMeterForm = () => {
       // Build the payload to match the expected API structure
       const payload = {
         serial_number: formData.serialNumber || '',
-        powerMeterCapacity: formData.powerMeterCapacity ? parseFloat(formData.powerMeterCapacity) : null,
+        powerMeterCapacity: formData.powerMeterCapacity 
+        ? parseFloat(formData.powerMeterCapacity) 
+        : null,
         meter_reading: formData.meterReading ? parseFloat(formData.meterReading) : null,
         ac_power_source_type: formData.powerSourceType ? normalizeApiValue(formData.powerSourceType) : null,
         // Electrical measurements
@@ -139,7 +157,7 @@ const PowerMeterForm = () => {
         if (data) {
           setFormData({
             serialNumber: data.serial_number || "",
-            powerMeterCapacity:data.powerMeterCapacity || "",
+            powerMeterCapacity:data.powerMeterCapacity || 0,
             meterReading: data.meter_reading || "",
             powerSourceType: normalizeRadioValue(data.ac_power_source_type) || "",
             cableLength: data.power_cable_config?.length || "",
@@ -309,7 +327,7 @@ const PowerMeterForm = () => {
   };
 
   return (
-    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2">
+    <div className="h-full flex items-stretch space-x-2 justify-start bg-gray-100 p-2" ref={formRef}>
     <div className="bg-white p-3 rounded-xl shadow-md w-[80%] h-full flex flex-col"> 
    {/* Unsaved Changes Warning */}
         {hasUnsavedChanges && (
@@ -332,7 +350,8 @@ const PowerMeterForm = () => {
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Power Meter Serial Number</label>
             <input
-              type="number"
+              type="number" 
+min={0}
               name="serialNumber"
               value={formData.serialNumber}
               onChange={handleChange}
@@ -342,7 +361,8 @@ const PowerMeterForm = () => {
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Power Meter Capacity (KW) </label>
             <input
-              type="number"
+              type="number" 
+min={0}
               name="powerMeterCapacity"
               value={formData.powerMeterCapacity}
               onChange={handleChange}
@@ -352,7 +372,8 @@ const PowerMeterForm = () => {
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Power Meter Reading</label>
             <input
-              type="number"
+              type="number" 
+min={0}
               step="0.01"
               name="meterReading"
               value={formData.meterReading}
@@ -385,7 +406,8 @@ const PowerMeterForm = () => {
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Length of Power Meter Cable (in meters)</label>
             <input
-              type="number"
+              type="number" 
+min={0}
               step="0.1"
               name="cableLength"
               value={formData.cableLength}
@@ -397,7 +419,8 @@ const PowerMeterForm = () => {
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Cross Section of Power Cable (in mm²)</label>
             <input
-              type="number"
+              type="number" 
+min={0}
               step="0.1"
               name="crossSection"
               value={formData.crossSection}
@@ -409,7 +432,8 @@ const PowerMeterForm = () => {
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Main CB Rating (in Amp)</label>
             <input
-              type="number"
+              type="number" 
+min={0}
               step="0.1"
               name="mainCBRating"
               value={formData.mainCBRating}
@@ -449,17 +473,20 @@ const PowerMeterForm = () => {
                    <div className="flex justify-between gap-4">
                      
                         <input
-                          type="number"
+                          type="number" 
+min={0}
                           step="0.1"
                           name="existingPhase1Voltage"
                           value={formData.existingPhase1Voltage}
                           onChange={handleChange}
                           className="form-input "
                           placeholder="phase 1 voltage"
+                          max="999999.99"
                         />
                      
                         <input
-                          type="number"
+                          type="number" 
+min={0}
                           step="0.1"
                           name="existingPhase2Voltage"
                           value={formData.existingPhase2Voltage}
@@ -470,7 +497,8 @@ const PowerMeterForm = () => {
                       
                      
                         <input
-                          type="number"
+                          type="number" 
+min={0}
                           step="0.1"
                           name="existingPhase3Voltage"
                           value={formData.existingPhase3Voltage}
@@ -483,7 +511,8 @@ const PowerMeterForm = () => {
                   ) : (
                     <div>
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         step="0.1"
                         name="existingPhase1Voltage"
                         value={formData.existingPhase1Voltage}
@@ -503,7 +532,8 @@ const PowerMeterForm = () => {
                     <div className="flex justify-between gap-4">
                     
                         <input
-                          type="number"
+                          type="number" 
+min={0}
                           step="0.1"
                           name="existingPhase1Current"
                           value={formData.existingPhase1Current}
@@ -514,7 +544,8 @@ const PowerMeterForm = () => {
                   
                      
                         <input
-                          type="number"
+                          type="number" 
+min={0}
                           step="0.1"
                           name="existingPhase2Current"
                           value={formData.existingPhase2Current}
@@ -525,7 +556,8 @@ const PowerMeterForm = () => {
                     
                      
                         <input
-                          type="number"
+                          type="number" 
+min={0}
                           step="0.1"
                           name="existingPhase3Current"
                           value={formData.existingPhase3Current}
@@ -538,7 +570,8 @@ const PowerMeterForm = () => {
                   ) : (
                     <div>
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         step="0.1"
                         name="existingPhase1Current"
                         value={formData.existingPhase1Current}
@@ -558,7 +591,8 @@ const PowerMeterForm = () => {
                     <div className="flex justify-between gap-4">
                     
                         <input
-                          type="number"
+                          type="number" 
+min={0}
                           step="0.1"
                           name="sharingPhase1Current"
                           value={formData.sharingPhase1Current}
@@ -568,7 +602,8 @@ const PowerMeterForm = () => {
                         />
                    
                         <input
-                          type="number"
+                          type="number" 
+min={0}
                           step="0.1"
                           name="sharingPhase2Current"
                           value={formData.sharingPhase2Current}
@@ -578,7 +613,8 @@ const PowerMeterForm = () => {
                         />
                
                         <input
-                          type="number"
+                          type="number" 
+min={0}
                           step="0.1"
                           name="sharingPhase3Current"
                           value={formData.sharingPhase3Current}
@@ -591,7 +627,8 @@ const PowerMeterForm = () => {
                   ) : (
                     <div>
                       <input
-                        type="number"
+                        type="number" 
+min={0}
                         step="0.1"
                         name="sharingPhase1Current"
                         value={formData.sharingPhase1Current}
@@ -611,7 +648,8 @@ const PowerMeterForm = () => {
                      
                        
                         <input
-                          type="number"
+                          type="number" 
+min={0}
                           step="0.1"
                           name="phaseToPhaseL1L2"
                           value={formData.phaseToPhaseL1L2}
@@ -621,7 +659,8 @@ const PowerMeterForm = () => {
                         />
                       
                         <input
-                          type="number"
+                          type="number" 
+min={0}
                           step="0.1"
                           name="phaseToPhaseL1L3"
                           value={formData.phaseToPhaseL1L3}
@@ -631,7 +670,8 @@ const PowerMeterForm = () => {
                         />
                     
                         <input
-                          type="number"
+                          type="number" 
+min={0}
                           step="0.1"
                           name="phaseToPhaseL2L3"
                           value={formData.phaseToPhaseL2L3}
@@ -649,7 +689,8 @@ const PowerMeterForm = () => {
                   <h4 className="font-semibold  mb-3">Earthing to Neutral Voltage (V)</h4>
                   <div>
                     <input
-                      type="number"
+                      type="number" 
+min={0}
                       step="0.1"
                       name="earthingToNeutralVoltage"
                       value={formData.earthingToNeutralVoltage}

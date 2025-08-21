@@ -1,8 +1,7 @@
 // Configuration for radio units form questions
 export const vendors = ['Nokia', 'Ericsson', 'Huawei'];
-export const nokiaModels = [
-  'List Nokia models to be provided by SE'
-];
+// Nokia models are now fetched from RadioUnitsCatalog with hardware_type 'RFM' and 'RRH'
+export const nokiaModels = [];
 export const dcPowerSources = [
   'Direct from rectifier distribution',
   'New FPFH', 
